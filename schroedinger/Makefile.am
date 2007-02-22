@@ -1,30 +1,66 @@
 
-AUTOMAKE_OPTIONS = foreign
+pkgincludedir = $(includedir)/schroedinger-@SCHRO_MAJORMINOR@/schroedinger
 
-SUBDIRS = doc schroedinger testsuite tools
+lib_LTLIBRARIES = libschroedinger-@SCHRO_MAJORMINOR@.la
 
-DISTCHECK_CONFIGURE_FLAGS=--enable-gtk-doc
+DISTCLEANFILES = schro-stdint.h
 
-if HAVE_GST
-SUBDIRS += gst
-endif
+EXTRA_DIST = schroarith-i386.c schrointernal.h
 
-DIST_SUBDIRS = doc schroedinger gst testsuite tools
+pkginclude_HEADERS = \
+	schro.h \
+	schroaux.h \
+	schrobuffer.h \
+	schrodecoder.h \
+	schroencoder.h \
+	schroengine.h \
+	schroframe.h \
+	schro-stdint.h \
+	schroarith.h \
+	schroasync.h \
+	schrobits.h \
+	schrobitstream.h \
+	schrodebug.h \
+	schrometric.h \
+	schromotion.h \
+	schrooil.h \
+	schroparams.h \
+	schropredict.h \
+	schrotables.h \
+	schroutils.h \
+	schrowavelet.h \
+	schrobitstream.h \
+	schromotion.h
 
-EXTRA_DIST = COPYING COPYING.GPL COPYING.LGPL COPYING.MIT COPYING.MPL \
-	     autogen.sh libschroedinger.spec TODO NEWS
+noinst_HEADERS = \
+	schrooffsets.h \
+	schrointernal.h
 
-pkgconfig_DATA = schroedinger-$(SCHRO_MAJORMINOR).pc
+libschroedinger_@SCHRO_MAJORMINOR@_la_SOURCES = \
+	schro.c \
+	schroarith.c \
+	schroasync-pthread.c \
+	schroaux.c \
+	schrobits.c \
+	schrodecoder.c \
+	schrodebug.c \
+	schroencoder.c \
+	schroengine.c \
+	schroframe.c \
+	schrobuffer.c \
+	schrometric.c \
+	schromotion.c \
+	schrooil.c \
+	schroparams.c \
+	schropredict.c \
+	schrotables.c \
+	schroutils.c \
+	schrowavelet.c
 
-schroedinger-$(SCHRO_MAJORMINOR).pc: schroedinger.pc
-	cp schroedinger.pc schroedinger-$(SCHRO_MAJORMINOR).pc
-
-schroedinger-$(SCHRO_MAJORMINOR)-uninstalled.pc: schroedinger-uninstalled.pc
-	cp schroedinger-uninstalled.pc schroedinger-$(SCHRO_MAJORMINOR)-uninstalled.pc
-
-BUILT_SOURCES=schroedinger-$(SCHRO_MAJORMINOR)-uninstalled.pc
-
-CLEANFILES = schroedinger-$(SCHRO_MAJORMINOR).pc schroedinger-$(SCHRO_MAJORMINOR)-uninstalled.pc
-
-ACLOCAL_FLAGS = -I m4
+libschroedinger_@SCHRO_MAJORMINOR@_la_CFLAGS = $(SCHRO_CFLAGS) $(LIBOIL_CFLAGS) $(ERROR_CFLAGS)
+libschroedinger_@SCHRO_MAJORMINOR@_la_LIBADD = $(LIBOIL_LIBS)
+libschroedinger_@SCHRO_MAJORMINOR@_la_LDFLAGS = \
+	-no-undefined \
+	-version-info $(SCHRO_LIBVERSION) \
+	-export-symbols-regex '^(oil|schro)_'
 

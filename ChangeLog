@@ -1,0 +1,2179 @@
+2007-02-22  Jan Schmidt  <thaytan@mad.scientist.com>
+
+	* schroedinger/Makefile.am:
+	* schroedinger/schrobits.c: (schro_bits_encode_parse_info):
+	* schroedinger/schrobits.h:
+	* schroedinger/schroencoder.c:
+	(schro_encoder_encode_codec_comment),
+	(schro_encoder_encode_end_of_stream),
+	(schro_encoder_encode_picture),
+	(schro_encoder_encode_access_unit_header):
+	* schroedinger/schroencoder.h:
+	* schroedinger/schroframe.c: (schro_frame_set_timecode):
+	* schroedinger/schroframe.h:
+	* schroedinger/schroutils.h:
+
+	Re-arrange some things and put in place the first code for
+	handling auxiliary data buffers and timecodes.
+
+=== release 0.4.0 ===
+
+2007-02-22  David Schleef  <ds@schleef.org>
+
+	* doc/schroedinger-0.1-sections.txt:
+	  Add.
+
+2007-02-22  David Schleef  <ds@schleef.org>
+
+	* Makefile.am:
+	* testsuite/coder/Makefile.am:
+	  distcheck fixes
+
+2007-02-22  David Schleef  <ds@schleef.org>
+
+	* configure.ac:
+	  revert to spec coder.
+	* testsuite/coding_efficiency.c:
+	* testsuite/exp_speed.c:
+	* testsuite/qm.c:
+	  remove.
+
+2007-02-22  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schroencoder.c:
+	  Fix some memleaks.
+	* schroedinger/schrotables.h:
+	  Reexport the tables.  They're used in the testsuite.
+	* testsuite/Makefile.am:
+	* testsuite/encode.c:
+	* testsuite/encode_big.c:
+	  Make it all work.
+
+2007-02-22  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schroencoder.c:
+	  Hard code some decent quantizer numbers.
+
+2007-02-22  David Schleef  <ds@schleef.org>
+
+	* misc/pydvdrip:
+	* misc/vtstest:
+	  Random checkin.  These are probably only useful for me
+	  anyway.
+
+2007-02-22  David Schleef  <ds@schleef.org>
+
+	* testsuite/arith.c:
+	* testsuite/arith_encode.c:
+	  Add config.h
+
+2007-02-22  David Schleef  <ds@schleef.org>
+
+	* gst/gstschrodec.c:
+	  Hard code some decent quantizer numbers.
+
+2007-02-22  David Schleef  <ds@schleef.org>
+
+	* testsuite/coder/Makefile.am:
+	* testsuite/coder/arith_bit.c:
+	* testsuite/coder/arith_dirac.c:
+	* testsuite/coder/arith_dirac_both.c:
+	* testsuite/coder/arith_dirac_byte.c:
+	* testsuite/coder/arith_dirac_stats.c:
+	* testsuite/coder/arith_exp.c:
+	* testsuite/coder/arith_qm.c:
+	* testsuite/coder/coding_efficiency.c:
+	* testsuite/coder/decode.c:
+	* testsuite/coder/plot_efficiency:
+	* testsuite/coder/speed.c:
+	* testsuite/coder/speed2.c:
+	  Write a new exp coder based on ideas from Thomas.  Minor other
+	  changes.
+
+2007-02-22  David Schleef  <ds@schleef.org>
+
+	* gst/Makefile.am:
+	* gst/gstschro.c:
+	* gst/gstschrotoy.c:
+	  Reenable schrotoy and make it do interesting things.  It's
+	  a secret.
+
+2007-02-21  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schrodecoder.c:
+	* schroedinger/schrodecoder.h:
+	* schroedinger/schroencoder.c:
+	* schroedinger/schroencoder.h:
+	* schroedinger/schroengine.c:
+	* schroedinger/schroparams.c:
+	* schroedinger/schroparams.h:
+	* testsuite/encode_big.c:
+	  Code rearrangement.
+
+2007-02-21  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schroencoder.c:
+	* schroedinger/schroencoder.h:
+	* schroedinger/schroengine.c:
+	  Implement a subband entropy estimator.  Rearrange some
+	  code to make things more consistent.
+
+2007-02-21  Jan Schmidt  <thaytan@mad.scientist.com>
+
+	* gst/gstschrodec.c: (gst_schrodec_send_tags),
+	(gst_schro_dec_push_all):
+	  Output a CODEC tag event before the first buffer so that
+	  totem and friends can display the video codec in use.
+
+2007-02-21  David Schleef  <ds@schleef.org>
+
+	* testsuite/coder/Makefile.am:
+	  Remove missing file.
+
+2007-02-20  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schroencoder.c:
+	* schroedinger/schroengine.c:
+	* schroedinger/schroengine.h:
+	  Implement backref2.
+	* schroedinger/schropredict.c:
+	  Disable merging of DC blocks, because it has some pathologically
+	  bad cases.
+
+2007-02-20  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schroasync-pthread.c:
+	* schroedinger/schroasync.h:
+	  Add wait_one(), since that's what is used now.
+	* schroedinger/schrobits.c:
+	  Fix off-by-one error.
+	* schroedinger/schrobitstream.h:
+	* schroedinger/schrodecoder.c:
+	  Handle (ignore) auxiliary packets.
+	* schroedinger/schroencoder.c:
+	* schroedinger/schroencoder.h:
+	* schroedinger/schroengine.c:
+	* schroedinger/schroengine.h:
+	  Change to using frame_queue as the entire picture state as
+	  they move through the encoder.  Rewrite engines (again).
+	* tools/dump_packets.c:
+	  Add support for auxiliary packets.
+
+2007-02-19  David Schleef  <ds@schleef.org>
+
+	* configure.ac:
+	  Add define for new coder.
+	* schroedinger/schroarith.c:
+	* schroedinger/schroarith.h:
+	  Add new coder.
+	* schroedinger/schropredict.c:
+	* schroedinger/schropredict.h:
+	  Calculate statistics as a separate step.
+	* schroedinger/schrowavelet.c:
+	  Add config.h
+	* schroedinger/schroencoder.c:
+	* schroedinger/schroencoder.h:
+	* schroedinger/schroengine.c:
+	  Random changes.
+
+2007-02-11  David Schleef  <ds@schleef.org>
+
+	* testsuite/coder/Makefile.am:
+	* testsuite/coder/arith_dirac.c:
+	* testsuite/coder/arith_dirac_both.c:
+	* testsuite/coder/arith_dirac_byte.c:
+	* testsuite/coder/arith_dirac_stats.c:
+	* testsuite/coder/arith_exp.c:
+	* testsuite/coder/coding_efficiency.c:
+	* testsuite/coder/decode.c:
+	* testsuite/coder/plot_efficiency:
+	* testsuite/coder/plot_speed:
+	* testsuite/coder/speed.c:
+	* testsuite/coder/speed2.c:
+	  More coder experiments
+
+2007-02-08  David Schleef  <ds@schleef.org>
+
+	* testsuite/coder/Makefile.am:
+	* testsuite/coder/arith.h:
+	* testsuite/coder/arith_dirac.c:
+	* testsuite/coder/arith_dirac_byte.c:
+	* testsuite/coder/arith_dirac_stats.c:
+	* testsuite/coder/coding_efficiency.c:
+	* testsuite/coder/decode.c:
+	* testsuite/coder/speed.c:
+	* testsuite/coder/speed2.c:
+	  More coder experiments
+
+2007-02-06  David Schleef  <ds@schleef.org>
+
+	* testsuite/coder/arith_exp.c:
+	  This works pretty well.
+
+2007-02-06  David Schleef  <ds@schleef.org>
+
+	* testsuite/coder/arith.h:
+	* testsuite/coder/arith_exp.c:
+	* testsuite/coder/speed.c:
+	  Experiment long enough and you come a cross a coder that
+	  doesn't suck.
+
+2007-02-02  David Schleef  <ds@schleef.org>
+
+	* configure.ac:
+	* testsuite/Makefile.am:
+	* testsuite/coder/:
+	* testsuite/coder/Makefile.am:
+	* testsuite/coder/arith.h:
+	* testsuite/coder/arith_bit.c:
+	* testsuite/coder/arith_dirac.c:
+	* testsuite/coder/arith_dirac_byte.c:
+	* testsuite/coder/arith_exp.c:
+	* testsuite/coder/arith_qm.c:
+	* testsuite/coder/coding_efficiency.c:
+	* testsuite/coder/speed.c:
+	  Add arithmetic coder comparison code.
+
+2007-02-01  David Schleef  <ds@schleef.org>
+
+	* testsuite/Makefile.am:
+	* testsuite/arith_exp.c:
+	* testsuite/arith_exp.h:
+	* testsuite/coding_efficiency.c:
+	* testsuite/exp_speed.c:
+	  Add another experimental arith coder.
+
+2007-01-31  David Schleef  <ds@schleef.org>
+
+	* testsuite/Makefile.am:
+	* testsuite/arith_qm.c:
+	* testsuite/arith_qm.h:
+	* testsuite/coding_efficiency.c:
+	* testsuite/qm.c:
+	  Add a QM arithmetic coder and a proggy for testing the efficiency
+	  of coding.
+
+2007-01-30  David Schleef  <ds@schleef.org>
+
+	* schroedinger/Makefile.am:
+	* schroedinger/schroencoder.c:
+	* schroedinger/schroencoder.h:
+	* schroedinger/schroengine.c:
+	* schroedinger/schroengine.h:
+	* schroedinger/schrointernal.h:
+	  Separate engine related code from encoder.
+
+2007-01-29  David Schleef  <ds@schleef.org>
+
+	* gst/gstschroenc.c:
+	* schroedinger/schroencoder.c:
+	  Use improved schro_encoder_iterate() API.
+
+2007-01-29  David Schleef  <ds@schleef.org>
+
+	* testsuite/encode.c:
+	  Use improved schro_encoder_iterate() API.
+
+2007-01-28  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schroasync-pthread.c:
+	  Clear allocated memory.  duh.
+	* schroedinger/schroencoder.c:
+	* schroedinger/schroencoder.h:
+	  Handle end of stream properly.
+
+2007-01-27  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schrowavelet.c:
+	  Fix 2d wavelet for proper edge extension.
+
+2007-01-27  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schrowavelet.c:
+	* testsuite/wavelet.c:
+	  Fix horizontal wavelet for proper edge extension.
+
+2007-01-25  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schroasync-pthread.c:
+	* schroedinger/schroencoder.c:
+	  Cleanup.  Set number of threads to the number of cpus by default.
+
+2007-01-25  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schroasync-pthread.c:
+	* schroedinger/schroasync.h:
+	  Remove unused function
+
+2007-01-25  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schroasync-pthread.c:
+	* schroedinger/schroasync.h:
+	* schroedinger/schroencoder.c:
+	* schroedinger/schroencoder.h:
+	* testsuite/encode.c:
+	  Rewrite the async code.  Seems to work now.
+
+2007-01-23  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schrodecoder.c:
+	* schroedinger/schroencoder.c:
+	  Clean up quantisation code and fix it a bit more to make it
+	  spec compliant.
+
+2007-01-22  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schrodecoder.c:
+	* schroedinger/schroencoder.c:
+	  Fix subband order to match 0.10.4 spec.  From David Flynn.
+
+2007-01-22  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schrobitstream.h:
+	* schroedinger/schrodecoder.c:
+	* schroedinger/schroencoder.c:
+	* schroedinger/schrotables.c:
+	* testsuite/tables.c:
+	  Quantiser related fixes from David Flynn.
+
+2007-01-22  David Schleef  <ds@schleef.org>
+
+	* configure.ac:
+	* schroedinger.pc.in:
+	* schroedinger/schroasync-pthread.c:
+	* schroedinger/schroencoder.c:
+	* schroedinger/schroencoder.h:
+	  Generic fixes from David Flynn.
+
+2007-01-22  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schroasync-pthread.c:
+	* schroedinger/schroasync.h:
+	* schroedinger/schroencoder.c:
+	* schroedinger/schroencoder.h:
+	  More hacking on async stuff.  Still doesn't quite work.
+
+2007-01-22  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schrodecoder.c:
+	* schroedinger/schroencoder.c:
+	  Dirac now calculates the neighborhood sum correctly, so drop
+	  the DIRAC_COMPAT.
+
+2007-01-18  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schroasync-pthread.c:
+	* schroedinger/schroasync.h:
+	* schroedinger/schroencoder.c:
+	* schroedinger/schroencoder.h:
+	* testsuite/encode.c:
+	  More threading goodness.  Kinda broken still.
+
+2007-01-17  David Schleef  <ds@schleef.org>
+
+	* doc/schroedinger-0.1-docs.sgml:
+	* gtk-doc.make:
+	  More files for doc build.
+
+2007-01-17  David Schleef  <ds@schleef.org>
+
+	* autogen.sh:
+	* configure.ac:
+	* doc/Makefile.am:
+	* schroedinger/schro.c:
+	* schroedinger/schrobitstream.h:
+	* schroedinger/schroframe.h:
+	  Build documentation.
+
+2007-01-17  David Schleef  <ds@schleef.org>
+
+	* testsuite/wavelet.c:
+	* schroedinger/schrowavelet.c:
+	  The spec changed to be even/odd edge extension.  Not quite
+	  right yet.
+	* schroedinger/schrooil.c:
+	* schroedinger/schrooil.h:
+	* schroedinger/schroframe.c:
+	* testsuite/upsample.c:
+	  Implement and test upsampling.
+	* schroedinger/Makefile.am:
+	  Export oil_ symbols (ugh) for testing purposes.
+
+2006-12-19  David Schleef  <ds@schleef.org>
+
+	* configure.ac:
+	  Enable -Wall and -Werror.  I wonder who disabled them?
+	* schroedinger/schroarith.c:
+	  Add some limits while decoding.
+	* schroedinger/schrobits.c:
+	  Add assertion for buffer overrun.
+	* schroedinger/schroencoder.c:
+	* schroedinger/schroencoder.h:
+	  Don't hard-code the size of the subband buffer.
+	* schroedinger/schrodecoder.c:
+	  Disable DECODE_PREDICTION_ONLY *again*.  Refactor some code.
+	* schroedinger/schroframe.c:
+	* schroedinger/schroframe.h:
+	  Add upsampling.
+	* schroedinger/schroutils.h:
+	  Wrap MIN/MAX in #ifdefs so they don't conflict with glib.  This
+	  could be done better.
+
+2006-12-19  David Schleef  <ds@schleef.org>
+
+	* testsuite/Makefile.am:
+	* testsuite/encode_big.c:
+	  Add a test to check encoding HD1080 pictures.
+	* testsuite/upsample.c:
+	  And one to check upsampling.
+
+2006-12-17  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schro.h:
+	* schroedinger/schroarith.h:
+	* schroedinger/schroasync.h:
+	* schroedinger/schrobits.h:
+	* schroedinger/schrobitstream.h:
+	* schroedinger/schrobuffer.h:
+	* schroedinger/schrodebug.h:
+	* schroedinger/schrodecoder.h:
+	* schroedinger/schroencoder.h:
+	* schroedinger/schroframe.h:
+	* schroedinger/schrometric.h:
+	* schroedinger/schromotion.h:
+	* schroedinger/schrooil.h:
+	* schroedinger/schroparams.h:
+	* schroedinger/schropredict.h:
+	* schroedinger/schrotables.h:
+	* schroedinger/schrowavelet.h:
+	  add extern "C" stuff for C++
+
+2006-12-07 Christian Schaller <christian@fluendo.com>
+
+	* Fix GSTREAMER_MAJORMINOR -> GST_MAJORMINOR
+
+2006-12-05  David Schleef  <ds@schleef.org>
+
+	* Makefile.am:
+	* configure.ac:
+	* gst/Makefile.am:
+	* gst/gstschro.c:
+	* tools/Makefile.am:
+	  Make GStreamer optional.
+
+2006-11-30  David Schleef  <ds@schleef.org>
+
+	* misc/yuv-to-drc:
+	  New script.
+
+2006-11-29  David Schleef  <ds@schleef.org>
+
+	* testsuite/Makefile.am:
+	* testsuite/README:
+	* testsuite/arith_fixup_shift.c:
+	* testsuite/check/it.c:
+	* testsuite/codes.c:
+	* testsuite/global_motion.c:
+	* testsuite/phasecorrelation.c:
+	  Fix up random stuff.  Write some notes.
+
+2006-11-28  David Schleef  <ds@schleef.org>
+
+	* configure.ac:
+	* testsuite/Makefile.am:
+	* testsuite/check:
+	* testsuite/check/Makefile.am:
+	* testsuite/check/it.c:
+	* testsuite/perf:
+	* testsuite/perf/Makefile.am:
+	* testsuite/perf/wavelet_speed.c:
+	* testsuite/wavelet_speed.c:
+	  Move some tests around.
+
+2006-11-27  David Schleef  <ds@schleef.org>
+
+	* configure.ac:
+	  Add check for check.
+	* Makefile.am:
+	* testsuite/Makefile.am:
+	* testsuite/dump_packets.c:
+	* tools:
+	* tools/Makefile.am:
+	* tools/dump_packets.c:
+	  Move dump_packets.
+
+2006-11-26  David Schleef  <ds@schleef.org>
+
+	* testsuite/arith_encode.c:
+	* testsuite/motion.c:
+	* testsuite/obmc.c:
+	  Fix some tests.
+
+2006-11-26  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schrobitstream.h:
+	  Add low delay codes.
+	* gst/gstschrodec.c:
+	* schroedinger/schrodecoder.c:
+	* schroedinger/schrodecoder.h:
+	  Improve support for seeking.  Probably leaks.
+	* schroedinger/schroencoder.c:
+	* schroedinger/schroencoder.h:
+	  Fix pushing of access units as well as the frame number on
+	  access units.
+	* schroedinger/schromotion.c:
+	  Fix bug creating weight arrays for non-overlapped blocks.
+	* schroedinger/schroparams.h:
+	  Add picture weight bits.
+	* schroedinger/schropredict.c:
+	  Use the global motion for the second reference picture.
+
+2006-11-20  Christian Schaller <christian@fluendo.com>
+
+	* Add header files to SPEC file
+	* gst/gstschroenc.c: Fix Class to be Codec and not Coder
+	  the codec becomes available in Pitivi
+
+
+2006-11-20  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schromotion.c:
+	* schroedinger/schropredict.c:
+	  Implement basic combining of blocks into a superblock.  This
+	  is a pretty poor way to do it -- it's here just to make sure
+	  split==0 works.
+
+2006-11-20  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schroarith.c:
+	* schroedinger/schroarith.h:
+	  Adjust a few of the contexts to match spec.  Remove some cruft.
+	* schroedinger/schrodecoder.c:
+	* schroedinger/schroencoder.c:
+	  Change split_residual from _mode to _uint to match spec.  Changes
+	  BITSTREAM.
+
+2006-11-19  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schrodecoder.c:
+	* schroedinger/schrodecoder.h:
+	* schroedinger/schroencoder.c:
+	* schroedinger/schromotion.c:
+	* schroedinger/schromotion.h:
+	* schroedinger/schroparams.h:
+	* schroedinger/schropredict.c:
+	  Implement global motion encoding and decoding.  Fix a few
+	  bitstream compatibility issues.  Changes BITSTREAM.  The
+	  global motion implementation is done per block, not per pixel,
+	  so it's not quite right yet.
+
+2006-11-19  David Schleef  <ds@schleef.org>
+
+	* schroedinger.pc.in:
+	* schroedinger/Makefile.am:
+	  Fix installation of headers and pc file.
+
+2006-11-19  David Schleef  <ds@schleef.org>
+
+	* configure.ac:
+	* gst/gstschroenc.c:
+	* misc/pydvdrip:
+	* schroedinger.pc.in:
+	* schroedinger/Makefile.am:
+	* schroedinger/schroasync-none.c:
+	* schroedinger/schroasync-pthread.c:
+	* schroedinger/schroasync.h:
+	* schroedinger/schrodecoder.c:
+	* schroedinger/schroencoder.c:
+	* schroedinger/schroencoder.h:
+	* schroedinger/schroframe.c:
+	* schroedinger/schrointernal.h:
+	* schroedinger/schromotion.c:
+	* schroedinger/schroparams.h:
+	* schroedinger/schropredict.c:
+	* schroedinger/schropredict.h:
+	* schroedinger/schroutils.h:
+	* testsuite/Makefile.am:
+	* testsuite/global_motion.c:
+	* testsuite/motion.c:
+	  A truly massive amount of hacking.  Add an async interface.
+	  Add some support for global motion in the encoder.
+
+=== Release 0.3.0 ===
+
+2006-11-12  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schrowavelet.c:
+	  Revert last change.  It sucks.
+
+2006-11-12  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schrowavelet.c:
+	* testsuite/Makefile.am:
+	* testsuite/wavelet_speed.c:
+	  Add some wavelet performance measurement code.  Add some toys
+	  to schrowavelet.c for prefetching/flushing which will fail on
+	  many CPUs (needs to be reverted).
+
+2006-11-08  David Schleef  <ds@schleef.org>
+
+	* gst/gstschrodec.c:
+	  Calculate the size of an I420 buffer correctly.
+
+2006-11-08  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schromotion.c:
+	  Fix splatting blocks in the same way as done for copying in
+	  previous checkin.
+
+2006-11-06  David Schleef  <ds@schleef.org>
+
+	* configure.ac: bump nano
+	* schroedinger/schrobitstream.h:
+	* schroedinger/schrodecoder.c:
+	* schroedinger/schroencoder.c:
+	* schroedinger/schrotables.c:
+	* schroedinger/schrotables.h:
+	* testsuite/tables.c:
+	  Implement Tim's offset experiment.  Disabled by default.
+	* schroedinger/schromotion.c:
+	* schroedinger/schromotion.h:
+	  Refactor code to separate block retrieval from weight
+	  multiplication.
+
+=== 0.2.1 ===
+
+2006-11-06  David Schleef  <ds@schleef.org>
+
+	* Makefile.am:
+	* NEWS:
+	* TODO:
+	  Add some docos
+	* testsuite/Makefile.am:
+	  Fix automake warning.
+
+2006-11-06  David Schleef  <ds@schleef.org>
+
+	* configure.ac: bump liboil version
+
+2006-11-04  David Schleef  <ds@schleef.org>
+
+	* configure.ac:
+	  Bump version.
+	* testsuite/Makefile.am:
+	  Disable wavelet2 due to last checkin
+	* testsuite/arith_speed.c:
+	  Disable code on non-i386.
+
+2006-11-03  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schrowavelet.c:
+	  remove dead code.
+
+2006-11-02  David Schleef  <ds@schleef.org>
+
+	* misc/any-to-ogg:
+	  Random fixes.
+
+2006-11-02  David Schleef  <ds@schleef.org>
+
+	* schroedinger/Makefile.am:
+	  Dist schrointernal.h
+
+2006-11-02  David Schleef  <ds@schleef.org>
+
+	* misc/pydvdrip:
+	  I use this a lot.  Maybe it should be in svn.
+
+2006-11-02  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schroencoder.c:
+	* schroedinger/schroencoder.h:
+	  Add encoding preferences for a bunch of parameters.  They're
+	  "preferences", because the encoding engine is free to ignore
+	  them.
+	* gst/gstschroenc.c:
+	  Add properties for encoder preferences.
+
+2006-11-02  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schroencoder.c:
+	  Fix spatial partitioning.
+	* schroedinger/schroframe.c:
+	  Fix calculation of I420 sizes.
+	* schroedinger/schroparams.c:
+	  Fix mc_chroma_height claculation.
+	* testsuite/arith_speed.c:
+	* testsuite/encode.c:
+	  Make these complile and pass.
+
+2006-11-01  David Schleef  <ds@schleef.org>
+
+	* gst/gstschroenc.c:
+	  Change ERRORs to DEBUGs
+	* misc/dvd-to-ogg:
+	* misc/leakcheck_enc:
+	* misc/oggtest:
+	* misc/vtstest:
+	  might as well check these in.
+	* schroedinger/schroarith.c:
+	  enable arith block reaping
+	* schroedinger/schrodecoder.c:
+	  Ignore earliest_frame for now.  Ignore overrunning the end of
+	  an arith block, since it's allowed now.
+	* schroedinger/schroencoder.c:
+	  random change to quality level.  Imagine this being externalized
+	  at some point.
+	* schroedinger/schropredict.c:
+	  Disable predict-from-neighbor, because it's slow.
+
+2006-10-31  David Schleef  <ds@schleef.org>
+
+	* testsuite/struct_offsets.c:
+	  add this.
+
+2006-10-30  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schroarith.c:
+	  Add code to reap 0xff bytes off the end of an arith block.
+
+2006-10-28  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schrodecoder.c:
+	  Move the halve_all_counts reset check out of the inner loop.
+	* schroedinger/schromotion.c:
+	  Dubious change to do motion prediction one component at a
+	  time.  Good in principle, but no real profiling data.
+
+2006-10-28  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schroarith-i386.c:
+	  Make the branch targets local.  Helps for profiling and
+	  debugging.
+	* schroedinger/schroarith.c:
+	  Improve decode_sint performance a bit.
+	* schroedinger/schrodecoder.c:
+	  Split out codeblock line decoding into a separate function,
+	  then duplicate the function for the various codeblocks cases.
+	  Moves most conditionals outside of the inner loop.
+	* schroedinger/schromotion.c:
+	  Use new liboil class.
+
+2006-10-27  David Schleef  <ds@schleef.org>
+
+	* schroedinger/Makefile.am:
+	* schroedinger/schrooffsets.h:
+	* schroedinger/schroarith-i386.c:
+	* schroedinger/schroarith.c:
+	* testsuite/Makefile.am:
+	* testsuite/arith_speed.c:
+	* testsuite/arith_fixup_shift.c:
+	* testsuite/quant.c:
+	  Copy over assembly code for arith decoding.
+
+2006-10-27  David Schleef  <ds@schleef.org>
+
+	* testsuite/arith_speed.c:
+	  another checkpoint.
+
+2006-10-27  David Schleef  <ds@schleef.org>
+
+	* testsuite/arith_speed.c:
+	  another checkpoint.  getting faster.
+
+2006-10-27  David Schleef  <ds@schleef.org>
+
+	* testsuite/arith_speed.c:
+	  another checkpoint
+
+2006-10-27  David Schleef  <ds@schleef.org>
+
+	* testsuite/arith_speed.c:
+	  Checkpoint.  Code cleanup.
+
+2006-10-27  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schroarith.c:
+	* schroedinger/schroarith.h:
+	  Add data pointer in SchroArith to decrease register pressure.
+	* testsuite/arith_speed.c:
+	  Checkpoint.  Decode is 100% assembly now.  But not faster.
+
+2006-10-27  David Schleef  <ds@schleef.org>
+
+	* testsuite/arith_speed.c: checkpoint
+
+2006-10-25  David Schleef  <ds@schleef.org>
+
+	* gst/gstschrodec.c:
+	* gst/gstschroenc.c:
+	  Random hacking in circles.
+	* schroedinger/schroarith.c:
+	* schroedinger/schroarith.h:
+	* schroedinger/schrotables.c:
+	* schroedinger/schrotables.h:
+	* testsuite/tables.c:
+	  Add a table of information to make shifting bits faster.
+	* schroedinger/schrobitstream.h:
+	  Add SCHRO_LIMIT_WIDTH.
+	* schroedinger/schroutils.h:
+	  Add schro_divide()
+	* schroedinger/schrodecoder.c:
+	* schroedinger/schroencoder.c:
+	  Use SCHRO_LIMIT_WIDTH and schro_divide().
+	* testsuite/arith_speed.c:
+	  Assembly code testing.  Sorry, only compiles on i386.
+
+2006-10-19  David Schleef  <ds@schleef.org>
+
+	* gst/gstschroenc.c:
+	  remove debug
+	* schroedinger/schrobitstream.h:
+	  Increase frame queue length.
+	* schroedinger/schrodecoder.c:
+	* schroedinger/schroencoder.c:
+	* schroedinger/schroencoder.h:
+	  Implement backref, tworef, fourref engines.
+
+2006-10-18  David Schleef  <ds@schleef.org>
+
+	* gst/gstschrodec.c:
+	  Handle QoS events and frame dropping.
+	* gst/gstschroenc.c:
+	  Rewrite handling of granulepos.  Use new information from the
+	  encoder.
+	* schroedinger/schrodecoder.c:
+	* schroedinger/schrodecoder.h:
+	  Implement frame skipping.  Restructure decoding around _iterate()
+	  function.
+	* schroedinger/schroencoder.c:
+	* schroedinger/schroencoder.h:
+	  Implement the intra-only engine.  Restructure encoding around
+	  _iterate().  Remove SchroPicture (mostly).  Stage 2 of
+	  separating encoding into tasks.
+	* schroedinger/schroframe.h:
+	  Clean up.
+	  
+
+2006-10-18  Jan Schmidt  <thaytan@mad.scientist.com>
+
+	* testsuite/motion.c: (main):
+	Fix format string for 64-bit builds
+
+2006-10-17  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schroencoder.c:
+	* schroedinger/schroencoder.h:
+	* schroedinger/schroparams.h:
+	* schroedinger/schropredict.c:
+	* schroedinger/schropredict.h:
+	  More code cleanup.  Stage one of separating encoding of
+	  individual pictures out of SchroEncoder (so we can encode
+	  multiple pictures on different CPUs, woohoo!)
+
+2006-10-16  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schrodecoder.c:
+	* schroedinger/schroencoder.c:
+	* schroedinger/schroencoder.h:
+	* schroedinger/schromotion.c:
+	* schroedinger/schroparams.c:
+	* schroedinger/schroparams.h:
+	* schroedinger/schropredict.c:
+	* testsuite/motion.c:
+	  More code cleanup.  Separate SchroParams and SchroVideoFormat.
+
+2006-10-16  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schroencoder.c:
+	* schroedinger/schroencoder.h:
+	* schroedinger/schromotion.c:
+	* schroedinger/schroparams.h:
+	* schroedinger/schropredict.c:
+	* schroedinger/schropredict.h:
+	* testsuite/predict.c:
+	  Refactor the prediction code so that it makes sense (?).
+
+2006-10-15  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schromotion.c:
+	* schroedinger/schromotion.h:
+	* schroedinger/schroparams.c:
+	* schroedinger/schroutils.c:
+	* schroedinger/schroutils.h:
+	* testsuite/Makefile.am:
+	* testsuite/utils.c:
+	  Clean up code.  Remove some utility functions that are better
+	  implemented as macros.
+
+2006-10-15  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schrodecoder.c:
+	* schroedinger/schroencoder.c:
+	  Rearrange the main picture encoding/decoding function.
+
+2006-10-14  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schrodecoder.c:
+	  Ok, encoder seems to match decoder again.
+
+2006-10-14  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schrodecoder.c:
+	* schroedinger/schroencoder.c:
+	* schroedinger/schroframe.c:
+	* schroedinger/schroframe.h:
+	* schroedinger/schropredict.c:
+	* testsuite/motion.c:
+	  Make encoder match up with decoder.  Sort of.
+
+2006-10-13  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schrodecoder.c:
+	  Use the correct number of codeblocks for a given subband.
+
+2006-10-13  David Schleef  <ds@schleef.org>
+
+	* configure.ac:
+	  Put DIRAC_COMPAT into config.h
+	* schroedinger/schroarith.c:
+	* schroedinger/schroarith.h:
+	* schroedinger/schrodecoder.c:
+	* schroedinger/schroencoder.c:
+	* schroedinger/schroframe.c:
+	* schroedinger/schroframe.h:
+	* schroedinger/schroparams.c:
+	  Changes to make schro closer to Dirac (the code).  We'll
+	  figure out later if it matches the spec.  Changes BITSTREAM.
+	  WARNING: the encoder and decoder do not currently match
+	  bitstreams, so if you want to encode something and play it
+	  back, you'll need to use the last revision.
+
+2006-10-12  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schrodecoder.c:
+	* schroedinger/schroencoder.c:
+	* schroedinger/schrotables.c:
+	* schroedinger/schrotables.h:
+	* testsuite/tables.c:
+	  Update the quantisation tables to match the spec.  Only
+	  changes BITSTREAM slightly.
+
+2006-10-12  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schroarith.c:
+	* schroedinger/schroarith.h:
+	* schroedinger/schrodecoder.c:
+	* schroedinger/schroencoder.c:
+	  Update the arithmetic bins to match the spec.  Changes
+	  BITSTREAM.
+
+2006-10-12  David Schleef  <ds@schleef.org>
+
+	* testsuite/arith.c:
+	  Test that notices flushing bug fixed by the last checkin.
+
+2006-10-12  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schroarith.c:
+	* schroedinger/schroarith.h:
+	  Fix up flushing.  Expand nextbits to 32 bits, although it
+	  doesn't seem to make a performance difference.
+
+2006-10-12  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schroarith.c:
+	* schroedinger/schroarith.h:
+	* schroedinger/schrotables.c:
+	* schroedinger/schrotables.h:
+	* testsuite/arith_speed.c:
+	* testsuite/tables.c:
+	  Update the arithmetic encoder to match the spec.  Changes
+	  BITSTREAM.  One of these days, I'll finally catch all the
+	  differences.
+
+2006-10-12  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schrodecoder.c:
+	* schroedinger/schroencoder.c:
+	* schroedinger/schromotion.c:
+	* schroedinger/schromotion.h:
+	* schroedinger/schropredict.c:
+	  Fix bug where motion vector prediction doesn't happen for
+	  ref2 vectors.  Changes BITSTREAM.
+
+2006-10-11  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schromotion.c:
+	  Interleave clear/copy/shift stages in order to make better
+	  use of the cache.
+	* schroedinger/schroparams.h:
+	  Decrease size of SchroMotionVector from 40 bytes to 12.  It
+	  really adds up.
+	* testsuite/Makefile.am:
+	* testsuite/motion.c:
+	  New test for testing schro_frame_copy_with_motion().
+
+2006-10-11  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schromotion.c:
+	  Fix last checkin.
+
+2006-10-11  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schromotion.c:
+	* schroedinger/schrooil.c:
+	* schroedinger/schrooil.h:
+	  Move some stuff to liboil.  Requires up-to-date liboil CVS.
+
+2006-10-11  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schroencoder.c:
+	* schroedinger/schroencoder.h:
+	* schroedinger/schropredict.c:
+	  Keep an array of reference frames rather than reallocating
+	  all the time.
+
+2006-10-10  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schroencoder.h:
+	  Oops, this wasn't supposed to be checked in with the last
+	  changelog entry.
+
+2006-10-09  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schrodecoder.c:
+	* schroedinger/schroencoder.c:
+	* schroedinger/schroencoder.h:
+	* schroedinger/schrometric.c:
+	* schroedinger/schropredict.c:
+	  Move DC subband prediction out of the loop, as it affects
+	  neighborhood summing.  Changes BITSTREAM.  Use liboil for
+	  sad8x8 summing.
+
+2006-10-09  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schropredict.c:
+	  Fix bug reading past the end of the block prediction array.
+
+2006-10-09  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schrodecoder.c:
+	* schroedinger/schroencoder.c:
+	* schroedinger/schroencoder.h:
+	  Rearrange how quantisers are assigned to subbands in a way that
+	  takes into account wavelet gains.  Performance enhancements.
+	  Fix some stuff to get encoding/decoding working again, and
+	  closer to the spec.  Changes BITSTREAM.
+	* schroedinger/schrotables.c:
+	* schroedinger/schrotables.h:
+	* testsuite/tables.c:
+	  Add inverse quantisers.
+
+2006-10-08  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schrowavelet.c:
+	* schroedinger/schrowavelet.h:
+	* testsuite/wavelet_2d.c:
+	  Add inverse wavelet transform plus testing.
+
+2006-10-08  David Schleef  <ds@schleef.org>
+
+	* testsuite/ack.c:
+	  This doesn't belong here.
+
+2006-10-08  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schroencoder.c:
+	* schroedinger/schroframe.c:
+	* schroedinger/schromotion.c:
+	* schroedinger/schrooil.c:
+	* schroedinger/schrooil.h:
+	* schroedinger/schrowavelet.c:
+	* schroedinger/schrowavelet.h:
+	  Move wavelet code into the library.  Fix up some of the liboil
+	  related code, since names of functions have changed.
+
+2006-10-08  David Schleef  <ds@schleef.org>
+
+	* testsuite/Makefile.am:
+	* testsuite/phasecorrelation.c:
+	  Add phase correlation demonstration code.
+
+2006-10-06  David Schleef  <ds@schleef.org>
+
+	* testsuite/wavelet_2d.c:
+	  Yet another checkpoint.  The last.  For today.
+
+2006-10-06  David Schleef  <ds@schleef.org>
+
+	* testsuite/wavelet_2d.c:
+	  Another checkpoint.
+
+2006-10-06  David Schleef  <ds@schleef.org>
+
+	* testsuite/wavelet_2d.c:
+	  Another checkpoint.
+
+2006-10-03  David Schleef  <ds@schleef.org>
+
+	* testsuite/Makefile.am:
+	* testsuite/wavelet.c:
+	* testsuite/wavelet_2d.c:
+	  Checkpoint 2-d code.
+
+2006-10-03  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schrowavelet.c:
+	* testsuite/wavelet.c:
+	  Delete old and disabled code.
+
+2006-10-03  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schrowavelet.c:
+	* schroedinger/schrowavelet.h:
+	* testsuite/wavelet.c:
+	  Move working code into the library.
+
+2006-10-02  David Schleef  <ds@schleef.org>
+
+	* testsuite/wavelet.c: another checkpoint
+
+2006-10-02  David Schleef  <ds@schleef.org>
+
+	* testsuite/wavelet.c:
+	  Checkpoint the code.
+
+2006-10-02  David Schleef  <ds@schleef.org>
+
+	* configure.ac:
+	  Bump liboil requirement
+	* testsuite/wavelet.c:
+	  Use new liboil mas functions (I hope you're using liboil CVS).
+
+2006-09-28  David Schleef  <ds@schleef.org>
+
+	* gst/gstschrodec.c:
+	* gst/gstschroenc.c:
+	* gst/gstschroparse.c:
+	  Don't handle "KW-DIRAC" packets.  Make ogg[de]mux do it, since
+	  it's ogg-specific.
+
+2006-09-28  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schrodecoder.c:
+	  Disable DECODE_PREDICTION_ONLY again.
+	* schroedinger/schrometric.c:
+	  Switch back to using absdiff metric.
+	* schroedinger/schropredict.c:
+	  Convert some hard-coded numbers into defines
+
+2006-09-28  Jan Schmidt  <thaytan@mad.scientist.com>
+
+	* configure.ac:
+	  Report the actual version of liboil needed when the found version is
+	  not sufficient.
+
+	* gst/Makefile.am:
+	* gst/gstschrodec.c: (gst_schro_dec_init), (gst_schro_dec_reset),
+	(gst_schro_dec_finalize), (gst_schro_dec_chain),
+	(gst_schro_dec_push_all):
+	* gst/gstschroparse.c: (gst_schro_parse_init),
+	(gst_schro_parse_reset), (gst_schro_parse_finalize),
+	(gst_schro_parse_sink_event), (gst_schro_parse_push_all),
+	(gst_schro_parse_chain):
+	* gst/parsehelper.c: (parse_helper_init), (parse_helper_flush),
+	(parse_helper_free), (parse_helper_push),
+	(parse_helper_have_next_parse_unit), (parse_helper_peek),
+	(parse_helper_skip), (parse_helper_pull),
+	(parse_helper_skip_to_next_parse_unit):
+	* gst/parsehelper.h:
+
+	  Factor out code to collect dirac parse units and feed them to the
+	  decoder as a single buffer. Makes schrodec able to work on random
+	  sized input, rather than just packets coming from oggdemux.
+
+2006-09-26  David Schleef  <ds@schleef.org>
+
+	* testsuite/dump_packets.c:
+	  Minor fix.
+	* testsuite/wavelet.c:
+	  Remove disabled code.
+
+2006-09-26  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schrodecoder.c:
+	* schroedinger/schroencoder.c:
+	* schroedinger/schroencoder.h:
+	  To Jan with love.  Set the offsets on buffers.
+
+2006-09-24  David Schleef  <ds@schleef.org>
+
+	* gst/gstschro.c:
+	* gst/gstschrodec.c:
+	* gst/gstschroenc.c:
+	* schroedinger/schrodecoder.c:
+	* schroedinger/schroencoder.c:
+	* schroedinger/schroframe.c:
+	* schroedinger/schroparams.c:
+	* schroedinger/schroparams.h:
+	* schroedinger/schropredict.c:
+	  Fix a bunch of stuff.  Changes BITSTREAM.  But break some
+	  other stuff and make the library annoyingly verbose.
+
+2006-09-24  David Schleef  <ds@schleef.org>
+
+	* testsuite/wavelet.c:
+	  Fix compilation problem in last checkin.
+
+2006-09-24  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schrobitstream.h:
+	* schroedinger/schrowavelet.c:
+	* schroedinger/schrowavelet.h:
+	* schroedinger/schrooil.c:
+	* schroedinger/schrooil.h:
+	* testsuite/Makefile.am:
+	* testsuite/wavelet.c:
+	  Update wavelets for spec.  Rewrite test.  Changes BITSTREAM.
+
+2006-09-15  David Schleef  <ds@schleef.org>
+
+	* configure.ac:
+	  Remove AM_MAINTAINER_MODE.  I want the Makefiles to be
+	  updated from Makefile.am's unconditionally.
+	* testsuite/encode.c:
+	* testsuite/wavelet_2d.c:
+	  Fix for recent API changes.
+
+2006-09-15  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schrobitstream.h:
+	* schroedinger/schrodecoder.c:
+	* schroedinger/schrodecoder.h:
+	* schroedinger/schroencoder.c:
+	* schroedinger/schroencoder.h:
+	* schroedinger/schroparams.c:
+	* schroedinger/schroparams.h:
+	* schroedinger/schrowavelet.h:
+	  Code cleanup.  Still broken.  Changes BITSTREAM.
+
+2006-09-10  David Schleef  <ds@schleef.org>
+
+	* gst/gstschrodec.c:
+	* gst/gstschroenc.c:
+	* schroedinger/schrobitstream.h:
+	* schroedinger/schrodecoder.c:
+	* schroedinger/schrodecoder.h:
+	* schroedinger/schroencoder.c:
+	* schroedinger/schroencoder.h:
+	* schroedinger/schroparams.c:
+	* schroedinger/schroparams.h:
+	* schroedinger/schropredict.c:
+	  First stage of splitting SchroParams.  Currently broken.
+
+2006-09-10  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schrobitstream.h:
+	* schroedinger/schrodecoder.c:
+	* schroedinger/schroparams.c:
+	* schroedinger/schroparams.h:
+	  Updates for new spec related to default video formats.  Changes
+	  BITSTREAM.
+
+2006-09-10  David Schleef  <ds@schleef.org>
+
+	* gst/gstschrodec.c:
+	* schroedinger/schroarith.c:
+	* schroedinger/schrobits.c:
+	* schroedinger/schrodecoder.c:
+	* schroedinger/schroencoder.c:
+	* schroedinger/schroparams.c:
+	* schroedinger/schroparams.h:
+	* schroedinger/schrowavelet.c:
+	* schroedinger/schrowavelet.h:
+	* testsuite/wavelet2.c:
+	  More updates for new spec.  Fix the way codeblocks are handled.
+	  Changes BITSTREAM.
+
+2006-09-09  David Schleef  <ds@schleef.org>
+
+	* gst/gstschro.c:
+	* schroedinger/schrodecoder.c:
+	* schroedinger/schroencoder.c:
+	* schroedinger/schroparams.h:
+	* testsuite/dump_packets.c:
+	  Update for new spec.  Add compatibility mode for Dirac codebase.
+	  Changes BITSTREAM.
+
+2006-09-09  David Schleef  <ds@schleef.org>
+
+	* gst/Makefile.am:
+	* gst/gstschro.c:
+	* gst/gstschroparse.c:
+	  Add schroparse, to parse raw dirac streams.
+	* schroedinger/schrodecoder.c:
+	* schroedinger/schroparams.c:
+	* schroedinger/schroparams.h:
+	  Check parameters we get from a stream.
+	* testsuite/dump_packets.c:
+	  Add comments plus filename parsing.
+
+2006-09-05  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schroarith.c:
+	* schroedinger/schroarith.h:
+	* testsuite/Makefile.am:
+	* testsuite/arith.c:
+	  Rearrange some code to make it faster (?).  Fix compile issues.
+
+2006-09-03  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schroarith.c:
+	* schroedinger/schroarith.h:
+	* schroedinger/schroframe.c:
+	* schroedinger/schromotion.c:
+	* schroedinger/schrooil.c:
+	* schroedinger/schrooil.h:
+	* schroedinger/schrotables.c:
+	  remove access to global variable in schro_arith_context_decode_bit,
+	  rearrange some (soon to be) oil functions.
+
+2006-09-03  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schroarith.c:
+	* schroedinger/schroarith.h:
+	* schroedinger/schrodecoder.c:
+	* schroedinger/schroencoder.c:
+	* schroedinger/schrointernal.h:
+	* schroedinger/schrotables.c:
+	* schroedinger/schrotables.h:
+	* schroedinger/schroutils.h:
+	* testsuite/arith.c:
+	* testsuite/arith_decode.c:
+	* testsuite/arith_encode.c:
+	* testsuite/arith_speed.c:
+	* testsuite/tables.c:
+	  Add "internal" tag to schro_arith functions, add wrappers that
+	  are exported by the library for testing.
+
+2006-09-01  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schroarith.c:
+	* schroedinger/schroarith.h:
+	* schroedinger/schrobits.c:
+	* schroedinger/schrobits.h:
+	* testsuite/Makefile.am:
+	* testsuite/bits.c:
+	* testsuite/bits2.c:
+	* testsuite/codes.c:
+	  Remove old bit encoding methods.
+
+2006-09-01  David Schleef  <ds@schleef.org>
+
+	* schroedinger/Makefile.am:
+	* schroedinger/schro.c:
+	* schroedinger/schro.h:
+	* schroedinger/schrobits.c:
+	* schroedinger/schrodebug.c:
+	* schroedinger/schrodecoder.c:
+	* schroedinger/schrodecoder.h:
+	* schroedinger/schroencoder.c:
+	* schroedinger/schroframe.c:
+	* schroedinger/schroframe.h:
+	* schroedinger/schrointernal.h:
+	* schroedinger/schrometric.c:
+	* schroedinger/schromotion.c:
+	* schroedinger/schrooil.c:
+	* schroedinger/schrooil.h:
+	* schroedinger/schroparams.c:
+	* schroedinger/schropredict.c:
+	* schroedinger/schroutils.c:
+	* schroedinger/schroutils.h:
+	* schroedinger/schrowavelet.c:
+	* testsuite/arith.c:
+	* testsuite/arith_decode.c:
+	* testsuite/arith_encode.c:
+	* testsuite/arith_speed.c:
+	* testsuite/codes.c:
+	* testsuite/dump_packets.c:
+	* testsuite/obmc.c:
+	* testsuite/predict.c:
+	* testsuite/wavelet2.c:
+	* testsuite/wavelet_2d.c:
+	  Code cleanup.  Move internal headers out of schro.h.  Move
+	  (future) oil code to separate file.  Move code to schroutils.c.
+
+2006-08-20  David Schleef  <ds@schleef.org>
+
+	* gst/gstschrodec.c:
+	* schroedinger/schrobits.c:
+	* schroedinger/schrobits.h:
+	* schroedinger/schrobitstream.h:
+	* schroedinger/schrodecoder.c:
+	* schroedinger/schrodecoder.h:
+	* schroedinger/schroencoder.c:
+	* schroedinger/schroencoder.h:
+	* schroedinger/schroparams.c:
+	* schroedinger/schroparams.h:
+	* testsuite/Makefile.am:
+	* testsuite/dump_packets.c:
+	  "...And Moses came down from the mountain after 40 days and 40
+	  nights, and delivered unto the people two stone tablets
+	  containing a massive patch, saying 'With this patch, schroedinger
+	  is bistream compliant.'  And it was good."  Changes BISTREAM.
+
+2006-07-16  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schrodecoder.c:
+	* schroedinger/schroencoder.c:
+	* schroedinger/schroframe.c:
+	* schroedinger/schrowavelet.c:
+	  Delete dead code.
+
+2006-07-16  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schroencoder.c: use zero-extending instead of
+	  edge-extending inter frames.
+	* schroedinger/schroframe.c: Add zero-extending code.
+	* schroedinger/schroframe.h:
+
+2006-07-10  David Schleef  <ds@schleef.org>
+
+	* gst/gstschrodec.c:
+	* schroedinger/schrodecoder.c:
+	* schroedinger/schrodecoder.h:
+	  Play pictures in order.
+
+2006-07-10  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schrodecoder.c:
+	* schroedinger/schrodecoder.h:
+	* schroedinger/schroencoder.c:
+	* schroedinger/schrometric.c:
+	* schroedinger/schromotion.c:
+	* schroedinger/schropredict.c:
+	* schroedinger/schropredict.h:
+	  Turn on support for bi-reference frames.  Changes BITSTREAM.
+	  The decoder outputs frames in bitstream order still, so it
+	  looks a bit strange.
+
+2006-07-10  David Schleef  <ds@schleef.org>
+
+	* schroedinger/Makefile.am:
+	* schroedinger/schro.h:
+	* schroedinger/schrometric.c:
+	* schroedinger/schrometric.h:
+	* schroedinger/schropredict.c:
+	  Move some code from schropredict to separate file.
+
+2006-07-10  David Schleef  <ds@schleef.org>
+
+	* misc/dvd-to-ogg:
+	  Use default audio stream.  Samurai Jack is better in English
+	  than in Spanish.
+	* schroedinger/schrodecoder.c:
+	* schroedinger/schropredict.c:
+	  Clean up stuff.
+
+2006-07-08  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schroencoder.c:
+	* schroedinger/schroencoder.h:
+	* schroedinger/schropredict.c:
+	  Rewrite the hierarchical motion prediction code.  Add a metric
+	  based on an 8x8 Haar transform.  The haar metric is a much more
+	  consistent predictor of bits in the final bitstream.
+
+2006-07-05  David Schleef  <ds@schleef.org>
+
+	* testsuite/arith_decode.c: compile fix.  From Christian.
+
+2006-06-30  David Schleef  <ds@schleef.org>
+
+	* schroedinger/Makefile.am:
+	* testsuite/arith.c:
+	  distcheck fixes.
+
+2006-06-12  David Schleef  <ds@schleef.org>
+
+	* schroedinger/Makefile.am:
+	* schroedinger/schro.h:
+	* schroedinger/schrodecoder.c:
+	* schroedinger/schroencoder.c:
+	* schroedinger/schroencoder.h:
+	* schroedinger/schroframe.c: Fix a memleak.  Fix other bugs.
+	* schroedinger/schroframe.h:
+	* schroedinger/schromotion.c: Fix some bugs
+	* schroedinger/schromotion.h: new header
+	* schroedinger/schropredict.c: Add a file for prediction functions.
+	* schroedinger/schropredict.h:
+	* schroedinger/schroutils.c: Utility functions go here.
+	* testsuite/Makefile.am: More tests
+	* testsuite/arith2.c:
+	* testsuite/arith_speed.c:
+	* testsuite/obmc.c:
+	* testsuite/predict.c:
+	* testsuite/utils.c:
+
+2006-06-06  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schroencoder.c: Choose superblock split.  Slightly
+	  more intellegence in choosing quantisers.
+
+2006-06-06  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schroarith.c:
+	* schroedinger/schroarith.h:
+	* schroedinger/schrodecoder.c:
+	* schroedinger/schroencoder.c:
+	* schroedinger/schromotion.c:
+	* schroedinger/schroparams.h:
+	  Make superblock split conform to spec.  Changes BITSTREAM.
+
+2006-06-06  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schrodecoder.c:
+	* schroedinger/schroencoder.c:
+	  Flag zero codeblocks.  Changes BITSTREAM.
+
+2006-06-06  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schro.h: Implement OBMC
+	* schroedinger/schrodebug.h:
+	* schroedinger/schrodecoder.c:
+	* schroedinger/schroencoder.c:
+	* schroedinger/schroframe.c:
+	* schroedinger/schroframe.h:
+	* schroedinger/schromotion.c:
+
+2006-06-01  David Schleef  <ds@schleef.org>
+
+	* testsuite/arith.c: And some compile fixes.
+	* testsuite/arith_decode.c:
+	* testsuite/arith_encode.c:
+
+2006-06-01  David Schleef  <ds@schleef.org>
+
+	* misc/dvd-to-ogg: rescaling is for wimps.  Full-size, baby.
+	* schroedinger/schroarith.c: Stop using the (artificial) extra
+	  layer of schro_bits_*()
+	* schroedinger/schroarith.h:
+	* schroedinger/schrobits.c: Change bits_append() to make it
+	  useful from schro_arith
+	* schroedinger/schrobits.h:
+	* schroedinger/schrodecoder.c: Add prediction of motion vectors.
+	  Added codeblocks.  Changes BITSTREAM.
+	* schroedinger/schroencoder.c: same
+	* schroedinger/schroencoder.h: same
+	* schroedinger/schroframe.h:
+	* schroedinger/schromotion.c: Slightly smarter motion prediction.
+	* schroedinger/schroparams.c: add codeblocks
+	* schroedinger/schroparams.h: add codeblocks
+	* testsuite/Makefile.am: compile some files directly against
+	  schroarith.c
+
+2006-05-26  David Schleef  <ds@schleef.org>
+
+	* configure.ac: bump nano
+	* schroedinger/schrodecoder.c: Attempt to speed up decoding by
+	  using a table lookup instead of a nest of if()s
+	* schroedinger/schroencoder.c: Implement stupid rate limiting
+	  algorithm.  Handle new shift in 8-bit data.
+	* schroedinger/schroencoder.h:
+	* schroedinger/schroframe.c: Shift 8-bit data by 4 bits.  Changes
+	  BITSTREAM.
+
+2006-05-24 Christian Schaller <Christian@fluendo.com>
+	* Update liboil requirement to 0.3.8
+
+=== 0.2.0 ===
+
+2006-05-22  David Schleef  <ds@schleef.org>
+
+	* gst/gstschrodec.c:
+	* gst/gstschroenc.c:
+	  Fix seeking.
+	* misc/oggtest:
+	  make number of frames more configurable
+	* schroedinger/schrodecoder.c:
+	* schroedinger/schroencoder.c:
+	* schroedinger/schrowavelet.c:
+	* schroedinger/schrowavelet.h:
+	  Add Haar wavelet and fix indicies to correspond to spec.
+	  BITSTREAM.
+	* testsuite/wavelet_2d.c:
+	  Some fixes, add Haar.
+
+2006-05-16  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schroencoder.c:
+	  Set the wavelet index to something that works.
+
+2006-05-15  David Schleef  <ds@schleef.org>
+
+	* gst/gstschroenc.c:
+	* schroedinger/schroencoder.c:
+	* schroedinger/schroencoder.h:
+	  Um, yeah, don't disable the code that was just written.  And
+	  disable wavelet_type.
+
+2006-05-15  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schroencoder.c:
+	  Do some cleanup of non-visible areas after wavelet transform.
+
+2006-05-15  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schroencoder.c:
+	  Rip out quantization into a separate function.
+
+2006-05-15  David Schleef  <ds@schleef.org>
+
+	* gst/gstschroenc.c:
+	  Fix massive memleak.
+	* misc/leakcheck_enc:
+	  leak checking
+	* schroedinger/schroencoder.c:
+	  lossless is dumb
+
+2006-05-13  David Schleef  <ds@schleef.org>
+
+	* misc/dvd-to-ogg:
+	  fix parse error
+
+2006-05-13  David Schleef  <ds@schleef.org>
+
+	* gst/gstschrodec.c:
+	* gst/gstschroenc.c:
+	  Seeking seems to mostly work now.
+
+2006-05-13  David Schleef  <ds@schleef.org>
+
+	* misc/dvd-to-ogg:
+	  Improve somewhat.
+
+2006-05-13  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schroencoder.c:
+	  oops, compile fix
+
+2006-05-13  David Schleef  <ds@schleef.org>
+
+	* gst/gstschrodec.c:
+	* gst/gstschroenc.c:
+	  Plugin hacking.
+	* schroedinger/schrodecoder.c:
+	  Fix memleak.
+	* schroedinger/schroencoder.c:
+	* schroedinger/schroencoder.h:
+	  Add setting of framerate.
+
+2006-05-13  David Schleef  <ds@schleef.org>
+
+	* gst/gstschrodec.c:
+	* gst/gstschroenc.c:
+	  Ogg packet fixups, more (annoying) debugging.
+	* misc/oggtest:
+
+2006-05-11  David Schleef  <ds@schleef.org>
+
+	* gst/gstschrodec.c:
+	* gst/gstschroenc.c:
+	  Major improvements
+	* misc/dvd-to-ogg:
+	  Fix somewhat
+	* schroedinger/schroarith.c:
+	* schroedinger/schroarith.h:
+	* schroedinger/schrodecoder.c:
+	* schroedinger/schroencoder.c:
+	  Add arithmetic encoding to motion encoding
+
+2006-05-09  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schroarith.c:
+	* schroedinger/schroarith.h:
+	* schroedinger/schrodecoder.c:
+	* schroedinger/schroencoder.c:
+	  Convert bins over to newer spec.
+
+2006-05-08  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schroarith.c:
+	* schroedinger/schroarith.h:
+	* schroedinger/schrobits.c:
+	* schroedinger/schrodecoder.c:
+	* schroedinger/schroencoder.c:
+	* testsuite/arith.c:
+	  Migrate towards newer spec.
+
+2006-05-08  David Schleef  <ds@schleef.org>
+
+	* schroedinger/schrodecoder.c:
+	* schroedinger/schroencoder.c:
+	* schroedinger/schroframe.h:
+	* schroedinger/schromotion.c:
+	  Fix bug in ntop calculation.  Add DC prediction in motion
+	  prediction.  Clean up code.
+
+2006-05-08  David Schleef  <ds@schleef.org>
+
+	* testsuite/Makefile.am:
+	* testsuite/encode.c:
+	  Add a valgrindable test for encoding.
+	* schroedinger/schrodebug.h:
+	* schroedinger/schroencoder.c:
+	* schroedinger/schroencoder.h:
+	  Fixes to make above valgrind-clean.
+
+2006-05-05  David Schleef  <ds@schleef.org>
+
+	* misc/dvd-to-ogg:
+	* misc/dvdtest:
+	* misc/fgenc:
+	* misc/fgtest:
+	* misc/oggplay:
+	* misc/spidertest:
+	* misc/vtstest:
+	  Oops.  We're called schro, not carid.
+
+	* schroedinger/schrodecoder.c:
+	* schroedinger/schroencoder.c:
+	* schroedinger/schroencoder.h:
+	* schroedinger/schroframe.c:
+	* schroedinger/schroframe.h:
+	  Encode/decode residuals after motion compensation.  Finally,
+	  inter coding looks halfway decent.
+
+2006-05-04  David Schleef  <ds@schleef.org>
+
+	* misc: Add some test scripts
+	* misc/dvd-to-ogg:
+	* misc/dvdtest:
+	* misc/fgenc:
+	* misc/fgtest:
+	* misc/oggplay:
+	* misc/oggtest:
+	* misc/spidertest:
+	* misc/vtstest:
+
+2006-05-02  David Schleef  <ds@schleef.org>
+
+	* m4/check.m4:
+	* m4/pkg.m4:
+	  Add some macros that not everyone has.
+
+2006-04-25  David Schleef  <ds@schleef.org>
+
+	* gst/gstschro.c:
+	* gst/gstschrodec.c:
+	* gst/gstschroenc.c: Fix ogg encoding to make it work more sanely.
+	  Ogg/vorbis+dirac works now.
+
+2006-04-21  David Schleef  <ds@schleef.org>
+
+	* configure.ac: Add hackaround for ld bug.
+
+2006-04-21  David Schleef  <ds@schleef.org>
+
+	Fixes to make stuff compile with the new name
+	* Makefile.am:
+	* configure.ac:
+	* gst/gstschro.c:
+	* gst/gstschrodec.c:
+	* gst/gstschroenc.c:
+	* gst/gstschrotoy.c:
+	* gst/gstwaveletvisualizer.c:
+	* schroedinger/Makefile.am:
+	* schroedinger/schro.c:
+	* schroedinger/schro.h:
+	* schroedinger/schroarith.c:
+	* schroedinger/schroarith.h:
+	* schroedinger/schrobits.c:
+	* schroedinger/schrobits.h:
+	* schroedinger/schrobuffer.c:
+	* schroedinger/schrodebug.c:
+	* schroedinger/schrodecoder.c:
+	* schroedinger/schrodecoder.h:
+	* schroedinger/schroencoder.c:
+	* schroedinger/schroencoder.h:
+	* schroedinger/schroframe.c:
+	* schroedinger/schroframe.h:
+	* schroedinger/schromotion.c:
+	* schroedinger/schroparams.c:
+	* schroedinger/schrotables.c:
+	* schroedinger/schrotables.h:
+	* schroedinger/schrowavelet.c:
+	* schroedinger/schrowavelet.h:
+	* testsuite/arith.c:
+	* testsuite/arith_decode.c:
+	* testsuite/arith_encode.c:
+	* testsuite/bits.c:
+	* testsuite/bits2.c:
+	* testsuite/codes.c:
+	* testsuite/wavelet.c:
+	* testsuite/wavelet2.c:
+	* testsuite/wavelet_2d.c:
+
+2006-04-21  David Schleef  <ds@schleef.org>
+
+        * global search/replace of carid->schro[edinger].
+
+2006-04-21  David Schleef  <ds@schleef.org>
+
+	* carid/Makefile.am: random fixes
+	* carid/caridbuffer.c:
+	* carid/carid-stdint.h: remove this, since it's autogenerated
+
+2006-04-17  David Schleef  <ds@schleef.org>
+
+	* carid/cariddecoder.c:
+	* carid/cariddecoder.h:
+	* carid/caridencoder.c:
+	* carid/caridframe.c:
+	* carid/caridparams.c:
+	* carid/caridparams.h:
+	  Fix green strip problem.  Move code to caridparams.
+
+2006-04-17  David Schleef  <ds@schleef.org>
+
+	* carid/caridencoder.c:
+	* carid/caridencoder.h:
+	* carid/caridframe.c:
+	* configure.ac:
+	  hacking
+
+2006-04-17  David Schleef  <ds@schleef.org>
+
+	* carid/Makefile.am: make distcheck work
+	* carid/caridencoder.c: hacking
+	* carid/caridencoder.h:
+	* carid/caridparams.h:
+	* configure.ac: change to schroedinger.  For the hell of it.
+	* carid/carid-stdint.h: update
+	* testsuite/Makefile.am: disable failing tests
+
+2006-04-16  Christian Schaller <christian@fluendo.com>
+
+	* add spec file
+	* add missing .h file to sources list
+
+2006-04-16  David Schleef  <ds@schleef.org>
+
+	* carid/cariddecoder.c:
+	* carid/caridencoder.c:
+	* carid/caridparams.h:
+	  Implement DC macroblocks and improve prediction.
+
+2006-04-16  David Schleef  <ds@schleef.org>
+
+	* carid/carid-stdint.h:
+	* carid/caridbits.c:
+	* carid/caridbits.h:
+	* carid/cariddecoder.c:
+	* carid/cariddecoder.h:
+	* carid/caridencoder.c:
+	* carid/caridencoder.h:
+	* carid/caridparams.c:
+	* carid/caridparams.h:
+	  OMG.  I'm lazy.
+
+2006-02-08  David Schleef  <ds@schleef.org>
+
+	* carid/cariddecoder.c:
+	* carid/cariddecoder.h:
+	* carid/caridencoder.c:
+	* carid/caridencoder.h:
+	* carid/caridparams.h:
+	* gst/gstcariddec.c:
+	  Preliminary motion estimation stuff.  Doesn't follow the
+	  spec, but I needed to checkpoint stuff.
+
+2006-02-06  David Schleef  <ds@schleef.org>
+
+	* carid/caridencoder.c:
+	* carid/caridframe.c:
+	* carid/caridframe.h:
+	* gst/gstcaridenc.c:
+	  Fix memory leak.  Some cleanup.
+
+2006-02-06  David Schleef  <ds@schleef.org>
+
+	* carid/Makefile.am:
+	* carid/carid.h:
+	* carid/caridbitstream.h:
+	* carid/cariddecoder.c:
+	* carid/cariddecoder.h:
+	* carid/caridencoder.c:
+	* carid/caridencoder.h:
+	* carid/caridframe.c:
+	* carid/caridframe.h:
+	* gst/Makefile.am:
+	* gst/gstcarid.c:
+	* gst/gstcariddec.c:
+	* gst/gstcaridenc.c:
+	  Create a new type CaridFrame to hold frames in various forms.
+
+2006-02-04  David Schleef  <ds@schleef.org>
+
+	* carid/carid.h:
+	* carid/cariddecoder.c:
+	* carid/cariddecoder.h:
+	* carid/caridencoder.c:
+	* carid/caridencoder.h:
+	* carid/caridparams.c:
+	* carid/caridparams.h:
+	* carid/caridwavelet.c:
+	* gst/gstcarid.c:
+	* gst/gstcariddec.c:
+	* gst/gstcaridenc.c:
+	* gst/gstcaridtoy.c:
+	* testsuite/wavelet_2d.c:
+	  Another dropping of code.  I should really checkpoint more
+	  often.  At this point, encoding and decoding work and ogg
+	  muxing/demuxing roughly works.  So one can theoretically
+	  watch videos (encoded by caridenc) in totem.  The codec is
+	  still intra-frame only, argh.
+
+2006-02-03  Christian Schaller <christian@fluendo.com>
+
+	* Add COPYING and LEGAL files
+
+2006-01-27  David Schleef  <ds@schleef.org>
+
+	* gst/gstcariddec.c: Add
+	* gst/gstcaridenc.c:
+	* testsuite/tables.c:
+	* testsuite/wavelet_2d.c:
+
+2006-01-27  David Schleef  <ds@schleef.org>
+
+	* carid/carid-stdint.h: update
+	* carid/caridarith.c: remove hidden visibility pragma
+	* carid/caridbits.c: remove hidden visibility pragma
+	* carid/cariddecoder.c: check for RAP and parse header
+	* carid/cariddecoder.h: same
+	* carid/caridencoder.c: allocate smaller output buffer
+	* gst/Makefile.am: add gstcaridenc.c
+	* gst/gstcarid.c: same
+	* testsuite/Makefile.am: fixes
+	* testsuite/arith.c:
+	* testsuite/arith_decode.c:
+	* testsuite/arith_encode.c:
+	* testsuite/codes.c:
+
+2006-01-23  David Schleef  <ds@schleef.org>
+
+	* carid/cariddebug.c:
+	* carid/cariddebug.h:
+	* carid/caridparams.c:
+	* carid/caridparams.h:
+	* carid/caridtables.c:
+	* carid/caridtables.h:
+	  Oops, these weren't added.  I should be more careful.  Like,
+	  a *lot*.
+	* carid/caridencoder.c:
+	* carid/caridencoder.h:
+	  Refactor stuff into CaridSubband structures.
+
+2006-01-23  David Schleef  <ds@schleef.org>
+
+	* carid/Makefile.am:
+	* carid/carid.h:
+	* carid/caridcoeff.c:
+	* carid/caridcoeff.h:
+	  Remove caridcoeff.
+
+2006-01-23  David Schleef  <ds@schleef.org>
+
+	* carid/caridarith.c:
+	* carid/caridarith.h:
+	* carid/caridbits.c:
+	* carid/cariddecoder.c:
+	* carid/caridencoder.c:
+	* carid/caridencoder.h:
+	* carid/caridwavelet.c:
+	* gst/gstcaridtoy.c:
+	  Fix concerning clarification of spec and how bins are used.
+	  Code cleanup.
+
+2006-01-23  David Schleef  <ds@schleef.org>
+
+	* carid/cariddecoder.c:
+	* carid/caridencoder.c:
+	  Add intra DC subband prediction.
+
+2006-01-23  David Schleef  <ds@schleef.org>
+
+	* carid/cariddecoder.c:
+	* carid/caridencoder.c:
+	  Duh.  The spec encodes subband value magnitudes as uu, not
+	  uegol.  Fixor.
+
+2006-01-23  David Schleef  <ds@schleef.org>
+
+	* carid/caridarith.c:
+	* carid/caridarith.h:
+	* carid/caridbits.c:
+	* carid/caridbits.h:
+	* carid/cariddecoder.c:
+	* carid/cariddecoder.h:
+	* carid/caridencoder.c:
+	* carid/caridencoder.h:
+	* testsuite/arith.c:
+	* testsuite/arith_decode.c:
+	* testsuite/arith_encode.c:
+	  Change carid_arith to use carid_bits.  Switch intra frame
+	  encoding/decoding over to arithmetic encoding.
+
+2006-01-16  David Schleef  <ds@schleef.org>
+
+	* carid/caridcoeff.c:
+	* carid/caridcoeff.h:
+	* carid/cariddecoder.c:
+	* carid/cariddecoder.h:
+	* carid/caridencoder.c:
+	* carid/caridencoder.h:
+	* carid/caridwavelet.c:
+	* carid/caridwavelet.h:
+	* gst/gstcaridtoy.c:
+	* play.py:
+	* testsuite/Makefile.am:
+	* testsuite/arith_decode.c:
+	* testsuite/bits.c:
+	* testsuite/bits2.c:
+	* testsuite/wavelet.c:
+	* testsuite/wavelet2.c:
+	  Ok, _now_ intra frame encoding/decoding works.
+
+2006-01-14  David Schleef  <ds@schleef.org>
+
+	* carid/Makefile.am:
+	* carid/carid.c:
+	* carid/carid.h:
+	* carid/caridbits.c:
+	* carid/caridbits.h:
+	* carid/caridcoeff.c:
+	* carid/caridcoeff.h:
+	* carid/cariddecoder.c:
+	* carid/cariddecoder.h:
+	* carid/caridencoder.c:
+	* carid/caridencoder.h:
+	* carid/caridwavelet.c:
+	* carid/caridwavelet.h:
+	* gst/gstcaridtoy.c:
+	* gst/gstwaveletvisualizer.c:
+	* play.py:
+	* testsuite/Makefile.am:
+	* testsuite/wavelet2.c:
+	  This checkin roughly has intra frame encoding/decoding
+	  working.  "Roughly" because I just made changes to liboil
+	  that breaks all of it.
+
+2005-12-31  David Schleef  <ds@schleef.org>
+
+	* carid/Makefile.am:
+	* carid/carid.c:
+	* carid/carid.h:
+	* carid/caridbits.c:
+	* carid/caridbits.h:
+	* carid/caridbuffer.c:
+	* carid/caridbuffer.h:
+	* carid/caridcoeff.c:
+	* carid/caridcoeff.h:
+	* carid/cariddecoder.c:
+	* carid/cariddecoder.h:
+	* carid/caridencoder.c:
+	* carid/caridencoder.h:
+	* carid/caridwavelet.c:
+	* carid/caridwavelet.h:
+	* gst/Makefile.am:
+	* gst/gstcarid.c:
+	* gst/gstcaridtoy.c:
+	* gst/gstwaveletvisualizer.c:
+	* play.py:
+	* testsuite/Makefile.am:
+	* testsuite/bits.c:
+	* testsuite/bits2.c:
+	* testsuite/wavelet.c:
+	* testsuite/wavelet2.c:
+	  I'm just making this shit up as I go.
+
+2005-12-23  David Schleef  <ds@schleef.org>
+
+	* Makefile.am:
+	* carid/caridarith.c:
+	* carid/caridarith.h:
+	* configure.ac:
+	* testsuite/Makefile.am:
+	* testsuite/ack.c:
+	* testsuite/arith.c:
+	* testsuite/arith_decode.c:
+	* testsuite/arith_encode.c:
+	* testsuite/codes.c:
+	* testsuite/test_file:
+	  Arithmetic coding plus tests.
+
+2005-12-22  David Schleef  <ds@schleef.org>
+
+	* carid/caridwavelet.c:
+	* configure.ac:
+	* gst/Makefile.am:
+	* gst/gstcarid.c:
+	  s/dirac/carid/
+
+2005-12-21  David Schleef  <ds@schleef.org>
+
+	* Makefile.am:
+	* carid/Makefile.am:
+	* carid/carid-stdint.h:
+	* carid/caridarith.c:
+	* carid/caridwavelet.c:
+	* carid/caridwavelet.h:
+	* configure.ac:
+	* gst/Makefile.am:
+	* gst/gstcarid.c:
+	* m4/as-ac-expand.m4:
+	* m4/as-auto-alt.m4:
+	* m4/codeset.m4:
+	* m4/gettext.m4:
+	* m4/glibc21.m4:
+	* m4/gst-args.m4:
+	* m4/gst-check.m4:
+	* m4/gst-error.m4:
+	* m4/gst-plugindir.m4:
+	* m4/iconv.m4:
+	* m4/intdiv0.m4:
+	* m4/inttypes-pri.m4:
+	* m4/inttypes.m4:
+	* m4/inttypes_h.m4:
+	* m4/isc-posix.m4:
+	* m4/lcmessage.m4:
+	* m4/lib-ld.m4:
+	* m4/lib-link.m4:
+	* m4/lib-prefix.m4:
+	* m4/progtest.m4:
+	* m4/stdint_h.m4:
+	* m4/uintmax_t.m4:
+	* m4/ulonglong.m4:
+	* play.py:
+	  Copy more stuff in.
+
+2005-12-20  David Schleef  <ds@schleef.org>
+
+	* Makefile.am:
+	* autogen.sh:
+	* carid-uninstalled.pc.in:
+	* carid.pc.in:
+	* carid/Makefile.am:
+	* carid/carid.h:
+	* carid/caridarith.c:
+	* carid/caridarith.h:
+	* configure.ac:
+	* doc/Makefile.am:
+	* m4/as-compiler-flag.m4:
+	* m4/as-nano.m4:
+	* m4/ax_create_stdint_h.m4:
+	  Initial checkin
+
+
