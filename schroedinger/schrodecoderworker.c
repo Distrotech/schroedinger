@@ -20,11 +20,13 @@
 
 #define SCHRO_SKIP_TIME_CONSTANT 0.1
 
-
-
 #ifdef SCHRO_GPU
 // Don't copy frame out
-//#define GPU_NOCOPY_OUT
+#define GPU_NOCOPY_OUT
+
+// Load balancing tests -- corrupts output
+#define DEBUGGPU
+
 
 /// Assume subbands and blocks are zero, to prevent expensive filling operations
 #define ASSUME_ZERO
@@ -101,9 +103,6 @@ schro_decoderworker_new (void)
 
   decoder->params.video_format = &decoder->settings.video_format;
 
-#ifdef SCHRO_GPU
-  decoder->gpumotion = schro_gpumotion_new();
-#endif
 
   return decoder;
 }
@@ -120,15 +119,16 @@ schro_decoderworker_free (SchroDecoderWorker *decoder)
   }
 
   if (decoder->mc_tmp_frame) schro_frame_unref (decoder->mc_tmp_frame);
+#ifndef SCHRO_GPU
   if (decoder->planar_output_frame) schro_frame_unref (decoder->planar_output_frame);
-
+#endif
   if (decoder->tmpbuf) free (decoder->tmpbuf);
   if (decoder->tmpbuf2) free (decoder->tmpbuf2);
   if (decoder->error_message) free (decoder->error_message);
   
 #ifdef SCHRO_GPU
   if (decoder->goutput_frame) schro_gpuframe_unref (decoder->goutput_frame);
-  if (decoder->gupsample_temp) schro_gpuframe_unref (decoder->gupsample_temp);
+  //if (decoder->gupsample_temp) schro_gpuframe_unref (decoder->gupsample_temp);
   if (decoder->store) schro_subband_storage_free(decoder->store);
   schro_gpumotion_free(decoder->gpumotion);
 #endif
@@ -227,32 +227,83 @@ schro_decoder_is_end_sequence (SchroBuffer *buffer)
 #define schro_frame_new_and_alloc schro_gpuframe_new_and_alloc
 #endif
 
-void
-schro_decoderworker_iterate (SchroDecoderWorker *decoder)
+/* This must be executed in the GPU thread 
+   TODO the symmetric de-init function must be executed on GPU too
+*/
+static void
+schro_decoderworker_init (SchroDecoderWorker *decoder)
+{
+  SchroFrameFormat frame_format;
+  SchroVideoFormat *video_format = &decoder->settings.video_format;
+  int frame_width, frame_height;
+
+  frame_format = schro_params_get_frame_format (16,
+      video_format->chroma_format);
+  frame_width = ROUND_UP_POW2(video_format->width,
+      SCHRO_LIMIT_TRANSFORM_DEPTH + video_format->chroma_h_shift);
+  frame_height = ROUND_UP_POW2(video_format->height,
+      SCHRO_LIMIT_TRANSFORM_DEPTH + video_format->chroma_v_shift);
+  decoder->mc_tmp_frame = schro_frame_new_and_alloc (frame_format,
+      frame_width, frame_height);
+  decoder->frame = schro_frame_new_and_alloc (frame_format,
+      frame_width, frame_height);
+  frame_format = schro_params_get_frame_format (8,
+      video_format->chroma_format);
+
+#ifdef SCHRO_GPU
+  /** We can use the fact that there is only one GPU thread to conserve
+      memory, and allocate temporary structures only once.
+   */
+  if(!decoder->parent->planar_output_frame)
+  {
+    decoder->parent->planar_output_frame = schro_frame_new_and_alloc (frame_format,
+      video_format->width, video_format->height);
+    SCHRO_DEBUG("planar output frame %dx%d",
+      video_format->width, video_format->height);
+
+    decoder->parent->gupsample_temp = schro_gpuframe_new_and_alloc (frame_format,
+        video_format->width*2, video_format->height*2);
+  }
+#else
+  decoder->planar_output_frame = schro_frame_new_and_alloc (frame_format,
+      video_format->width, video_format->height);
+  SCHRO_DEBUG("planar output frame %dx%d",
+      video_format->width, video_format->height);
+#endif
+#ifdef SCHRO_GPU
+  decoder->gpumotion = schro_gpumotion_new();
+#endif
+  schro_decoder_skipstate(decoder->parent, decoder, SCHRO_DECODER_INITIALIZED);
+}
+
+
+#ifdef SCHRO_GPU
+static void
+schro_decoderworker_iterate_init_output (SchroDecoderWorker *decoder)
+{
+  /* GPU clone output frame. This must be here as we cannot know in advance
+     what frame format (interleaved, planar, bit depth) the user expects. 
+   */
+  if(!decoder->goutput_frame)
+      decoder->goutput_frame = schro_gpuframe_new_clone(decoder->output_picture);
+  schro_decoder_skipstate(decoder->parent, decoder, SCHRO_DECODER_OUTPUT_INIT);
+}
+#endif
+
+static void
+schro_decoderworker_iterate_motion_decode_params (SchroDecoderWorker *decoder)
 {
   SchroParams *params = &decoder->params;
-#ifdef SCHRO_GPU
-  SchroGPUFrame *output_picture;
-  SchroFrame *cpu_output_picture;
-#else
-  int i;
-  SchroFrame *output_picture;
-#endif  
+
+  /* General worker state initialisation */
+  decoder->ref0 = NULL;
+  decoder->ref1 = NULL;
   params->num_refs = SCHRO_PARSE_CODE_NUM_REFS(decoder->header.parse_code);
   params->is_lowdelay = SCHRO_PARSE_CODE_IS_LOW_DELAY(decoder->header.parse_code);
   params->is_noarith = !SCHRO_PARSE_CODE_USING_AC(decoder->header.parse_code);
 
-#ifdef SCHRO_GPU
-  cpu_output_picture = decoder->output_picture;
-  /// GPU clone output frame
-  if(!decoder->goutput_frame)
-      decoder->goutput_frame = schro_gpuframe_new_clone(cpu_output_picture);
-  output_picture = decoder->goutput_frame;
-#else
-  output_picture = decoder->output_picture;
-#endif
-
-  if (SCHRO_PARSE_CODE_NUM_REFS(decoder->header.parse_code) > 0) {
+  /* Check for motion comp data */
+  if (decoder->header.n_refs > 0) {
 
     SCHRO_DEBUG("inter");
 
@@ -261,23 +312,50 @@ schro_decoderworker_iterate (SchroDecoderWorker *decoder)
     schro_params_calculate_mc_sizes (params);
 
     decoder->motion = schro_motion_new (params, NULL, NULL);
-    
+  }
+}
 
-    schro_unpack_byte_sync (&decoder->unpack);
-    schro_decoder_decode_block_data (decoder);
-
-#if 0
-    if (params->mv_precision > 0) {
-      schro_upsampled_frame_upsample (decoder->ref0);
-      if (decoder->ref1) {
-        schro_upsampled_frame_upsample (decoder->ref1);
-      }
-    }
+#ifdef SCHRO_GPU
+static void
+schro_decoderworker_iterate_motion_init (SchroDecoderWorker *decoder)
+{
+  if (decoder->header.n_refs > 0)
+  {
+    schro_gpumotion_init (decoder->gpumotion, decoder->motion);
+    schro_decoder_skipstate(decoder->parent, decoder, SCHRO_DECODER_MOTION_INIT);
+  }
+}
 #endif
 
+static void
+schro_decoderworker_iterate_motion_decode_vectors (SchroDecoderWorker *decoder)
+{
+  if (decoder->header.n_refs > 0) {
+    schro_unpack_byte_sync (&decoder->unpack);
+    schro_decoder_decode_block_data (decoder);
+#ifdef SCHRO_GPU
+    //SCHRO_DEBUG("%p pre schro_gpumotion_copy", decoder);
+    schro_gpumotion_copy (decoder->gpumotion, decoder->motion);
+    //SCHRO_DEBUG("%p post schro_gpumotion_copy", decoder);
+#endif
   }
-  
+}
 
+/**
+    GPU: Can run in any thread, but schro_decoder_decode_transform_data_serial 
+    must kick GPU thread after each subband is ready. 
+    
+    Also, schro_subband_storage_new must be called in the GPU thread. 
+    But this can just assume the maximum allowed transform depth 
+    (SCHRO_LIMIT_TRANSFORM_DEPTH) and thus be called in the init function
+    instead.
+ */
+static void
+schro_decoderworker_iterate_wavelet_decode_params (SchroDecoderWorker *decoder)  
+{
+  SchroParams *params = &decoder->params;
+  
+  /* Decode transform data */
   schro_unpack_byte_sync (&decoder->unpack);
   decoder->zero_residual = FALSE;
   if (params->num_refs > 0) {
@@ -289,59 +367,96 @@ schro_decoderworker_iterate (SchroDecoderWorker *decoder)
   if (!decoder->zero_residual) {
     schro_decoder_decode_transform_parameters (decoder);
     schro_params_calculate_iwt_sizes (params);
+  }
+}
 
 #ifdef SCHRO_GPU
+void
+schro_decoderworker_iterate_wavelet_init (SchroDecoderWorker *decoder)
+{
+  if (!decoder->zero_residual) {
     if(!decoder->store)
         decoder->store = schro_subband_storage_new(&decoder->params);
+    schro_decoder_skipstate(decoder->parent, decoder, SCHRO_DECODER_WAVELET_INIT);
+  }
+}
 #endif         
 
+static void
+schro_decoderworker_iterate_wavelet_decode_image (SchroDecoderWorker *decoder)
+{
+  SchroParams *params = &decoder->params;
+  if (!decoder->zero_residual) {
     schro_unpack_byte_sync (&decoder->unpack);
 #ifdef SCHRO_GPU
     SCHRO_ASSERT(!params->is_lowdelay);
     schro_decoder_decode_transform_data_serial(decoder, decoder->store, decoder->frame);
-    //schro_subband_storage_to_gpuframe(decoder->store, decoder->frame);
-    schro_gpuframe_inverse_iwt_transform (decoder->frame, &decoder->params);
-    //schro_gpuframe_zero(decoder->frame);
 #else
     if (params->is_lowdelay) {
       schro_decoder_decode_lowdelay_transform_data (decoder);
     } else {
       schro_decoder_decode_transform_data (decoder);
     }
+#endif
+  }
+
+  /* Input buffer can be released now stream decoding is complete. */
+  schro_buffer_unref (decoder->input_buffer);
+  decoder->input_buffer = NULL;
+}
+
+
+
+static void
+schro_decoderworker_iterate_wavelet_transform (SchroDecoderWorker *decoder)
+{
+  if (!decoder->zero_residual) {
+#ifdef SCHRO_GPU
+    /** TODO overlap this with decoding */
+    schro_subband_storage_to_gpuframe(decoder->store, decoder->frame);
+    schro_gpuframe_inverse_iwt_transform (decoder->frame, &decoder->params);
+#else
     schro_frame_inverse_iwt_transform (decoder->frame, &decoder->params,
         decoder->tmpbuf);
 #endif
-  }
-  
-  /** Motion compensation frame query and rendering has been moved after the wavelet 
-      transform, so that the thread thread can do something useful instead of wait for reference
-      frames to become available.
-  */
-  if (SCHRO_PARSE_CODE_NUM_REFS(decoder->header.parse_code) > 0) {
-    int skip = 0;
-    decoder->ref0 = schro_decoder_reference_get (decoder->parent, decoder->pichdr.reference1);
-    if (decoder->ref0 == NULL) {
-      SCHRO_ERROR("Could not find reference picture %d", decoder->pichdr.reference1);
-      skip = 1;
-    }
-    decoder->ref1 = NULL;
 
-    if (decoder->header.n_refs > 1) {
-      decoder->ref1 = schro_decoder_reference_get (decoder->parent, decoder->pichdr.reference2);
-      if (decoder->ref1 == NULL) {
-        SCHRO_ERROR("Could not find reference picture %d", decoder->pichdr.reference2);
-        skip = 1;
+  }
+}
+
+static int 
+schro_decoderworker_check_refs (SchroDecoderWorker *decoder)
+{
+  int rv;
+
+  /** Find reference frames, if we didn't yet. We should check for frames
+      that are "stuck" due to their reference frames never appearing. 
+   */
+  if(decoder->header.n_refs > 0 && !decoder->ref0)
+    decoder->ref0 = schro_decoder_reference_get (decoder->parent, decoder->pichdr.reference1);
+  if(decoder->header.n_refs > 1 && !decoder->ref1)
+    decoder->ref1 = schro_decoder_reference_get (decoder->parent, decoder->pichdr.reference2);
+
+  /** Count number of available reference frames, and compare
+      to what we need. 
+   */
+  rv = (decoder->ref0 != NULL) + (decoder->ref1 != NULL);
+  return rv == decoder->header.n_refs;
+}
+
+static void
+schro_decoderworker_iterate_motion_transform (SchroDecoderWorker *decoder)
+{
+  if (decoder->header.n_refs > 0) {
+#if 0
+    /* Moved this to finish frame stage because of race conditions.
+       It should really be here, though. */
+    if (params->mv_precision > 0) {
+      schro_upsampled_frame_upsample (decoder->ref0);
+      if (decoder->ref1) {
+        schro_upsampled_frame_upsample (decoder->ref1);
       }
     }
-
-    if (skip) {
-      schro_motion_free (decoder->motion);  
-      schro_buffer_unref (decoder->input_buffer);
-      decoder->input_buffer = NULL;
-
-      return;
-    }
-    
+#endif
     decoder->motion->src1 = (SchroUpsampledFrame*)decoder->ref0;
     decoder->motion->src2 = (SchroUpsampledFrame*)decoder->ref1;
 
@@ -349,13 +464,28 @@ schro_decoderworker_iterate (SchroDecoderWorker *decoder)
     schro_motion_render (decoder->motion, decoder->mc_tmp_frame);
 #else
     schro_gpumotion_render (decoder->gpumotion, decoder->motion, decoder->mc_tmp_frame);
-    //schro_gpuframe_zero(decoder->mc_tmp_frame);
 #endif
 
     schro_motion_free (decoder->motion);  
+    decoder->motion = NULL;
   }
+}
 
+#ifdef SCHRO_GPU
+#define planar_output_frame parent->planar_output_frame
+#endif
 
+static void
+schro_decoderworker_iterate_finish (SchroDecoderWorker *decoder)
+{
+#ifdef SCHRO_GPU
+  SchroFrame *cpu_output_picture = decoder->output_picture;
+  SchroGPUFrame *output_picture = decoder->goutput_frame;
+#else
+  SchroParams *params = &decoder->params;
+  SchroFrame *output_picture = decoder->output_picture;
+  int i;
+#endif
   if (decoder->zero_residual) {
     if (SCHRO_FRAME_IS_PACKED(output_picture->format)) {
       schro_frame_convert (decoder->planar_output_frame, decoder->mc_tmp_frame);
@@ -425,6 +555,9 @@ schro_decoderworker_iterate (SchroDecoderWorker *decoder)
     ref->frame_number = decoder->pichdr.picture_number;
     
     upsampler = schro_upsampled_frame_new(ref);
+    
+    /* This upsampling should ideally not happen here, but only on
+       demand. */
     schro_upsampled_frame_upsample (upsampler);
     
     schro_decoder_reference_add (decoder->parent, upsampler, decoder->pichdr.picture_number);
@@ -433,25 +566,25 @@ schro_decoderworker_iterate (SchroDecoderWorker *decoder)
     SchroUpsampledGPUFrame *rv;
     if(output_picture->format == decoder->planar_output_frame->format)
     {
-        /// We can skip an extra conversion if we have the output already in the format
-        /// we want
+        /* We can skip an extra conversion if we have the output already in the format
+           we want
+         */
         ref = output_picture;
     } else {
         ref = decoder->planar_output_frame;
         schro_gpuframe_convert (decoder->planar_output_frame, decoder->frame);
     }
-    /// Try popping from freestack
-    rv = schro_queue_popfree(decoder->reference_queue);
+    /* Try to re-use a frame from freestack */
+    rv = schro_decoder_reference_getfree(decoder->parent);
     if(rv == NULL)
-        rv = schro_upsampled_gpuframe_new(&decoder->video_format);
-    schro_upsampled_gpuframe_upsample(rv, decoder->gupsample_temp, ref, &decoder->video_format);
+        rv = schro_upsampled_gpuframe_new(&decoder->settings.video_format);
+    schro_upsampled_gpuframe_upsample(rv, decoder->parent->gupsample_temp, ref, &decoder->settings.video_format);
     
-    schro_decoder_reference_add (decoder, rv, decoder->picture_number);
+    schro_decoder_reference_add (decoder->parent, rv, decoder->pichdr.picture_number);
 #endif
   }
 
-  schro_buffer_unref (decoder->input_buffer);
-  decoder->input_buffer = NULL;
+
 #ifndef SCHRO_GPU
   if (decoder->has_md5) {
     uint32_t state[4];
@@ -477,41 +610,143 @@ schro_decoderworker_iterate (SchroDecoderWorker *decoder)
 #else
 #ifndef GPU_NOCOPY_OUT
   schro_gpuframe_to_cpu(cpu_output_picture, output_picture);
+#else
+  cpu_output_picture->frame_number = output_picture->frame_number;
 #endif
   schro_decoder_add_finished_frame (decoder->parent, cpu_output_picture);
 #endif
 }
+#undef planar_output_frame
+/**
+ The "script", this describes the state transitions for the 
+ NFA of the decoding process of a frame.
 
-void
-schro_decoderworker_init (SchroDecoderWorker *decoder)
-{
-  SchroFrameFormat frame_format;
-  SchroVideoFormat *video_format = &decoder->settings.video_format;
-  int frame_width, frame_height;
+ state is the state bit to set after this operation
+ reqstate is a bitfield signifying which states should be completed
+ check is a function that does additional requirement checks for this action
+ exec is a function that does the work to achieve this state
+ gpu signifies this must be executed in the GPU thread (if in GPU mode)
+ 
+ state, 
+ reqstate, check,
+ exec,
+ [gpu,]
+*/
+#ifndef SCHRO_GPU
+/* CPU version */
+static SchroDecoderOp schro_decoder_ops[] = {
+/* One-time initialisation */
+{SCHRO_DECODER_INITIALIZED,
+ SCHRO_DECODER_HAVE_ACCESS_UNIT, NULL,
+ schro_decoderworker_init
+},
+/* Start of frame decoding */
+{SCHRO_DECODER_MOTION_DECODE_PARAMS,
+ SCHRO_DECODER_START|SCHRO_DECODER_INITIALIZED, NULL, 
+ schro_decoderworker_iterate_motion_decode_params, 
+},
+{SCHRO_DECODER_MOTION_DECODE_VECTORS, 
+ SCHRO_DECODER_MOTION_DECODE_PARAMS, NULL, 
+ schro_decoderworker_iterate_motion_decode_vectors, 
+},
+{SCHRO_DECODER_WAVELET_DECODE_PARAMS, 
+ SCHRO_DECODER_MOTION_DECODE_VECTORS, NULL, 
+ schro_decoderworker_iterate_wavelet_decode_params, 
+},
+{SCHRO_DECODER_WAVELET_DECODE_IMAGE, 
+ SCHRO_DECODER_WAVELET_DECODE_PARAMS, NULL, 
+ schro_decoderworker_iterate_wavelet_decode_image, 
+},
 
-  frame_format = schro_params_get_frame_format (16,
-      video_format->chroma_format);
-  frame_width = ROUND_UP_POW2(video_format->width,
-      SCHRO_LIMIT_TRANSFORM_DEPTH + video_format->chroma_h_shift);
-  frame_height = ROUND_UP_POW2(video_format->height,
-      SCHRO_LIMIT_TRANSFORM_DEPTH + video_format->chroma_v_shift);
-  decoder->mc_tmp_frame = schro_frame_new_and_alloc (frame_format,
-      frame_width, frame_height);
-  decoder->frame = schro_frame_new_and_alloc (frame_format,
-      frame_width, frame_height);
-  frame_format = schro_params_get_frame_format (8,
-      video_format->chroma_format);
-  decoder->planar_output_frame = schro_frame_new_and_alloc (frame_format,
-      video_format->width, video_format->height);
-  SCHRO_DEBUG("planar output frame %dx%d",
-      video_format->width, video_format->height);
+{SCHRO_DECODER_MOTION_RENDER, 
+ SCHRO_DECODER_MOTION_DECODE_VECTORS, schro_decoderworker_check_refs, 
+ schro_decoderworker_iterate_motion_transform, 
+},
+{SCHRO_DECODER_WAVELET_TRANSFORM, 
+ SCHRO_DECODER_WAVELET_DECODE_IMAGE, NULL, 
+ schro_decoderworker_iterate_wavelet_transform, 
+},
+{SCHRO_DECODER_FINISHED, 
+ SCHRO_DECODER_MOTION_RENDER|SCHRO_DECODER_WAVELET_TRANSFORM, NULL, 
+ schro_decoderworker_iterate_finish, 
+},
+/* End of frame decoding */
+{SCHRO_DECODER_EMPTY}
+};
+#else
+/* GPU version */
+static SchroDecoderOp schro_decoder_ops[] = {
+/* One-time initialisation */
+{SCHRO_DECODER_INITIALIZED,
+ SCHRO_DECODER_HAVE_ACCESS_UNIT, NULL,
+ schro_decoderworker_init,
+ TRUE
+},
+/* Start of frame decoding */
+{SCHRO_DECODER_OUTPUT_INIT,
+ SCHRO_DECODER_START|SCHRO_DECODER_INITIALIZED, NULL, 
+ schro_decoderworker_iterate_init_output, 
+ TRUE
+},
+{SCHRO_DECODER_MOTION_DECODE_PARAMS,
+ SCHRO_DECODER_START|SCHRO_DECODER_INITIALIZED, NULL, 
+ schro_decoderworker_iterate_motion_decode_params, 
+ FALSE
+},
+{SCHRO_DECODER_MOTION_INIT, 
+ SCHRO_DECODER_MOTION_DECODE_PARAMS, NULL, 
+ schro_decoderworker_iterate_motion_init, 
+ TRUE
+},
+{SCHRO_DECODER_MOTION_DECODE_VECTORS, 
+ SCHRO_DECODER_MOTION_INIT|SCHRO_DECODER_MOTION_DECODE_PARAMS, NULL, 
+ schro_decoderworker_iterate_motion_decode_vectors, 
+ FALSE
+},
+{SCHRO_DECODER_WAVELET_DECODE_PARAMS, 
+ SCHRO_DECODER_MOTION_DECODE_VECTORS, NULL, 
+ schro_decoderworker_iterate_wavelet_decode_params, 
+ FALSE
+},
+{SCHRO_DECODER_WAVELET_INIT, 
+ SCHRO_DECODER_WAVELET_DECODE_PARAMS, NULL, 
+ schro_decoderworker_iterate_wavelet_init, 
+ TRUE
+},
+{SCHRO_DECODER_WAVELET_DECODE_IMAGE, 
+ SCHRO_DECODER_WAVELET_INIT|SCHRO_DECODER_WAVELET_DECODE_PARAMS, NULL, 
+ schro_decoderworker_iterate_wavelet_decode_image, 
+ FALSE
+},
 
-#ifdef SCHRO_GPU
-  decoder->gupsample_temp = schro_gpuframe_new_and_alloc (frame_format,
-        video_format->width*2, video_format->height*2);
+{SCHRO_DECODER_MOTION_RENDER, 
+ SCHRO_DECODER_MOTION_DECODE_VECTORS, schro_decoderworker_check_refs, 
+ schro_decoderworker_iterate_motion_transform, 
+ TRUE
+},
+{SCHRO_DECODER_WAVELET_TRANSFORM, 
+ SCHRO_DECODER_WAVELET_DECODE_IMAGE, NULL, 
+ schro_decoderworker_iterate_wavelet_transform, 
+ TRUE
+},
+{SCHRO_DECODER_FINISHED, 
+ SCHRO_DECODER_OUTPUT_INIT|SCHRO_DECODER_MOTION_RENDER|SCHRO_DECODER_WAVELET_TRANSFORM, NULL, 
+ schro_decoderworker_iterate_finish, 
+ TRUE
+},
+/* End of frame decoding */
+{SCHRO_DECODER_EMPTY}
+};
+
 #endif
 
+
+SchroDecoderOp *schro_get_decoder_ops()
+{
+  return schro_decoder_ops;
 }
+
+
 #undef schro_frame_convert
 #undef schro_frame_add
 #undef schro_frame_new_and_alloc
@@ -1224,9 +1459,9 @@ schro_decoder_decode_transform_data_serial (SchroDecoderWorker *decoder, schro_s
   SchroDecoderSubbandContext context = { 0 }, *ctx = &context;
   int total_length = 0;
   int bandid = 0;
-  
+#if 0  
   schro_subband_storage_to_gpuframe_init(store, frame);
-
+#endif
   for(component=0;component<3;component++) {
     for(i=0;i<1+3*params->transform_depth;i++) {
     
@@ -1265,7 +1500,9 @@ schro_decoder_decode_transform_data_serial (SchroDecoderWorker *decoder, schro_s
       {
           /** Fire off asynchronous transfer to GPU */
           store->offsets[bandid] = total_length;
+#if 0
           schro_subband_storage_to_gpuframe(store, frame, ctx->component, ctx->position, store->offsets[bandid]);
+#endif
           total_length += length;
       }
       else

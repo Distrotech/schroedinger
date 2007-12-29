@@ -15,6 +15,13 @@
 #include "cudamotion.h"
 #include <stdio.h>
 
+struct _SchroGPUMotion
+{
+  CudaMotion *cm;
+  CudaMotionData md;
+  struct _MotionVector *vectors;
+};
+
 static inline int ilog2 (unsigned int x)
 {
   int i;
@@ -29,22 +36,31 @@ static inline int ilog2 (unsigned int x)
 
 SchroGPUMotion *schro_gpumotion_new()
 {
-    return (SchroGPUMotion*)cuda_motion_init();
+  SchroGPUMotion *ret;
+  ret = (SchroGPUMotion*)malloc(sizeof(SchroGPUMotion));
+  ret->cm = cuda_motion_init();
+  ret->vectors = NULL;
+  return ret;
 }
 
 void schro_gpumotion_free(SchroGPUMotion *rv)
 {
-    cuda_motion_free((CudaMotion*)rv);
+  cuda_motion_free(rv->cm);
+  free(rv);
 }
 
-void schro_gpumotion_render(SchroGPUMotion *self, SchroMotion *motion, SchroGPUFrame *gdest)
+void schro_gpumotion_init(SchroGPUMotion *self, SchroMotion *motion)
 {
-    CudaMotion *cm = (CudaMotion*)self;
-    CudaMotionData md;
+  /* Create texture */
+  self->vectors = cuda_motion_reserve(self->cm, motion->params->x_num_blocks, motion->params->y_num_blocks);
+}
+
+#define md self->md
+#define vectors self->vectors
+void schro_gpumotion_copy(SchroGPUMotion *self, SchroMotion *motion)
+{
+    SCHRO_ASSERT(vectors);
     int i;
-    SchroUpsampledGPUFrame *ref1 = (SchroUpsampledGPUFrame*)motion->src1;
-    SchroUpsampledGPUFrame *ref2 = (SchroUpsampledGPUFrame*)motion->src2;
-    struct _MotionVector *vectors;
     
     SCHRO_DEBUG("schro_gpuframe_copy_with_motion");
     
@@ -78,17 +94,12 @@ void schro_gpumotion_render(SchroGPUMotion *self, SchroMotion *motion, SchroGPUF
     md.obmc.y_ramp_log2 = ilog2(md.obmc.y_ramp);
     md.obmc.x_mid_log2 = ilog2(md.obmc.x_mid);
     md.obmc.y_mid_log2 = ilog2(md.obmc.y_mid);
-
+    
     // Transfer vectors
     int numv = md.obmc.blocksx*md.obmc.blocksy;
     
-    // Allocating and freeing this every time is not so nice for performance,
-    // so we let the cuda_motion object cache the memory block
-    vectors = cuda_motion_reserve(cm, md.obmc.blocksx, md.obmc.blocksy);
-    
     // make sure we always have 3 bits of precision
     int precision = (3-motion->params->mv_precision);
-
     for(i=0; i<numv; ++i)
     {
 //#define TESTMODE
@@ -139,6 +150,13 @@ void schro_gpumotion_render(SchroGPUMotion *self, SchroMotion *motion, SchroGPUF
 #endif
     }
     //printf("%i blocks (%ix%i)\n", numv, md.obmc.blocksx, md.obmc.blocksy);
+}
+
+void schro_gpumotion_render(SchroGPUMotion *self, SchroMotion *motion, SchroGPUFrame *gdest)
+{
+    CudaMotion *cm = self->cm;
+    SchroUpsampledGPUFrame *ref1 = (SchroUpsampledGPUFrame*)motion->src1;
+    SchroUpsampledGPUFrame *ref2 = (SchroUpsampledGPUFrame*)motion->src2;
 
     cuda_motion_begin(cm, &md);
 
@@ -172,3 +190,6 @@ void schro_gpumotion_render(SchroGPUMotion *self, SchroMotion *motion, SchroGPUF
             ref1->components[2], NULL);    
     }    
 }
+
+#undef md
+#undef vectors

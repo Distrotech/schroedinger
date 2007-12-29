@@ -13,33 +13,179 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <limits.h>
+#ifdef SCHRO_GPU
+#include <cuda.h>
+#endif
 
 static void schro_decoder_init(SchroDecoder *decoder);
 
+/** NFA-based parallel scheduler
+
+    - lock
+    - check global quit flag to signify if thread should die
+      - if so, unlock and break out
+    - thread looks for work (scheduling)
+      - go over all decoderworker structures
+      - find which one is most important
+        - prefer reference frames, especially those that we are waiting for.
+      - given curstate, find out what needs/can be done
+        - iterate over schro_decoder_ops
+          - if state not yet in curstate|busystate
+            - see if reqstate bits are in curstate
+            - if so, mark it
+      - for each bit still set, take into account additional constraints, 
+        like availability of reference frames
+      - if we found work, break out, otherwise continue searching
+      - if we found no work after searching all frames, go into sleep mode,
+        wait for wake-up signal (worker_statechange)
+    - mark bit in busystate
+    - unlock
+    - thread executes work
+    - lock
+    - clear bit in busystate, mark bit in curstate
+    - if the final state (SCHRO_DECODER_FINISHED) is set, the decoder 
+      can revert back to SCHRO_DECODER_EMPTY. In the case of GPU, 
+      there should be a last final state that waits for the GPU to complete
+      asynchronous processing.  After this, the structure can be re-used
+      for a new frame.
+      - notify main thread that a decoder completed its work and is ready
+        to accept a new frame (worker_available)
+    - unlock
+    - wake up threads that a state changed (worker_statechange)
+    - repeat from top
+
+Decoupled thread from decoder structure.
+TODO port to real schroasync once we know what we're doing and what they're doing
+*/
+
+
 static void* schro_decoder_main(void *arg)
 {
-  SchroDecoderWorker *decoder = arg;
-  int newstate;
-  SCHRO_DEBUG("Starting thread %p", decoder);
+  SchroDecoderThread *thread = (SchroDecoderThread*)arg;
+  SchroDecoder *decoder = thread->parent;
+  int x,y;
+  
+  SCHRO_DEBUG("Starting thread %i (gpu=%i)", thread->id, thread->gpu);
+
   while(1)
   {
-    pthread_mutex_lock (&decoder->parent->mutex);
-    while(decoder->state == SCHRO_DECODER_FREE || decoder->state == SCHRO_DECODER_PREPARING)
-      pthread_cond_wait (&decoder->parent->worker_statechange, &decoder->parent->mutex);
-    newstate = decoder->state;
-    pthread_mutex_unlock (&decoder->parent->mutex);
+    SchroDecoderOp *op = NULL;
+    SchroDecoderWorker *op_w = NULL;    
+    int priority = INT_MIN;
+    int state;
+#ifdef SCHRO_GPU
+#if 0
+    if(thread->gpu)
+    {
+      /* CUDA memory stats */
+      unsigned int mfree = 0, mtotal = 0;
+      cuMemGetInfo(&mfree, &mtotal);
+      SCHRO_DEBUG("Memory free %.1fMB total %.1fMB", mfree/(1024.0*1024.0), mtotal/(1024.0*1024.0));
+    }
+#endif
+#endif
+    pthread_mutex_lock (&decoder->mutex);
+#if 0
+    SCHRO_DEBUG("Reference queue has %i, freestack has %i", decoder->reference_queue->n, decoder->free_count);
+#endif
     
-    SCHRO_DEBUG("Thread %p got new state %i", decoder, newstate);
-
-    if(newstate == SCHRO_DECODER_QUIT)
+    /* Find work to do for this thread. */
+    while(!decoder->quit)
+    {
+      for(x=0; x<decoder->worker_count; ++x)
+      {
+        SchroDecoderWorker *w = decoder->workers[x];
+        int curstate = w->curstate;
+        int exclude = w->busystate | w->curstate;
+        int w_pri;
+        SchroDecoderOp *ops = schro_get_decoder_ops();
+        for(y=0; ops[y].state; ++y)
+        {
+          /* Check if we 
+             a) gpu operations in the gpu thread, cpu operations in the cpu thread
+             b) haven't done this operation yet, or aren't working on it
+             c) the required state exists for doing it
+          */
+          if(thread->gpu == ops[y].gpu && !(exclude & ops[y].state) && (curstate & ops[y].reqstate) == ops[y].reqstate)
+          {
+            /* Call the specific check function to see if the decoder is ready
+               for this operation. This checks for reference frames, for example. */
+            if(!ops[y].check || ops[y].check(w))
+              break;
+          }
+        }
+        if(ops[y].state == 0)
+          /* Continue if we found nothing to do for this frame */
+          continue;
+        /* Determine priority of this decoder, and compare with the
+           priority of what we found up to now, so the most important
+           piece of work can be picked.
+           
+           TODO A decoder is most important if it is a reference frame, or if
+           the frame is most near to be shown.
+           
+           For now, just pick the one with the lowest position in the stream.
+        */
+        w_pri = -w->time;
+        if(w_pri > priority)
+        {
+          priority = w_pri;
+          op = &ops[y];
+          op_w = w;
+        }
+      }
+      /* Break out if we found at least one operation to perform */
+      if(op != NULL)
+      {
+        /* Update state that we're working on this */
+        op_w->busystate |= op->state;
+        break;
+      }
+      /* If we found nothing to do, wait for a state change */
+      SCHRO_DEBUG("Thread %i idle", thread->id);
+      pthread_cond_wait (&decoder->worker_statechange, &decoder->mutex);
+    }
+    state = op_w->curstate;
+    pthread_mutex_unlock (&decoder->mutex);
+    
+    /* Break out of main loop if quit flag is set */
+    if(decoder->quit)
       break;
-      
-    schro_decoderworker_iterate(decoder);
-    SCHRO_DEBUG("Thread %p finished", decoder);
-    schro_decoder_set_worker_state(decoder->parent, decoder, SCHRO_DECODER_FREE);
+
+    SCHRO_DEBUG("Thread %i working on frame %p, state is %04x will do operation %04x", thread->id, op_w, state, op->state);
+
+    op->exec(op_w);
+
+    /* Update state that we've finished working on this */
+    pthread_mutex_lock (&decoder->mutex);
+    op_w->curstate |= op->state;
+    op_w->busystate &= ~op->state;
+    
+    SCHRO_DEBUG("Thread %i finished on frame %p, new state is %04x", thread->id, op_w, op_w->curstate);
+    
+    /* Check for final state */
+    if(op_w->curstate & SCHRO_DECODER_FINAL)
+    {
+      /* If reached, reset frame to initial state, and send a signal that
+         a decoder is now available. 
+       */
+      SCHRO_ASSERT(op_w->busystate == 0);
+      op_w->curstate = op_w->skipstate | SCHRO_DECODER_INITIAL;
+      SCHRO_DEBUG("Thread %i reached final state on %p, new state is %04x", thread->id, op_w, op_w->curstate);
+      pthread_cond_signal (&decoder->worker_available);
+    }
+    
+    pthread_mutex_unlock (&decoder->mutex);
+    pthread_cond_broadcast (&decoder->worker_statechange);
   }
   
-  SCHRO_DEBUG("Quitting thread %p", decoder);
+  /** TODO 
+      If this is the GPU thread, make sure we have freed all GPU structures before
+      exiting, otherwise there is no chance of ever doing this again.
+      - Deinitialize all decoders
+      - Flush the free_stack and reference queue
+  */
+  SCHRO_DEBUG("Quitting thread %i", thread->id);
   return NULL;
 }
 
@@ -54,18 +200,19 @@ SchroDecoder *schro_decoder_new()
 
   pthread_mutex_init(&decoder->mutex, NULL);
   pthread_cond_init(&decoder->reference_notfull, NULL);
-  pthread_cond_init(&decoder->reference_newframe, NULL);
+  //pthread_cond_init(&decoder->reference_newframe, NULL);
   pthread_cond_init(&decoder->worker_statechange, NULL);
+  pthread_cond_init(&decoder->worker_available, NULL);
 
 #ifdef SCHRO_GPU
-  decoder->reference_queue = schro_queue_new (SCHRO_LIMIT_REFERENCE_FRAMES,
-      (SchroQueueFreeFunc)schro_upsampled_gpuframe_free);
-  schro_queue_alloc_freestack(decoder->reference_queue, UQUEUE_SIZE);
+  decoder->reference_queue = schro_queue_new (SCHRO_LIMIT_REFERENCE_FRAMES, NULL);
+//      (SchroQueueFreeFunc)schro_upsampled_gpuframe_free);
+//  schro_queue_alloc_freestack(decoder->reference_queue, UQUEUE_SIZE);
 #else
   decoder->reference_queue = schro_queue_new (SCHRO_LIMIT_REFERENCE_FRAMES,
       (SchroQueueFreeFunc)schro_upsampled_frame_free);
 #endif
-      
+
   decoder->frame_queue = schro_queue_new (SCHRO_LIMIT_REFERENCE_FRAMES,
       (SchroQueueFreeFunc)schro_frame_unref);
   decoder->output_queue = schro_queue_new (SCHRO_LIMIT_REFERENCE_FRAMES,
@@ -90,17 +237,36 @@ SchroDecoder *schro_decoder_new()
       n_threads = 1;
     }
   }
-  if(n_threads>SCHRO_MAX_DECODERS)
-    n_threads = SCHRO_MAX_DECODERS;
+#ifdef SCHRO_GPU 
+  n_threads += 1; /* add special gpu-only thread */
+#endif
+  if(n_threads>SCHRO_MAX_THREADS)
+    n_threads = SCHRO_MAX_THREADS;
+ 
+  decoder->n_threads = n_threads;
   
-  decoder->worker_count = n_threads;
+  /** Number of worker structures (not threads!) */
+  decoder->worker_count = 10;
   
+  /** Create decoder structures */
   for(x=0; x<decoder->worker_count; ++x)
   {
     SCHRO_LOG("creating decoder %i", x);
     decoder->workers[x] = schro_decoderworker_new();
     decoder->workers[x]->parent = decoder;
-    pthread_create (&decoder->worker_threads[x], NULL, schro_decoder_main, decoder->workers[x]);
+  }
+  
+  /** Create worker threads */
+  for(x=0; x<decoder->n_threads; ++x)
+  {
+    decoder->threads[x].parent = decoder;
+    decoder->threads[x].id = x;
+#ifdef SCHRO_GPU 
+    decoder->threads[x].gpu = (x==0);
+#else
+    decoder->threads[x].gpu = FALSE;
+#endif
+    pthread_create (&decoder->threads[x].thread, NULL, schro_decoder_main, &decoder->threads[x]);
   }
 
   return decoder;
@@ -111,22 +277,20 @@ void schro_decoder_free(SchroDecoder *decoder)
   int x;
   
   /** Send all threads the command to quit */
-  for(x=0; x<decoder->worker_count; ++x)
+  decoder->quit = 1;
+  pthread_cond_broadcast (&decoder->worker_statechange);
+  
+  for(x=0; x<decoder->n_threads; ++x)
   {
     void *ignore;
     
-    SCHRO_LOG("stopping decoder %p", decoder->workers[x]);
+    SCHRO_LOG("stopping thread %i", x);
     
-    pthread_mutex_lock (&decoder->mutex);
-    while(decoder->workers[x]->state != SCHRO_DECODER_FREE)
-        pthread_cond_wait (&decoder->worker_statechange, &decoder->mutex);
-    decoder->workers[x]->state = SCHRO_DECODER_QUIT;    
-    pthread_mutex_unlock (&decoder->mutex);
-
-    pthread_cond_broadcast (&decoder->worker_statechange);
-    
-    pthread_join (decoder->worker_threads[x], &ignore);
-
+    pthread_join (decoder->threads[x].thread, &ignore);
+  }
+  
+  for(x=0; x<decoder->worker_count; ++x)
+  {
     SCHRO_LOG("freeing decoder %i", x);
     schro_decoderworker_free(decoder->workers[x]);
   }
@@ -138,8 +302,9 @@ void schro_decoder_free(SchroDecoder *decoder)
   /** Destroy mutexes and conditions */
   pthread_mutex_destroy(&decoder->mutex);
   pthread_cond_destroy(&decoder->reference_notfull);
-  pthread_cond_destroy(&decoder->reference_newframe);
+  //pthread_cond_destroy(&decoder->reference_newframe);
   pthread_cond_destroy(&decoder->worker_statechange);
+  pthread_cond_destroy(&decoder->worker_available);
 
   free(decoder);
 }
@@ -217,7 +382,7 @@ static SchroDecoderWorker *get_free_worker(SchroDecoder *decoder)
   int x;
   for(x=0; x<decoder->worker_count; ++x)
   {
-    if(decoder->workers[x]->state == SCHRO_DECODER_FREE)
+    if(!(decoder->workers[x]->curstate & SCHRO_DECODER_START) && decoder->workers[x]->busystate == 0)
       return decoder->workers[x];
   }
   return NULL;
@@ -227,10 +392,10 @@ static int schro_decoder_mintime(SchroDecoder *decoder)
 {
   int x;
   int mintime = INT_MAX;
-
+  /* minimum time of active workers */
   for(x=0; x<decoder->worker_count; ++x)
   {
-    if(decoder->workers[x]->state == SCHRO_DECODER_BUSY)
+    if((decoder->workers[x]->curstate & SCHRO_DECODER_START) || decoder->workers[x]->busystate != 0)
     {
       if(decoder->workers[x]->time < mintime)
         mintime = decoder->workers[x]->time;
@@ -374,13 +539,21 @@ schro_decoder_iterate (SchroDecoder *decoder)
 SCHRO_DEBUG("skip value %g ratio %g", decoder->skip_value, decoder->skip_ratio);
 #endif
 
-  /** Get free worker thread */
-  SCHRO_DEBUG("Looking for free worker thread");
+  /** Get a free decoder structure */
+  SCHRO_DEBUG("Looking for free decoder");
   pthread_mutex_lock (&decoder->mutex);
   while((w = get_free_worker(decoder)) == NULL) {
-    pthread_cond_wait (&decoder->worker_statechange, &decoder->mutex);
+    /* If current frame is available, unlock and return */
+    if(schro_queue_find (decoder->frame_queue, decoder->next_frame_number))
+    {
+      SCHRO_DEBUG("Stopped looking, current frame is available");
+      pthread_mutex_unlock (&decoder->mutex);
+      return SCHRO_DECODER_OK;
+    }
+    pthread_cond_wait (&decoder->worker_available, &decoder->mutex);
   }
-  w->state = SCHRO_DECODER_PREPARING;
+  /* Pending SCHRO_DECODER_START */
+  w->busystate |= SCHRO_DECODER_START;
   pthread_mutex_unlock (&decoder->mutex);
   
   /** Propagate our settings */
@@ -397,8 +570,12 @@ SCHRO_DEBUG("skip value %g ratio %g", decoder->skip_value, decoder->skip_ratio);
   
   SCHRO_DEBUG("decode picture here -- %i with decoder %p", pichdr.picture_number, w);
 
-  /* Fire off thread */
-  schro_decoder_set_worker_state(decoder, w, SCHRO_DECODER_BUSY);
+  /* Wake up worker threads */
+  pthread_mutex_lock (&decoder->mutex);
+  w->curstate |= SCHRO_DECODER_START;
+  w->busystate &= ~SCHRO_DECODER_START;
+  pthread_mutex_unlock (&decoder->mutex);
+  pthread_cond_broadcast (&decoder->worker_statechange);
   
   /* We consumed the input buffer */
   decoder->input_buffer = NULL;  
@@ -435,8 +612,13 @@ schro_decoder_reference_add (SchroDecoder *decoder, SchroUpsampledFrame *frame,
   }
   schro_queue_add (decoder->reference_queue, frame, picture_number);
   pthread_mutex_unlock (&decoder->mutex);
+#if 0
   /** Broadcast signal that a new frame is waiting */
   pthread_cond_broadcast(&decoder->reference_newframe);
+#else
+  /** Wake up worker threads that might be waiting for this reference to appear */
+  //pthread_cond_broadcast (&decoder->worker_statechange);
+#endif
 }
 
 #ifdef SCHRO_GPU
@@ -450,32 +632,26 @@ schro_decoder_reference_get (SchroDecoder *decoder,
 #endif
 {
   void *ret;
-  
-  pthread_mutex_lock (&decoder->mutex);
-  
+
   SCHRO_DEBUG("getting %d", picture_number);
-  /** Block if frame is not found */
-  while((ret = schro_queue_find (decoder->reference_queue, picture_number)) == NULL) {
-    //SCHRO_ERROR("%d Not found -- waiting", picture_number);
-    pthread_cond_wait (&decoder->reference_newframe, &decoder->mutex);
-  }
-  
-  pthread_mutex_unlock (&decoder->mutex);
+  ret = schro_queue_find (decoder->reference_queue, picture_number); 
   
   return ret;
 }
 
-#if 0
-void
-schro_decoder_reference_retire (SchroDecoder *decoder,
-    SchroPictureNumber picture_number)
+#ifdef SCHRO_GPU
+void *schro_decoder_reference_getfree(SchroDecoder *decoder)
 {
-  SCHRO_DEBUG("retiring %d", picture_number);
+  void *ret = NULL;
   pthread_mutex_lock (&decoder->mutex);
-  schro_queue_delete (decoder->reference_queue, picture_number);
+  if(decoder->free_count)
+  {
+    --decoder->free_count;
+    ret = decoder->free_stack[decoder->free_count];
+  }
+  SCHRO_DEBUG("getfree %p, %i left", ret, decoder->free_count);
   pthread_mutex_unlock (&decoder->mutex);
-  /** Signal that queue is no longer full */
-  pthread_cond_signal(&decoder->reference_notfull);
+  return ret;
 }
 #endif
 
@@ -491,6 +667,17 @@ schro_retirement_check(SchroDecoder *decoder)
   for(x=0; x<decoder->retired_count && mintime >= decoder->retired[x].time; ++x)
   {
     SCHRO_DEBUG("retiring %i", decoder->retired[x].frame);
+#ifdef SCHRO_GPU
+    /* Retired frames will not actually be freed, but moved to the free
+       stack, otherwise we run into problems, as the delete function for GPU
+       frames must be called in the GPU thread. This also gives a slight
+       performance gain.
+     */
+    SCHRO_ASSERT(decoder->free_count < UQUEUE_SIZE);
+    decoder->free_stack[decoder->free_count] = schro_queue_find(decoder->reference_queue, decoder->retired[x].frame);
+    if(decoder->free_stack[decoder->free_count])
+      ++decoder->free_count;
+#endif
     schro_queue_delete (decoder->reference_queue, decoder->retired[x].frame);
   }
   
@@ -519,24 +706,27 @@ schro_decoder_add_finished_frame (SchroDecoder *decoder, SchroFrame *output_pict
 
 }
 
+void schro_decoder_skipstate (SchroDecoder *decoder, SchroDecoderWorker *w, int state)
+{
+  pthread_mutex_lock (&decoder->mutex);
+  w->skipstate |= state;
+  pthread_mutex_unlock (&decoder->mutex);
+}
+
 static void schro_decoder_init (SchroDecoder *decoder)
 {
-  /* We could send a message to subthreads to initialize here,
+  /* Send a message to subthreads to initialize here,
      as the video format is known now.
   */
   int x;
+  pthread_mutex_lock (&decoder->mutex);
   for(x=0; x<decoder->worker_count; ++x)
   {
-      SCHRO_LOG("initializing decoder %i", x);
       decoder->workers[x]->settings = decoder->settings;
-      schro_decoderworker_init(decoder->workers[x]);
+      decoder->workers[x]->curstate |= SCHRO_DECODER_HAVE_ACCESS_UNIT;
+      decoder->workers[x]->skipstate |= SCHRO_DECODER_HAVE_ACCESS_UNIT;
   }
-}
-
-void schro_decoder_set_worker_state(SchroDecoder *decoder, SchroDecoderWorker *worker, SchroDecoderState state)
-{
-  pthread_mutex_lock (&decoder->mutex);
-  worker->state = state;
   pthread_mutex_unlock (&decoder->mutex);
   pthread_cond_broadcast (&decoder->worker_statechange);
 }
+
