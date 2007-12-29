@@ -18,6 +18,9 @@
 #endif
 
 static void schro_decoder_init(SchroDecoder *decoder);
+#ifdef SCHRO_GPU
+static void schro_decoder_gpu_cleanup(SchroDecoder *decoder);
+#endif
 
 /** NFA-based parallel scheduler
 
@@ -54,7 +57,6 @@ static void schro_decoder_init(SchroDecoder *decoder);
     - wake up threads that a state changed (worker_statechange)
     - repeat from top
 
-Decoupled thread from decoder structure.
 TODO port to real schroasync once we know what we're doing and what they're doing
 */
 
@@ -72,7 +74,6 @@ static void* schro_decoder_main(void *arg)
     SchroDecoderOp *op = NULL;
     SchroDecoderWorker *op_w = NULL;    
     int priority = INT_MIN;
-    int state;
 #ifdef SCHRO_GPU
 #if 0
     if(thread->gpu)
@@ -90,7 +91,7 @@ static void* schro_decoder_main(void *arg)
 #endif
     
     /* Find work to do for this thread. */
-    while(!decoder->quit)
+    while(!thread->quit)
     {
       for(x=0; x<decoder->worker_count; ++x)
       {
@@ -145,14 +146,13 @@ static void* schro_decoder_main(void *arg)
       SCHRO_DEBUG("Thread %i idle", thread->id);
       pthread_cond_wait (&decoder->worker_statechange, &decoder->mutex);
     }
-    state = op_w->curstate;
     pthread_mutex_unlock (&decoder->mutex);
     
     /* Break out of main loop if quit flag is set */
-    if(decoder->quit)
+    if(thread->quit)
       break;
 
-    SCHRO_DEBUG("Thread %i working on frame %p, state is %04x will do operation %04x", thread->id, op_w, state, op->state);
+    SCHRO_DEBUG("Thread %i working on frame %p, will do operation %04x", thread->id, op_w, op->state);
 
     op->exec(op_w);
 
@@ -177,14 +177,17 @@ static void* schro_decoder_main(void *arg)
     
     pthread_mutex_unlock (&decoder->mutex);
     pthread_cond_broadcast (&decoder->worker_statechange);
-  }
-  
-  /** TODO 
-      If this is the GPU thread, make sure we have freed all GPU structures before
+  } 
+   
+#ifdef SCHRO_GPU
+  /** If this is the GPU thread, make sure we have freed all GPU structures before
       exiting, otherwise there is no chance of ever doing this again.
-      - Deinitialize all decoders
-      - Flush the free_stack and reference queue
   */
+  if(thread->gpu)
+  {
+    schro_decoder_gpu_cleanup(decoder);
+  }
+#endif
   SCHRO_DEBUG("Quitting thread %i", thread->id);
   return NULL;
 }
@@ -213,7 +216,7 @@ SchroDecoder *schro_decoder_new()
       (SchroQueueFreeFunc)schro_upsampled_frame_free);
 #endif
 
-  decoder->frame_queue = schro_queue_new (SCHRO_LIMIT_REFERENCE_FRAMES,
+  decoder->frame_queue = schro_queue_new (SCHRO_LIMIT_REFERENCE_FRAMES*2,
       (SchroQueueFreeFunc)schro_frame_unref);
   decoder->output_queue = schro_queue_new (SCHRO_LIMIT_REFERENCE_FRAMES,
       (SchroQueueFreeFunc)schro_frame_unref);
@@ -266,6 +269,7 @@ SchroDecoder *schro_decoder_new()
 #else
     decoder->threads[x].gpu = FALSE;
 #endif
+    decoder->threads[x].quit = 0;
     pthread_create (&decoder->threads[x].thread, NULL, schro_decoder_main, &decoder->threads[x]);
   }
 
@@ -276,24 +280,28 @@ void schro_decoder_free(SchroDecoder *decoder)
 {
   int x;
   
-  /** Send all threads the command to quit */
-  decoder->quit = 1;
-  pthread_cond_broadcast (&decoder->worker_statechange);
-  
-  for(x=0; x<decoder->n_threads; ++x)
+  /* Send all threads the command to quit, by decreasing
+     order of id, so that the GPU thread can clean up things last
+     (if there is a GPU thread)
+   */
+  for(x=decoder->n_threads-1; x>=0; --x)
   {
     void *ignore;
     
     SCHRO_LOG("stopping thread %i", x);
-    
+
+    decoder->threads[x].quit = TRUE;
+    pthread_cond_broadcast (&decoder->worker_statechange);
     pthread_join (decoder->threads[x].thread, &ignore);
   }
   
+#ifndef SCHRO_GPU
   for(x=0; x<decoder->worker_count; ++x)
   {
     SCHRO_LOG("freeing decoder %i", x);
     schro_decoderworker_free(decoder->workers[x]);
   }
+#endif
 
   schro_queue_free (decoder->output_queue);
   schro_queue_free (decoder->reference_queue);
@@ -730,3 +738,27 @@ static void schro_decoder_init (SchroDecoder *decoder)
   pthread_cond_broadcast (&decoder->worker_statechange);
 }
 
+#ifdef SCHRO_GPU
+static void schro_decoder_gpu_cleanup(SchroDecoder *decoder)
+{
+  int x;
+  SCHRO_DEBUG("Cleaning up GPU structures");
+  /* Release workers */
+  for(x=0; x<decoder->worker_count; ++x) {
+    schro_decoderworker_free(decoder->workers[x]);
+  }
+  /* Release reference queue entries */
+  for(x=0;x<decoder->reference_queue->n;x++){
+    schro_upsampled_gpuframe_free(decoder->reference_queue->elements[x].data);
+  }
+  /* Release freestack entries */
+  for(x=0;x<decoder->free_count;x++){
+    schro_upsampled_gpuframe_free(decoder->free_stack[x]);
+  }
+  /* Release temporary frames */
+  if(decoder->planar_output_frame)
+    schro_gpuframe_unref(decoder->planar_output_frame);
+  if(decoder->gupsample_temp)
+    schro_gpuframe_unref(decoder->gupsample_temp);
+}
+#endif

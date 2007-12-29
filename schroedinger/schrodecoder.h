@@ -12,7 +12,7 @@ SCHRO_BEGIN_DECLS
 */
 #define SCHRO_MAX_DECODERS 16
 #define SCHRO_MAX_THREADS 16
-#define SCHRO_RETIRE_QUEUE_SIZE 16
+#define SCHRO_RETIRE_QUEUE_SIZE 40
 #define UQUEUE_SIZE 40 /* Max number of stored ref frames (GPU) */
 
 struct _RetireEntry
@@ -27,6 +27,7 @@ struct _SchroDecoderThread
   int id;
   pthread_t thread;
   int gpu; /* is this the gpu thread? */
+  int quit;
 };
 
 typedef struct _SchroDecoderThread SchroDecoderThread;
@@ -66,7 +67,6 @@ struct _SchroDecoder
   SchroDecoderThread threads[SCHRO_MAX_THREADS];
   pthread_cond_t worker_statechange;
   pthread_cond_t worker_available;
-  int quit; /* quit flag for threads */
   
   /** Current decoder settings. Can change for each access unit. 
    */

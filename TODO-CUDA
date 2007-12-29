@@ -7,16 +7,6 @@
      - all done?
    - use event api to check for frame readiness ?
 
-- multithreaded 
-   - more CPU threads can feed data to GPU in parallel
-     (multiple schrodecoder structures)
-   - make some work division between threads
-   - video format, frame queue and reference queue, next_frame_number, ... must be shared
-   - one GPU thread that does all GPU things, communicated via queue
-     asynchronous only
-   - watch out with retiring frames; make sure all frames before the retire
-     command have been handled before doing it
-
 - fix schro_decoder_error in schro_decoder_decode_access_unit
 
 - Would it be possible to do SCHRO_DECODER_MOTION_DECODE/
@@ -24,6 +14,9 @@
 
 - split up schrodecoderworker.c, it's one big ugly file
 
-- we need a finalize state as well, we crash at the end
-
 - reintroduce Async overlap in serial subband copy, using GPU thread
+
+- various queue sizes
+  when are they large enough to be safe?
+#define SCHRO_RETIRE_QUEUE_SIZE 40
+#define UQUEUE_SIZE 40 /* Max number of stored ref frames (GPU) */
