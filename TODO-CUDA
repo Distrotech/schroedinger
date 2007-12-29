@@ -1,7 +1,7 @@
 - make playback less stuttery?
    - might not be a problem in normal mode if frames are throttled
    - frame skipping does not yet work for GPU
-   - multithreaded decoding
+
 - make gpu stuff completely asynchronous
    - async mem transfers
      - all done?
@@ -17,10 +17,13 @@
    - watch out with retiring frames; make sure all frames before the retire
      command have been handled before doing it
 
-- clear up non-gpu stuff in gpu decoder
-
 - fix schro_decoder_error in schro_decoder_decode_access_unit
 
-- swap order of motion compensation and wavelet transform, as the motion comp has to wait for reference frames to 
-  become available
+- Would it be possible to do SCHRO_DECODER_MOTION_DECODE/
+  SCHRO_DECODER_WAVELET_DECODE in parallel? (are the offsets known in advance?)
 
+- split up schrodecoderworker.c, it's one big ugly file
+
+- we need a finalize state as well, we crash at the end
+
+- reintroduce Async overlap in serial subband copy, using GPU thread
