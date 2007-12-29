@@ -61,7 +61,7 @@ void schro_subband_storage_to_gpuframe_init(schro_subband_storage *store, SchroG
     /** Zero the frame */
     schro_gpuframe_zero(frame);
 }
-
+#if 0
 void schro_subband_storage_to_gpuframe(schro_subband_storage *store, SchroGPUFrame *frame, int comp, int position, int offset)
 {
     int16_t *srcdata;
@@ -110,8 +110,9 @@ void schro_subband_storage_to_gpuframe(schro_subband_storage *store, SchroGPUFra
     cudaMemcpy2DAsync(dest, dstride, srcdata + offset, sstride, width<<1, height, cudaMemcpyHostToDevice, 0);
     //SCHRO_ERROR("cudaMemcpy2DAsync %p %i %p %i %i %i", dest, dstride, params.buffer + offset, sstride, width, height);
 }
+#endif
 
-#if 0
+#if 1
 void schro_subband_storage_to_gpuframe(schro_subband_storage *store, SchroGPUFrame *frame)
 {
     int16_t *data[3];
