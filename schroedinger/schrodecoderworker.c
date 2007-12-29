@@ -22,7 +22,7 @@
 
 #ifdef SCHRO_GPU
 // Don't copy frame out
-#define GPU_NOCOPY_OUT
+// #define GPU_NOCOPY_OUT
 
 // Load balancing tests -- corrupts output
 #define DEBUGGPU
@@ -128,7 +128,6 @@ schro_decoderworker_free (SchroDecoderWorker *decoder)
   
 #ifdef SCHRO_GPU
   if (decoder->goutput_frame) schro_gpuframe_unref (decoder->goutput_frame);
-  //if (decoder->gupsample_temp) schro_gpuframe_unref (decoder->gupsample_temp);
   if (decoder->store) schro_subband_storage_free(decoder->store);
   schro_gpumotion_free(decoder->gpumotion);
 #endif
