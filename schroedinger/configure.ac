@@ -50,10 +50,10 @@ fi
 # Check for gtk-doc.
 ##################################################
 
-if test "x$cross_compiling" = "xyes" ; then
-  enable_gtk_doc=no
-fi
-GTK_DOC_CHECK([1.0])
+#if test "x$cross_compiling" = "xyes" ; then
+#  enable_gtk_doc=no
+#fi
+#GTK_DOC_CHECK([1.0])
 
 AX_CREATE_STDINT_H([schroedinger/schro-stdint.h])
 
@@ -108,6 +108,26 @@ AC_SUBST(GST_PLUGIN_LDFLAGS)
 
 AC_DEFINE(GST_PACKAGE_ORIGIN, "unknown", [Package origin in GStreamer plugin])
 
+########################
+# Check for CUDA
+########################
+AC_ARG_WITH([cuda],
+    [  --with-cuda=PATH        prefix where cuda is installed [default=auto]])
+if test "x$with_cuda" != x; then
+  CUDA_CFLAGS="-I$with_cuda/include"
+  CUDA_LIBS="-L$with_cuda/lib -lcuda -lcudart"
+  NVCC="$with_cuda/bin/nvcc"
+else
+  CUDA_CFLAGS="-I/usr/local/cuda/include"
+  CUDA_LIBS="-L/usr/local/cuda/lib -lcuda -lcudart"
+  NVCC="nvcc"
+fi
+NVCCFLAGS="-O2 -use_fast_math"
+AC_SUBST(CUDA_CFLAGS)
+AC_SUBST(CUDA_LIBS)
+AC_SUBST(NVCC)
+AC_SUBST(NVCCFLAGS)
+
 #
 # Check for check
 #
@@ -121,9 +141,9 @@ AS_HOST_DEFINES()
 pkgconfigdir="\$(libdir)/pkgconfig"
 AC_SUBST(pkgconfigdir)
 
+#doc/Makefile
 AC_CONFIG_FILES([
 Makefile 
-doc/Makefile
 schroedinger/Makefile
 gst/Makefile
 testsuite/Makefile
@@ -137,10 +157,10 @@ testsuite/prototype/Makefile
 testsuite/streams/Makefile
 testsuite/tables2/Makefile
 tools/Makefile
+cuda/Makefile
 schroedinger-uninstalled.pc
 schroedinger.pc
 schroedinger.spec
 ])
 AC_OUTPUT
-
 

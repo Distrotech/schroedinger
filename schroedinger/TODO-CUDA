@@ -1,0 +1,26 @@
+- make playback less stuttery?
+   - might not be a problem in normal mode if frames are throttled
+   - frame skipping does not yet work for GPU
+   - multithreaded decoding
+- make gpu stuff completely asynchronous
+   - async mem transfers
+     - all done?
+   - use event api to check for frame readiness ?
+
+- multithreaded 
+   - more CPU threads can feed data to GPU in parallel
+     (multiple schrodecoder structures)
+   - make some work division between threads
+   - video format, frame queue and reference queue, next_frame_number, ... must be shared
+   - one GPU thread that does all GPU things, communicated via queue
+     asynchronous only
+   - watch out with retiring frames; make sure all frames before the retire
+     command have been handled before doing it
+
+- clear up non-gpu stuff in gpu decoder
+
+- fix schro_decoder_error in schro_decoder_decode_access_unit
+
+- swap order of motion compensation and wavelet transform, as the motion comp has to wait for reference frames to 
+  become available
+

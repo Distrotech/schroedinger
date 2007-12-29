@@ -25,6 +25,14 @@ schro_queue_new (int size, SchroQueueFreeFunc free_func)
   return queue;
 }
 
+void schro_queue_alloc_freestack(SchroQueue *queue, int size)
+{
+  queue->nfree = 0;
+  queue->freestack = malloc(size * sizeof(SchroQueueElement));
+  queue->freesize = size;
+  memset (queue->freestack, 0, size * sizeof(SchroQueueElement));
+}
+
 void
 schro_queue_free (SchroQueue *queue)
 {
@@ -33,9 +41,26 @@ schro_queue_free (SchroQueue *queue)
   for(i=0;i<queue->n;i++){
     queue->free (queue->elements[i].data, queue->elements[i].picture_number);
   }
-
   free(queue->elements);
+
+  if(queue->freestack)
+  {
+    for(i=0;i<queue->nfree;i++){
+      queue->free (queue->freestack[i].data, -1);
+    }
+    free(queue->freestack);
+  }
+
+  
   free(queue);
+}
+
+void *schro_queue_popfree (SchroQueue *queue)
+{
+  if(queue->nfree == 0)
+    return NULL;
+  queue->nfree --;
+  return queue->freestack[queue->nfree].data;
 }
 
 void schro_queue_add (SchroQueue *queue, void *data,
@@ -69,7 +94,11 @@ schro_queue_delete (SchroQueue *queue, SchroPictureNumber picture_number)
 
   for(i=0;i<queue->n;i++){
     if (queue->elements[i].picture_number == picture_number) {
-      if (queue->free) {
+      if (queue->nfree < queue->freesize)
+      {
+        queue->freestack[queue->nfree] = queue->elements[i];
+        queue->nfree ++;
+      } else if (queue->free) {
         queue->free(queue->elements[i].data, queue->elements[i].picture_number);
       }
       memmove (queue->elements + i, queue->elements + i + 1,

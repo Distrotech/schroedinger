@@ -22,12 +22,18 @@ struct _SchroQueue {
 
   SchroQueueElement *elements;
   SchroQueueFreeFunc free;
+  
+  int nfree, freesize;
+  SchroQueueElement *freestack;
 };
 
 #ifdef SCHRO_ENABLE_UNSTABLE_API
 
 SchroQueue *schro_queue_new (int size, SchroQueueFreeFunc func);
+void schro_queue_alloc_freestack(SchroQueue *queue, int size);
 void schro_queue_free (SchroQueue *queue);
+
+void *schro_queue_popfree (SchroQueue *queue);
 
 void schro_queue_add (SchroQueue *queue, void *element,
     SchroPictureNumber picture_number);

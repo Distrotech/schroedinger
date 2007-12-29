@@ -44,8 +44,12 @@ enum
 #define SCHRO_LOG(...) \
   SCHRO_DEBUG_LEVEL(SCHRO_LEVEL_LOG, __VA_ARGS__)
 
+#if 1
 #define SCHRO_DEBUG_LEVEL(level,...) \
   schro_debug_log ((level), __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
+#else
+#define SCHRO_DEBUG_LEVEL(level,...) 
+#endif
 
 #define SCHRO_ASSERT(test) do { \
   if (!(test)) { \

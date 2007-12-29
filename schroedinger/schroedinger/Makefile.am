@@ -40,7 +40,8 @@ pkginclude_HEADERS = \
 	schrovideoformat.h \
 	schrowavelet.h \
 	schrobitstream.h \
-	schromotion.h
+	schromotion.h \
+	schrodecoderworker.h
 
 noinst_HEADERS = \
 	schrooil.h
@@ -78,12 +79,20 @@ libschroedinger_@SCHRO_MAJORMINOR@_la_SOURCES = \
 	schroutils.c \
 	schrovideoformat.c \
 	schrowavelet.c \
-	schrowavelettables.c
+	schrowavelettables.c \
+	schrodecoderworker.c
+#	schrogpuframe.c 
+#	schrogpusubbandstorage.c 
+#	schrogpumotion.c 
 
 libschroedinger_@SCHRO_MAJORMINOR@_la_CFLAGS = \
 	$(SCHRO_CFLAGS) $(LIBOIL_CFLAGS) $(ERROR_CFLAGS) \
 	-DSCHRO_ENABLE_UNSTABLE_API
+
+#	$(CUDA_CFLAGS) -I../cuda -DSCHRO_GPU
+
 libschroedinger_@SCHRO_MAJORMINOR@_la_LIBADD = $(LIBOIL_LIBS)
+#	../cuda/libdcuda.la
 libschroedinger_@SCHRO_MAJORMINOR@_la_LDFLAGS = \
 	-no-undefined \
 	-version-info $(SCHRO_LIBVERSION) \

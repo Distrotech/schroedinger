@@ -15,6 +15,7 @@ static const char *schro_debug_level_names[] = {
   "LOG"
 };
 
+//static int schro_debug_level = SCHRO_LEVEL_LOG;
 static int schro_debug_level = SCHRO_LEVEL_ERROR;
 int _schro_dump_enable;
 

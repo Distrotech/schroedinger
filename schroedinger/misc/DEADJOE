@@ -1,0 +1,86 @@
+
+*** These modified files were found in JOE when it aborted on Sun Sep 16 13:48:06 2007
+*** JOE was aborted because the terminal closed
+
+*** File '(Unnamed)'
+greference_queue
+gpu_decoder
+decoder_gpu
+SchroGPUUpsampledFrame
+SchroUpsampledGPUFrame
+SchroUpsampledGPUFrame
+SchroUpsampledGPUFrame
+SchroUpsampledGPUFrame
+[i]
+motion_copy
+
+*** File '(Unnamed)'
+_add
+_add
+reference_
+[comp]
+upsampled_Frame
+upsampled_frame
+gpuframe_new_and_alloc
+gplanar_output_frame
+schro_gpufr
+cuda_motion_copy
+cudaMem
+
+*** File '(Unnamed)'
+schrobench.cu
+schrobench.cu
+schrobench.cu
+cudamotion.h
+cudamotion.h
+motion.cu
+motion.cu
+schrobench.cu
+Makefile
+Makefile
+../schroedinger/schrogpuframe.c
+
+*** These modified files were found in JOE when it aborted on Thu Sep 20 21:30:08 2007
+*** JOE was aborted because the terminal closed
+
+*** These modified files were found in JOE when it aborted on Thu Sep 20 21:30:08 2007
+*** JOE was aborted by UNIX signal 1
+
+*** File '(Unnamed)'
+decoder_gpu
+SchroGPUUpsampledFrame
+SchroUpsampledGPUFrame
+SchroUpsampledGPUFrame
+SchroUpsampledGPUFrame
+SchroUpsampledGPUFrame
+[i]
+motion_copy
+obmc
+params->
+
+*** File '(Unnamed)'
+LIBOIL_
+transform
+assert
+wavelet
+iwt
+params.
+serial
+offsets
+offsets
+odata
+
+*** File '(Unnamed)'
+/home/wladimir/simple2D/wl
+/home/wladimir/simple2D/wl
+/home/wladimir/simple2D/wl
+/home/wladimir/simple2D/wl
+subcopy/subcopy_kernel.h
+subcopy/subcopy_kernel.h
+subcopy/subcopy_kernel.h
+/home/wladimir/simple2D/wl
+/home/wladimir/simple2D/wl
+schrodebug.c
+/home/wladimir/simple2D/wl
+/home/wladimir/simple2D/wl
+/home/wladimir/simple2D/wl

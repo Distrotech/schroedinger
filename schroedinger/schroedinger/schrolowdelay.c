@@ -9,6 +9,7 @@
 #include <string.h>
 
 
+
 /* When defined, this trims -1's and 1's from the end of slices by
  * converting them to 0's.  (Zeros get trimmed by default.)  It
  * doesn't seem to affect psnr any. (limited testing) */
@@ -69,8 +70,9 @@ ilog2up (unsigned int x)
 }
 
 
+#ifndef SCHRO_GPU
 void
-schro_decoder_decode_slice (SchroDecoder *decoder,
+schro_decoder_decode_slice (SchroDecoderWorker *decoder,
     SchroLowDelay *lowdelay,
     int slice_x, int slice_y, int slice_bytes)
 {
@@ -157,6 +159,7 @@ schro_decoder_decode_slice (SchroDecoder *decoder,
 
   schro_unpack_skip_bits (&decoder->unpack, slice_bytes*8);
 }
+#endif
 
 void
 schro_lowdelay_init (SchroLowDelay *lowdelay, SchroFrame *frame,
@@ -176,8 +179,9 @@ schro_lowdelay_init (SchroLowDelay *lowdelay, SchroFrame *frame,
   }
 }
 
+#ifndef SCHRO_GPU
 void
-schro_decoder_decode_lowdelay_transform_data (SchroDecoder *decoder)
+schro_decoder_decode_lowdelay_transform_data (SchroDecoderWorker *decoder)
 {
   SchroParams *params = &decoder->params;
   SchroLowDelay lowdelay;
@@ -216,7 +220,7 @@ schro_decoder_decode_lowdelay_transform_data (SchroDecoder *decoder)
   schro_decoder_subband_dc_predict (lowdelay.chroma1_subbands + 0);
   schro_decoder_subband_dc_predict (lowdelay.chroma2_subbands + 0);
 }
-
+#endif
 static int
 schro_dc_predict (int16_t *line, int stride, int x, int y)
 {
@@ -236,6 +240,7 @@ schro_dc_predict (int16_t *line, int stride, int x, int y)
     }
   }
 }
+
 
 int
 schro_encoder_encode_slice (SchroEncoderFrame *frame,
@@ -707,6 +712,5 @@ schro_encoder_encode_lowdelay_transform_data (SchroEncoderFrame *frame)
       lowdelay.n_horiz_slices * lowdelay.n_vert_slices * params->slice_bytes_num * 8 /
       params->slice_bytes_denom);
 }
-
 
 

@@ -1,126 +1,119 @@
-
 #ifndef __SCHRO_DECODER_H__
 #define __SCHRO_DECODER_H__
 
-#include <schroedinger/schrobuffer.h>
-#include <schroedinger/schroparams.h>
-#include <schroedinger/schroframe.h>
-#include <schroedinger/schromotion.h>
-#include <schroedinger/schrounpack.h>
-#include <schroedinger/schrobitstream.h>
-#include <schroedinger/schroqueue.h>
+#include <schroedinger/schrodecoderworker.h>
+#include <schroedinger/schroasync.h>
+#include <pthread.h> /** TODO generalize condition variables in schroasync */
 
 SCHRO_BEGIN_DECLS
 
-typedef struct _SchroDecoder SchroDecoder;
+/* max number of ready decoder objects, should be larger or
+   equal to the number of threads.
+*/
+#define SCHRO_MAX_DECODERS 16
+#define SCHRO_RETIRE_QUEUE_SIZE 16
 
-#ifdef SCHRO_ENABLE_UNSTABLE_API
-struct _SchroDecoder {
-  /*< private >*/
-  SchroFrame *frame;
-  SchroFrame *mc_tmp_frame;
-  int n_reference_pictures;
+struct _RetireEntry
+{
+  int time;
+  int frame;
+};
 
-  /* the list of reference pictures */
+/** Thread management -- global object */
+struct _SchroDecoder
+{
+  int time; /* monotonically increasing time */
+  int worker_count;
+  
+  /** Worker thread management. The lock of this async object also protects
+      the fields of this structure marked with NEED LOCKING.
+   */
+  //SchroAsync *async;
+  pthread_mutex_t mutex;
+  
+  /** Reference queue. The list of reference pictures. NEED LOCKING.
+      Managed using two condition variables.
+  */
   SchroQueue *reference_queue;
+  pthread_cond_t reference_notfull, reference_newframe;
 
-  /* a list of frames provided by the app that we'll decode into */
+  /** Output queue. A list of frames provided by the app that we'll decode into.
+   */
   SchroQueue *output_queue;
 
-  SchroPictureNumber next_frame_number;
-
-  SchroPictureNumber picture_number;
-  int n_refs;
-  SchroPictureNumber reference1;
-  SchroPictureNumber reference2;
-  SchroPictureNumber retired_picture_number;
-  SchroUpsampledFrame *ref0;
-  SchroUpsampledFrame *ref1;
-  SchroFrame *planar_output_frame;
-
-  int16_t *tmpbuf;
-  int16_t *tmpbuf2;
-
-  int parse_code;
-  int next_parse_offset;
-  int prev_parse_offset;
-
-  SchroUnpack unpack;
-
-  int major_version;
-  int minor_version;
-  int profile;
-  int level;
-  schro_bool interlaced_coding;
-  SchroVideoFormat video_format;
-  SchroParams params;
-
-  SchroMotion *motion;
-
-  int zero_residual;
-
+  /** Frame queue. Queue of decoded, finished frames, for display. 
+      NEED LOCKING
+   */
   SchroQueue *frame_queue;
+  
+  /** List of schrodecoders slave objects.
+      NEED LOCKING
+   */
+  SchroDecoderWorker *workers[SCHRO_MAX_DECODERS];
+  pthread_t worker_threads[SCHRO_MAX_DECODERS];
+  pthread_cond_t worker_statechange;
+  
+  /** Current decoder settings. Can change for each access unit. 
+   */
+  SchroDecoderSettings settings;
 
+  SchroPictureNumber next_frame_number;
   SchroPictureNumber earliest_frame;
+  
+  double skip_value;
+  double skip_ratio;
+  
+  /** Working state 
+   */
   SchroBuffer *input_buffer;
 
   int have_access_unit;
   int have_frame_number;
-
-  double skip_value;
-  double skip_ratio;
-
-  int error;
-  char *error_message;
-
   int has_md5;
   uint8_t md5_checksum[32];
-};
-#endif
 
-enum {
-  SCHRO_DECODER_OK,
-  SCHRO_DECODER_ERROR,
-  SCHRO_DECODER_EOS,
-  SCHRO_DECODER_FIRST_ACCESS_UNIT,
-  SCHRO_DECODER_NEED_BITS,
-  SCHRO_DECODER_NEED_FRAME
+  /** Retired frame management.
+   */
+  struct _RetireEntry retired[SCHRO_RETIRE_QUEUE_SIZE];
+  int retired_count;
+  
+
 };
 
-SchroDecoder * schro_decoder_new (void);
-void schro_decoder_free (SchroDecoder *decoder);
+SchroDecoder *schro_decoder_new();
 void schro_decoder_reset (SchroDecoder *decoder);
-SchroVideoFormat * schro_decoder_get_video_format (SchroDecoder *decoder);
-void schro_decoder_add_output_picture (SchroDecoder *decoder, SchroFrame *frame);
-void schro_decoder_push (SchroDecoder *decoder, SchroBuffer *buffer);
-SchroFrame *schro_decoder_pull (SchroDecoder *decoder);
-int schro_decoder_is_parse_header (SchroBuffer *buffer);
-int schro_decoder_is_access_unit (SchroBuffer *buffer);
-int schro_decoder_is_intra (SchroBuffer *buffer);
-int schro_decoder_is_picture (SchroBuffer *buffer);
-int schro_decoder_iterate (SchroDecoder *decoder);
+SchroVideoFormat *schro_decoder_get_video_format (SchroDecoder *decoder);
 
 void schro_decoder_set_earliest_frame (SchroDecoder *decoder, SchroPictureNumber earliest_frame);
 void schro_decoder_set_skip_ratio (SchroDecoder *decoder, double ratio);
+void schro_decoder_add_output_picture (SchroDecoder *decoder, SchroFrame *frame);
+
+void schro_decoder_push (SchroDecoder *decoder, SchroBuffer *buffer);
+SchroFrame *schro_decoder_pull (SchroDecoder *decoder);
+int schro_decoder_iterate (SchroDecoder *decoder);
+
+#ifndef SCHRO_GPU
+void schro_decoder_reference_add (SchroDecoder *decoder,
+    SchroUpsampledFrame *frame, SchroPictureNumber picture_number);
+SchroUpsampledFrame * schro_decoder_reference_get (SchroDecoder *decoder,
+    SchroPictureNumber frame_number);
+//void schro_decoder_reference_retire (SchroDecoder *decoder,
+//    SchroPictureNumber frame_number);
+#else
+void schro_decoder_reference_add (SchroDecoder *decoder,
+    SchroUpsampledGPUFrame *frame, SchroPictureNumber picture_number);
+SchroUpsampledGPUFrame * schro_decoder_reference_get (SchroDecoder *decoder,
+    SchroPictureNumber frame_number);
+//void schro_decoder_reference_retire (SchroDecoder *decoder,
+//    SchroPictureNumber frame_number);
+#endif
+void schro_decoder_add_finished_frame (SchroDecoder *decoder, SchroFrame *frame);
 
 #ifdef SCHRO_ENABLE_UNSTABLE_API
-
-void schro_decoder_decode_parse_header (SchroDecoder *decoder);
-void schro_decoder_decode_access_unit (SchroDecoder *decoder);
-void schro_decoder_decode_picture_header (SchroDecoder *decoder);
-void schro_decoder_decode_picture_prediction_parameters (SchroDecoder *decoder);
-void schro_decoder_decode_block_data (SchroDecoder *decoder);
-void schro_decoder_decode_transform_parameters (SchroDecoder *decoder);
-void schro_decoder_decode_transform_data (SchroDecoder *decoder);
-void schro_decoder_decode_lowdelay_transform_data (SchroDecoder *decoder);
-void schro_decoder_iwt_transform (SchroDecoder *decoder, int component);
-void schro_decoder_copy_from_frame_buffer (SchroDecoder *decoder, SchroBuffer *buffer);
-
-void schro_decoder_subband_dc_predict (SchroFrameData *fd);
-
-void schro_decoder_decode_lowdelay_transform_data_2 (SchroDecoder *decoder);
-
+void schro_decoder_set_worker_state(SchroDecoder *decoder, SchroDecoderWorker *worker, SchroDecoderState state);
 #endif
+
+void schro_decoder_free(SchroDecoder *self);
 
 SCHRO_END_DECLS
 
