@@ -145,6 +145,7 @@ AC_CONFIG_FILES([
 Makefile 
 doc/Makefile
 schroedinger/Makefile
+schroedinger/cuda/Makefile
 gst/Makefile
 testsuite/Makefile
 testsuite/check/Makefile
@@ -157,7 +158,6 @@ testsuite/prototype/Makefile
 testsuite/streams/Makefile
 testsuite/tables2/Makefile
 tools/Makefile
-cuda/Makefile
 schroedinger-uninstalled.pc
 schroedinger.pc
 schroedinger.spec
