@@ -28,7 +28,7 @@ SchroGPUFrame *schro_gpuframe_new (void)
   return frame;
 }
 
-void schro_gpuframe_setstream(SchroGPUFrame *frame, cudaStream_t stream)
+void schro_gpuframe_setstream(SchroGPUFrame *frame, SchroStream stream)
 {
   frame->stream = stream;
 }

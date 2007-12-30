@@ -8,7 +8,7 @@ SCHRO_BEGIN_DECLS
 
 typedef struct _SchroGPUMotion SchroGPUMotion;
 
-SchroGPUMotion *schro_gpumotion_new(cudaStream_t stream);
+SchroGPUMotion *schro_gpumotion_new(SchroStream stream);
 void schro_gpumotion_free(SchroGPUMotion *rv);
 
 /** Initialize GPU structures */

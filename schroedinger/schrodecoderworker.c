@@ -9,6 +9,11 @@
 #include <string.h>
 #include <stdio.h>
 
+#ifdef SCHRO_GPU
+#include <cuda.h>
+#include <cuda_runtime_api.h>
+#endif
+
 #if 0
 /* Used for testing bitstream */
 #define MARKER() do{ \

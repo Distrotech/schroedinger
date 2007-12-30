@@ -150,7 +150,7 @@ struct _SchroDecoderWorker {
   SchroFrame *output_picture;
   
 #ifdef SCHRO_GPU
-  cudaStream_t stream; /* CUDA stream handle */
+  SchroStream stream; /* CUDA stream handle */
   int subband_min; /* last band+1 that was transferred to the GPU (updated only by GPU thread) */
   int subband_max; /* last band+1 that was decoded (updated only by CPU threads) */
 #endif
