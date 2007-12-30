@@ -112,21 +112,37 @@ AC_DEFINE(GST_PACKAGE_ORIGIN, "unknown", [Package origin in GStreamer plugin])
 # Check for CUDA
 ########################
 AC_ARG_WITH([cuda],
-    [  --with-cuda=PATH        prefix where cuda is installed [default=auto]])
-if test "x$with_cuda" != x; then
+    AS_HELP_STRING([--with-cuda=PATH],[prefix where cuda is installed [default=no]]),
+    [],
+    [with_cuda=no])
+if test "x$with_cuda" = xyes; then
+  AC_PATH_PROG([NVCC], [nvcc], no, [$PATH:/usr/local/cuda/bin])
+  if test "x$NVCC" = xno ; then
+    AC_MSG_FAILURE(["--with-cuda was give, but nvcc was not found"])
+  fi
+  with_cuda=`echo $NVCC|sed 's,bin/nvcc,,'`
+fi
+
+if test "x$with_cuda" != xno; then
   CUDA_CFLAGS="-I$with_cuda/include"
   CUDA_LIBS="-L$with_cuda/lib -lcuda -lcudart"
   NVCC="$with_cuda/bin/nvcc"
+  NVCCFLAGS="-O2 -use_fast_math"
+  HAVE_CUDA=yes
+  AC_DEFINE(HAVE_CUDA, 1, [Compile in CUDA rendering backend])
+  AC_DEFINE(SCHRO_GPU, 1, [Compile in CUDA rendering backend])
 else
-  CUDA_CFLAGS="-I/usr/local/cuda/include"
-  CUDA_LIBS="-L/usr/local/cuda/lib -lcuda -lcudart"
-  NVCC="/usr/local/cuda/bin/nvcc"
+  CUDA_CFLAGS=
+  CUDA_LIBS=
+  NVCC=
+  NVCCFLAGS=
+  HAVE_CUDA=no
 fi
-NVCCFLAGS="-O2 -use_fast_math"
 AC_SUBST(CUDA_CFLAGS)
 AC_SUBST(CUDA_LIBS)
 AC_SUBST(NVCC)
 AC_SUBST(NVCCFLAGS)
+AM_CONDITIONAL(HAVE_CUDA, test "x$HAVE_CUDA" = "xyes")
 
 #
 # Check for check
