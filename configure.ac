@@ -120,7 +120,7 @@ if test "x$with_cuda" != x; then
 else
   CUDA_CFLAGS="-I/usr/local/cuda/include"
   CUDA_LIBS="-L/usr/local/cuda/lib -lcuda -lcudart"
-  NVCC="nvcc"
+  NVCC="/usr/local/cuda/bin/nvcc"
 fi
 NVCCFLAGS="-O2 -use_fast_math"
 AC_SUBST(CUDA_CFLAGS)
