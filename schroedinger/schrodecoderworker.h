@@ -11,9 +11,9 @@
 #include <schroedinger/schroqueue.h>
 
 #ifdef SCHRO_GPU
-#include <schrogpuframe.h>
-#include <schrogpusubbandstorage.h>
-#include <schrogpumotion.h>
+#include <schroedinger/schrogpuframe.h>
+#include <schroedinger/schrogpusubbandstorage.h>
+#include <schroedinger/schrogpumotion.h>
 #endif
 
 SCHRO_BEGIN_DECLS
