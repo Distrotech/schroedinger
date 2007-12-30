@@ -13,9 +13,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <limits.h>
-#ifdef SCHRO_GPU
-#include <cuda.h>
-#endif
 
 static void schro_decoder_init(SchroDecoder *decoder);
 #ifdef SCHRO_GPU

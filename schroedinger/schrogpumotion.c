@@ -34,11 +34,11 @@ static inline int ilog2 (unsigned int x)
   return i;
 }
 
-SchroGPUMotion *schro_gpumotion_new()
+SchroGPUMotion *schro_gpumotion_new(cudaStream_t stream)
 {
   SchroGPUMotion *ret;
   ret = (SchroGPUMotion*)malloc(sizeof(SchroGPUMotion));
-  ret->cm = cuda_motion_init();
+  ret->cm = cuda_motion_init(stream);
   ret->vectors = NULL;
   return ret;
 }

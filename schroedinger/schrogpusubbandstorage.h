@@ -10,6 +10,7 @@ typedef struct _schro_subband_storage schro_subband_storage;
 
 struct _schro_subband_storage
 {
+    cudaStream_t stream;
     int numbands;
     int transform_depth;
     int iwt_luma_width;
@@ -30,7 +31,7 @@ struct _schro_subband_storage
 };
 
 
-schro_subband_storage* schro_subband_storage_new(SchroParams *params);
+schro_subband_storage* schro_subband_storage_new(SchroParams *params, cudaStream_t stream);
 void schro_subband_storage_free(schro_subband_storage *store);
 void schro_subband_storage_to_gpuframe(schro_subband_storage *store, SchroGPUFrame *frame);
 void schro_subband_storage_to_gpuframe_init(schro_subband_storage *store, SchroGPUFrame *frame);

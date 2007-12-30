@@ -28,6 +28,11 @@ SchroGPUFrame *schro_gpuframe_new (void)
   return frame;
 }
 
+void schro_gpuframe_setstream(SchroGPUFrame *frame, cudaStream_t stream)
+{
+  frame->stream = stream;
+}
+
 int schro_bpp(int format)
 {
   int bytes_pp;
@@ -326,7 +331,8 @@ void schro_gpuframe_convert (SchroGPUFrame *dest, SchroGPUFrame *src)
       // S16 to U8
       for(i=0; i<3; ++i)
           cuda_convert_u8_s16(dest->components[i].gdata, dest->components[i].stride, dest->components[i].width, dest->components[i].height,
-                              src->components[i].gdata, src->components[i].stride, src->components[i].width, src->components[i].height);
+                              src->components[i].gdata, src->components[i].stride, src->components[i].width, src->components[i].height,
+                              dest->stream);
   }
   else if((src->format==SCHRO_FRAME_FORMAT_U8_444 && dest->format==SCHRO_FRAME_FORMAT_S16_444) ||
           (src->format==SCHRO_FRAME_FORMAT_U8_422 && dest->format==SCHRO_FRAME_FORMAT_S16_422) ||
@@ -335,7 +341,8 @@ void schro_gpuframe_convert (SchroGPUFrame *dest, SchroGPUFrame *src)
       // U8 to S16
       for(i=0; i<3; ++i)
           cuda_convert_s16_u8(dest->components[i].gdata, dest->components[i].stride, dest->components[i].width, dest->components[i].height,
-                              src->components[i].gdata, src->components[i].stride, src->components[i].width, src->components[i].height);
+                              src->components[i].gdata, src->components[i].stride, src->components[i].width, src->components[i].height,
+                              dest->stream);
 
   }
   else if((src->format==SCHRO_FRAME_FORMAT_U8_444 && dest->format==SCHRO_FRAME_FORMAT_U8_444) ||
@@ -345,7 +352,8 @@ void schro_gpuframe_convert (SchroGPUFrame *dest, SchroGPUFrame *src)
       // U8 to U8
       for(i=0; i<3; ++i)
           cuda_convert_u8_u8(dest->components[i].gdata, dest->components[i].stride, dest->components[i].width, dest->components[i].height,
-                             src->components[i].gdata, src->components[i].stride, src->components[i].width, src->components[i].height);
+                             src->components[i].gdata, src->components[i].stride, src->components[i].width, src->components[i].height,
+                             dest->stream);
   }
   else if((src->format==SCHRO_FRAME_FORMAT_S16_444 && dest->format==SCHRO_FRAME_FORMAT_S16_444) ||
           (src->format==SCHRO_FRAME_FORMAT_S16_422 && dest->format==SCHRO_FRAME_FORMAT_S16_422) ||
@@ -354,7 +362,8 @@ void schro_gpuframe_convert (SchroGPUFrame *dest, SchroGPUFrame *src)
       // S16 to S16
       for(i=0; i<3; ++i)
           cuda_convert_s16_s16(dest->components[i].gdata, dest->components[i].stride, dest->components[i].width, dest->components[i].height,
-                               src->components[i].gdata, src->components[i].stride, src->components[i].width, src->components[i].height);
+                               src->components[i].gdata, src->components[i].stride, src->components[i].width, src->components[i].height,
+                               dest->stream);
   }
   else if(src->format==SCHRO_FRAME_FORMAT_YUYV && dest->format==SCHRO_FRAME_FORMAT_U8_422)
   {
@@ -364,7 +373,8 @@ void schro_gpuframe_convert (SchroGPUFrame *dest, SchroGPUFrame *src)
                                dest->components[2].gdata, dest->components[2].stride,
                                dest->width, dest->height,
                                src->components[0].gdata, src->components[0].stride,
-                               src->width, src->height);
+                               src->width, src->height,
+                               dest->stream);
   }
   else if(src->format==SCHRO_FRAME_FORMAT_UYVY && dest->format==SCHRO_FRAME_FORMAT_U8_422)
   {
@@ -374,7 +384,8 @@ void schro_gpuframe_convert (SchroGPUFrame *dest, SchroGPUFrame *src)
                                dest->components[2].gdata, dest->components[2].stride,
                                dest->width, dest->height,
                                src->components[0].gdata, src->components[0].stride,
-                               src->width, src->height);
+                               src->width, src->height,
+                               dest->stream);
   }
   else if(src->format==SCHRO_FRAME_FORMAT_AYUV && dest->format==SCHRO_FRAME_FORMAT_U8_444)
   {
@@ -384,7 +395,8 @@ void schro_gpuframe_convert (SchroGPUFrame *dest, SchroGPUFrame *src)
                                dest->components[2].gdata, dest->components[2].stride,
                                dest->width, dest->height,
                                src->components[0].gdata, src->components[0].stride,
-                               src->width, src->height);
+                               src->width, src->height,
+                               dest->stream);
 
   }
   else if(src->format==SCHRO_FRAME_FORMAT_U8_422 && dest->format==SCHRO_FRAME_FORMAT_YUYV)
@@ -395,7 +407,8 @@ void schro_gpuframe_convert (SchroGPUFrame *dest, SchroGPUFrame *src)
                                src->components[0].gdata, src->components[0].stride,
                                src->components[1].gdata, src->components[1].stride,
                                src->components[2].gdata, src->components[2].stride,
-                               src->width, src->height);
+                               src->width, src->height,
+                               dest->stream);
   }
   else if(src->format==SCHRO_FRAME_FORMAT_U8_422 && dest->format==SCHRO_FRAME_FORMAT_UYVY)
   {
@@ -405,7 +418,8 @@ void schro_gpuframe_convert (SchroGPUFrame *dest, SchroGPUFrame *src)
                                src->components[0].gdata, src->components[0].stride,
                                src->components[1].gdata, src->components[1].stride,
                                src->components[2].gdata, src->components[2].stride,
-                               src->width, src->height);
+                               src->width, src->height,
+                               dest->stream);
   }
   else if(src->format==SCHRO_FRAME_FORMAT_U8_444 && dest->format==SCHRO_FRAME_FORMAT_AYUV)
   {
@@ -415,7 +429,8 @@ void schro_gpuframe_convert (SchroGPUFrame *dest, SchroGPUFrame *src)
                                src->components[0].gdata, src->components[0].stride,
                                src->components[1].gdata, src->components[1].stride,
                                src->components[2].gdata, src->components[2].stride,
-                               src->width, src->height);
+                               src->width, src->height,
+                               dest->stream);
 
   }
   else
@@ -441,7 +456,8 @@ void schro_gpuframe_add (SchroGPUFrame *dest, SchroGPUFrame *src)
       // U8 to S16
       for(i=0; i<3; ++i)
           cuda_add_s16_u8(dest->components[i].gdata, dest->components[i].stride, dest->components[i].width, dest->components[i].height,
-                          src->components[i].gdata, src->components[i].stride, src->components[i].width, src->components[i].height);
+                          src->components[i].gdata, src->components[i].stride, src->components[i].width, src->components[i].height, 
+                          dest->stream);
   }
   else if((src->format==SCHRO_FRAME_FORMAT_S16_444 && dest->format==SCHRO_FRAME_FORMAT_S16_444) ||
           (src->format==SCHRO_FRAME_FORMAT_S16_422 && dest->format==SCHRO_FRAME_FORMAT_S16_422) ||
@@ -450,7 +466,8 @@ void schro_gpuframe_add (SchroGPUFrame *dest, SchroGPUFrame *src)
       // S16 to S16
       for(i=0; i<3; ++i)
           cuda_add_s16_s16(dest->components[i].gdata, dest->components[i].stride, dest->components[i].width, dest->components[i].height,
-                           src->components[i].gdata, src->components[i].stride, src->components[i].width, src->components[i].height);
+                           src->components[i].gdata, src->components[i].stride, src->components[i].width, src->components[i].height,
+                           dest->stream);
   }
   else 
   {
@@ -475,7 +492,8 @@ void schro_gpuframe_subtract (SchroGPUFrame *dest, SchroGPUFrame *src)
       // U8 to S16
       for(i=0; i<3; ++i)
           cuda_subtract_s16_u8(dest->components[i].gdata, dest->components[i].stride, dest->components[i].width, dest->components[i].height,
-                          src->components[i].gdata, src->components[i].stride, src->components[i].width, src->components[i].height);
+                          src->components[i].gdata, src->components[i].stride, src->components[i].width, src->components[i].height,
+                          dest->stream);
   }
   else if((src->format==SCHRO_FRAME_FORMAT_S16_444 && dest->format==SCHRO_FRAME_FORMAT_S16_444) ||
           (src->format==SCHRO_FRAME_FORMAT_S16_422 && dest->format==SCHRO_FRAME_FORMAT_S16_422) ||
@@ -484,7 +502,8 @@ void schro_gpuframe_subtract (SchroGPUFrame *dest, SchroGPUFrame *src)
       // S16 to S16
       for(i=0; i<3; ++i)
           cuda_subtract_s16_s16(dest->components[i].gdata, dest->components[i].stride, dest->components[i].width, dest->components[i].height,
-                           src->components[i].gdata, src->components[i].stride, src->components[i].width, src->components[i].height);
+                           src->components[i].gdata, src->components[i].stride, src->components[i].width, src->components[i].height,
+                           dest->stream);
   }
   else 
   {
@@ -524,11 +543,11 @@ void schro_gpuframe_iwt_transform (SchroGPUFrame *frame, SchroParams *params)
       h = height >> level;
       stride = comp->stride << level;
 
-      cuda_wavelet_transform_2d (params->wavelet_filter_index, frame_data, stride, w, h);
+      cuda_wavelet_transform_2d (params->wavelet_filter_index, frame_data, stride, w, h, frame->stream);
     }
   }
 }
-//#define TEST
+
 void schro_gpuframe_inverse_iwt_transform (SchroGPUFrame *frame, SchroParams *params)
 {
   int16_t *frame_data;
@@ -575,7 +594,7 @@ void schro_gpuframe_inverse_iwt_transform (SchroGPUFrame *frame, SchroParams *pa
       h = height >> level;
       stride = comp->stride << level;
       
-      cuda_wavelet_inverse_transform_2d (params->wavelet_filter_index, frame_data, stride, w, h);
+      cuda_wavelet_inverse_transform_2d (params->wavelet_filter_index, frame_data, stride, w, h, frame->stream);
     }
 #ifdef TEST
     /// Copy frame from GPU
@@ -785,8 +804,8 @@ void schro_gpuframe_upsample(SchroGPUFrame *dst, SchroGPUFrame *src)
         int width = src->components[i].width;
         int height = src->components[i].height;
 
-        cuda_upsample_horizontal(dst_data, dst_stride*2, src_data, src_stride, width, height);
-        cuda_upsample_vertical(dst_data+dst_stride, dst_stride*2, dst_data, dst_stride*2, width*2, height);
+        cuda_upsample_horizontal(dst_data, dst_stride*2, src_data, src_stride, width, height, dst->stream);
+        cuda_upsample_vertical(dst_data+dst_stride, dst_stride*2, dst_data, dst_stride*2, width*2, height, dst->stream);
     }
 }
 

@@ -5,13 +5,15 @@
 
 #define OFFSET_S16(ptr,offset) ((int16_t *)(((uint8_t *)(ptr)) + (offset)))
 
-schro_subband_storage* schro_subband_storage_new(SchroParams *params)
+schro_subband_storage* schro_subband_storage_new(SchroParams *params, cudaStream_t stream)
 {
     schro_subband_storage *store;
     int zeroes_length;
     
     store = (schro_subband_storage*)malloc(sizeof(schro_subband_storage));
     memset(store, 0, sizeof(schro_subband_storage));
+    
+    store->stream = stream;
     
     store->numbands = 3*(params->transform_depth*3+1);
     store->iwt_luma_width = params->iwt_luma_width;
@@ -107,7 +109,7 @@ void schro_subband_storage_to_gpuframe(schro_subband_storage *store, SchroGPUFra
        dest += width;
 
     /// Queue memory copy command
-    cudaMemcpy2DAsync(dest, dstride, srcdata + offset, sstride, width<<1, height, cudaMemcpyHostToDevice, 0);
+    cudaMemcpy2DAsync(dest, dstride, srcdata + offset, sstride, width<<1, height, cudaMemcpyHostToDevice, store->stream);
     //SCHRO_ERROR("cudaMemcpy2DAsync %p %i %p %i %i %i", dest, dstride, params.buffer + offset, sstride, width, height);
 }
 #endif
@@ -170,7 +172,7 @@ void schro_subband_storage_to_gpuframe(schro_subband_storage *store, SchroGPUFra
                    dest += width;
 
                 /// Queue memory copy command
-                cudaMemcpy2DAsync(dest, dstride, srcdata + offset, sstride, width<<1, height, cudaMemcpyHostToDevice, 0);
+                cudaMemcpy2DAsync(dest, dstride, srcdata + offset, sstride, width<<1, height, cudaMemcpyHostToDevice, store->stream);
                 //SCHRO_ERROR("cudaMemcpy2DAsync %p %i %p %i %i %i", dest, dstride, params.buffer + offset, sstride, width, height);
             }
             x++;

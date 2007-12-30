@@ -130,6 +130,7 @@ schro_decoderworker_free (SchroDecoderWorker *decoder)
   if (decoder->goutput_frame) schro_gpuframe_unref (decoder->goutput_frame);
   if (decoder->store) schro_subband_storage_free(decoder->store);
   schro_gpumotion_free(decoder->gpumotion);
+  cudaStreamDestroy(decoder->stream);
 #endif
 
   free (decoder);
@@ -227,7 +228,6 @@ schro_decoder_is_end_sequence (SchroBuffer *buffer)
 #endif
 
 /* This must be executed in the GPU thread 
-   TODO the symmetric de-init function must be executed on GPU too
 */
 static void
 schro_decoderworker_init (SchroDecoderWorker *decoder)
@@ -270,7 +270,11 @@ schro_decoderworker_init (SchroDecoderWorker *decoder)
       video_format->width, video_format->height);
 #endif
 #ifdef SCHRO_GPU
-  decoder->gpumotion = schro_gpumotion_new();
+  cudaStreamCreate(&decoder->stream);
+  decoder->gpumotion = schro_gpumotion_new(decoder->stream);
+  
+  schro_gpuframe_setstream(decoder->mc_tmp_frame, decoder->stream);
+  schro_gpuframe_setstream(decoder->frame, decoder->stream);
 #endif
   schro_decoder_skipstate(decoder->parent, decoder, SCHRO_DECODER_INITIALIZED);
 }
@@ -284,7 +288,10 @@ schro_decoderworker_iterate_init_output (SchroDecoderWorker *decoder)
      what frame format (interleaved, planar, bit depth) the user expects. 
    */
   if(!decoder->goutput_frame)
+  {
       decoder->goutput_frame = schro_gpuframe_new_clone(decoder->output_picture);
+      schro_gpuframe_setstream(decoder->goutput_frame, decoder->stream);
+  }
   schro_decoder_skipstate(decoder->parent, decoder, SCHRO_DECODER_OUTPUT_INIT);
 }
 #endif
@@ -375,7 +382,7 @@ schro_decoderworker_iterate_wavelet_init (SchroDecoderWorker *decoder)
 {
   if (!decoder->zero_residual) {
     if(!decoder->store)
-        decoder->store = schro_subband_storage_new(&decoder->params);
+        decoder->store = schro_subband_storage_new(&decoder->params, decoder->stream);
     schro_decoder_skipstate(decoder->parent, decoder, SCHRO_DECODER_WAVELET_INIT);
   }
 }
@@ -480,6 +487,8 @@ schro_decoderworker_iterate_finish (SchroDecoderWorker *decoder)
 #ifdef SCHRO_GPU
   SchroFrame *cpu_output_picture = decoder->output_picture;
   SchroGPUFrame *output_picture = decoder->goutput_frame;
+  
+  schro_gpuframe_setstream(decoder->planar_output_frame, decoder->stream);
 #else
   SchroParams *params = &decoder->params;
   SchroFrame *output_picture = decoder->output_picture;
@@ -577,6 +586,8 @@ schro_decoderworker_iterate_finish (SchroDecoderWorker *decoder)
     rv = schro_decoder_reference_getfree(decoder->parent);
     if(rv == NULL)
         rv = schro_upsampled_gpuframe_new(&decoder->settings.video_format);
+    
+    schro_gpuframe_setstream(decoder->parent->gupsample_temp, decoder->stream);
     schro_upsampled_gpuframe_upsample(rv, decoder->parent->gupsample_temp, ref, &decoder->settings.video_format);
     
     schro_decoder_reference_add (decoder->parent, rv, decoder->pichdr.picture_number);

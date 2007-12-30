@@ -6,6 +6,16 @@
    - async mem transfers
      - all done?
    - use event api to check for frame readiness ?
+   - reintroduce Async overlap in serial subband copy, using GPU thread
+   - use streams api to transfer memory at the same time as
+     decoding another frame
+     - a stream for ecah worker
+     - cudaStream_t <<< Dg, Db, Ns, S >>>
+     - cudaStreamCreate(&workers[x].stream);
+     - cudaStreamDestroy
+     - cudaStreamQuery
+     - Execute all memory transfers and kernels for a worker unit in this stream
+     - cudaMemcpyAsync
 
 - fix schro_decoder_error in schro_decoder_decode_access_unit
 
@@ -14,7 +24,6 @@
 
 - split up schrodecoderworker.c, it's one big ugly file
 
-- reintroduce Async overlap in serial subband copy, using GPU thread
 
 - various queue sizes
   when are they large enough to be safe?
