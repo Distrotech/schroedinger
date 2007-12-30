@@ -104,7 +104,7 @@ static void* schro_decoder_main(void *arg)
              b) haven't done this operation yet, or aren't working on it
              c) the required state exists for doing it
           */
-          if(thread->gpu == ops[y].gpu && !(exclude & ops[y].state) && (curstate & ops[y].reqstate) == ops[y].reqstate)
+          if(thread->gpu >= ops[y].gpu && !(exclude & ops[y].state) && (curstate & ops[y].reqstate) == ops[y].reqstate)
           {
             /* Call the specific check function to see if the decoder is ready
                for this operation. This checks for reference frames, for example. */
@@ -248,9 +248,7 @@ SchroDecoder *schro_decoder_new()
       n_threads = 1;
     }
   }
-#ifdef SCHRO_GPU 
-  n_threads += 1; /* add special gpu-only thread */
-#endif
+
   if(n_threads>SCHRO_MAX_THREADS)
     n_threads = SCHRO_MAX_THREADS;
  
