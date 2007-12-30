@@ -148,7 +148,16 @@ static void* schro_decoder_main(void *arg)
     /* Break out of main loop if quit flag is set */
     if(thread->quit)
       break;
-
+#ifdef SCHRO_GPU
+    if(thread->gpu)
+    {
+      /* Set up asynchronous subband transfers */
+      for(x=0; x<decoder->worker_count; ++x)
+      {
+        schro_decoder_async_transfer(decoder->workers[x]);
+      }
+    }
+#endif
     SCHRO_DEBUG("Thread %i working on frame %p, will do operation %04x", thread->id, op_w, op->state);
 
     op->exec(op_w);
@@ -169,6 +178,8 @@ static void* schro_decoder_main(void *arg)
       SCHRO_ASSERT(op_w->busystate == 0);
       op_w->curstate = op_w->skipstate | SCHRO_DECODER_INITIAL;
       SCHRO_DEBUG("Thread %i reached final state on %p, new state is %04x", thread->id, op_w, op_w->curstate);
+      /* Reset subband fifo */
+      op_w->subband_min = op_w->subband_max = 0;
       pthread_cond_signal (&decoder->worker_available);
     }
     

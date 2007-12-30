@@ -340,22 +340,11 @@ schro_decoderworker_iterate_motion_decode_vectors (SchroDecoderWorker *decoder)
     schro_unpack_byte_sync (&decoder->unpack);
     schro_decoder_decode_block_data (decoder);
 #ifdef SCHRO_GPU
-    //SCHRO_DEBUG("%p pre schro_gpumotion_copy", decoder);
     schro_gpumotion_copy (decoder->gpumotion, decoder->motion);
-    //SCHRO_DEBUG("%p post schro_gpumotion_copy", decoder);
 #endif
   }
 }
 
-/**
-    GPU: Can run in any thread, but schro_decoder_decode_transform_data_serial 
-    must kick GPU thread after each subband is ready. 
-    
-    Also, schro_subband_storage_new must be called in the GPU thread. 
-    But this can just assume the maximum allowed transform depth 
-    (SCHRO_LIMIT_TRANSFORM_DEPTH) and thus be called in the init function
-    instead.
- */
 static void
 schro_decoderworker_iterate_wavelet_decode_params (SchroDecoderWorker *decoder)  
 {
@@ -418,8 +407,8 @@ schro_decoderworker_iterate_wavelet_transform (SchroDecoderWorker *decoder)
 {
   if (!decoder->zero_residual) {
 #ifdef SCHRO_GPU
-    /** TODO overlap this with decoding */
-    schro_subband_storage_to_gpuframe(decoder->store, decoder->frame);
+    SCHRO_ASSERT(decoder->subband_min == decoder->subband_max);
+    SCHRO_ASSERT(decoder->subband_min == 3*(1+3*decoder->params.transform_depth));
     schro_gpuframe_inverse_iwt_transform (decoder->frame, &decoder->params);
 #else
     schro_frame_inverse_iwt_transform (decoder->frame, &decoder->params,
@@ -755,7 +744,6 @@ SchroDecoderOp *schro_get_decoder_ops()
 {
   return schro_decoder_ops;
 }
-
 
 #undef schro_frame_convert
 #undef schro_frame_add
@@ -1469,9 +1457,7 @@ schro_decoder_decode_transform_data_serial (SchroDecoderWorker *decoder, schro_s
   SchroDecoderSubbandContext context = { 0 }, *ctx = &context;
   int total_length = 0;
   int bandid = 0;
-#if 0  
-  schro_subband_storage_to_gpuframe_init(store, frame);
-#endif
+
   for(component=0;component<3;component++) {
     for(i=0;i<1+3*params->transform_depth;i++) {
     
@@ -1508,11 +1494,7 @@ schro_decoder_decode_transform_data_serial (SchroDecoderWorker *decoder, schro_s
       schro_unpack_byte_sync (&decoder->unpack);
       if(schro_decoder_decode_subband (decoder, ctx))
       {
-          /** Fire off asynchronous transfer to GPU */
           store->offsets[bandid] = total_length;
-#if 0
-          schro_subband_storage_to_gpuframe(store, frame, ctx->component, ctx->position, store->offsets[bandid]);
-#endif
           total_length += length;
       }
       else
@@ -1520,11 +1502,36 @@ schro_decoder_decode_transform_data_serial (SchroDecoderWorker *decoder, schro_s
           /** Empty block */
           store->offsets[bandid] = -1;
       }
+      /* SCHRO_ERROR("%p %i (%i %i)", decoder, bandid, ctx->component, ctx->position); */
       ++bandid;
+      /** Fire off asynchronous transfer to GPU */
+      decoder->subband_max = bandid;
     }
   }
   store->used = total_length;
   SCHRO_DEBUG("coefficients in buffer: %i (%f%%)", total_length, 100.0*(double)total_length/store->maxsize);
+}
+
+void schro_decoder_async_transfer(SchroDecoderWorker *decoder)
+{
+  /* Start transfers in FIFO order */
+  int x;
+  int limit = decoder->subband_max;
+  int subbands_per_component = 1+3*decoder->params.transform_depth;
+  /* SCHRO_ERROR("%i %i", decoder->subband_min, limit); */
+  for(x = decoder->subband_min; x < limit; ++x)
+  {
+    int component, position;
+    if(x == 0)
+      schro_subband_storage_to_gpuframe_init(decoder->store, decoder->frame);
+    component = x / subbands_per_component;
+    position = schro_subband_get_position(x % subbands_per_component);
+    /* SCHRO_ERROR("%p %i/%i/%i (%i %i)", decoder, x, limit, subbands_per_component*3, component, position); */
+    schro_subband_storage_to_gpuframe(decoder->store, decoder->frame, 
+      component, position, decoder->store->offsets[x]);
+  }
+  decoder->subband_min = x;
+  SCHRO_ASSERT(x == limit);
 }
 #endif
 

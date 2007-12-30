@@ -150,13 +150,9 @@ struct _SchroDecoderWorker {
   SchroFrame *output_picture;
   
 #ifdef SCHRO_GPU
-  /* Async transfer of subband data.
-     subband_min is the last band that was transferred to the GPU,
-     subband_max is the last one that was decoded by the CPU.
-   */
-  cudaStream_t stream;
-  int subband_min;
-  int subband_max;
+  cudaStream_t stream; /* CUDA stream handle */
+  int subband_min; /* last band+1 that was transferred to the GPU (updated only by GPU thread) */
+  int subband_max; /* last band+1 that was decoded (updated only by CPU threads) */
 #endif
   
   /*< private >*/
@@ -222,6 +218,7 @@ int schro_decoder_is_end_sequence (SchroBuffer *buffer);
 
 #ifdef SCHRO_ENABLE_UNSTABLE_API
 SchroDecoderOp *schro_get_decoder_ops();
+void schro_decoder_async_transfer(SchroDecoderWorker *decoder);
 
 void schro_decoder_decode_parse_header (SchroDecoderParseHeader *hdr, SchroUnpack *unpack);
 void schro_decoder_decode_access_unit (SchroDecoderSettings *hdr, SchroUnpack *unpack);
