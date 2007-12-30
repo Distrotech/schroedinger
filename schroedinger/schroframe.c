@@ -64,7 +64,7 @@ schro_frame_new_and_alloc (SchroFrameFormat format, int width, int height)
 
   frame->components[0].width = width;
   frame->components[0].height = height;
-  frame->components[0].stride = ROUND_UP_64(width * bytes_pp);
+  frame->components[0].stride = ROUND_UP_4(width * bytes_pp);
   frame->components[0].length = 
     frame->components[0].stride * frame->components[0].height;
   frame->components[0].v_shift = 0;
@@ -72,7 +72,7 @@ schro_frame_new_and_alloc (SchroFrameFormat format, int width, int height)
 
   frame->components[1].width = chroma_width;
   frame->components[1].height = chroma_height;
-  frame->components[1].stride = ROUND_UP_64(chroma_width * bytes_pp);
+  frame->components[1].stride = ROUND_UP_4(chroma_width * bytes_pp);
   frame->components[1].length = 
     frame->components[1].stride * frame->components[1].height;
   frame->components[1].v_shift = v_shift;
@@ -80,7 +80,7 @@ schro_frame_new_and_alloc (SchroFrameFormat format, int width, int height)
 
   frame->components[2].width = chroma_width;
   frame->components[2].height = chroma_height;
-  frame->components[2].stride = ROUND_UP_64(chroma_width * bytes_pp);
+  frame->components[2].stride = ROUND_UP_4(chroma_width * bytes_pp);
   frame->components[2].length = 
     frame->components[2].stride * frame->components[2].height;
   frame->components[2].v_shift = v_shift;

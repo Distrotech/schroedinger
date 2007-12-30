@@ -235,8 +235,7 @@ gst_schro_enc_sink_setcaps (GstPad *pad, GstCaps *caps)
       &schro_enc->par_n, &schro_enc->par_d);
 
   schro_video_format_set_std_video_format (schro_enc->video_format,
-      SCHRO_VIDEO_FORMAT_HD1080P_50);
-//      SCHRO_VIDEO_FORMAT_CUSTOM);
+      SCHRO_VIDEO_FORMAT_CUSTOM);
 
   switch (schro_enc->fourcc) {
     case GST_MAKE_FOURCC('I','4','2','0'):
