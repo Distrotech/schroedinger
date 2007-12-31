@@ -21,18 +21,6 @@ SCHRO_BEGIN_DECLS
 typedef struct _SchroDecoder SchroDecoder;
 typedef struct _SchroPicture SchroPicture;
 
-struct _SchroDecoderSettings 
-{
-  int major_version;
-  int minor_version;
-  int profile;
-  int level;
-  schro_bool interlaced_coding;
-  SchroVideoFormat video_format;
-};
-
-typedef struct _SchroDecoderSettings SchroDecoderSettings;
-
 struct _SchroDecoderParseHeader
 {
   int parse_code;
@@ -220,7 +208,7 @@ SchroDecoderOp *schro_get_decoder_ops();
 void schro_decoder_async_transfer(SchroPicture *decoder);
 
 void schro_decoder_decode_parse_header (SchroDecoderParseHeader *hdr, SchroUnpack *unpack);
-void schro_decoder_decode_access_unit (SchroDecoderSettings *hdr, SchroUnpack *unpack);
+void schro_decoder_decode_access_unit (SchroDecoder *decoder, SchroUnpack *unpack);
 void schro_decoder_decode_picture_header (SchroDecoderPictureHeader *hdr, SchroUnpack *unpack, SchroDecoderParseHeader *phdr);
 
 void schro_decoder_decode_picture_prediction_parameters (SchroPicture *decoder);

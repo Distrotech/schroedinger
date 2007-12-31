@@ -430,7 +430,7 @@ schro_decoder_get_video_format (SchroDecoder *decoder)
   SchroVideoFormat *format;
 
   format = malloc(sizeof(SchroVideoFormat));
-  memcpy (format, &decoder->settings.video_format, sizeof(SchroVideoFormat));
+  memcpy (format, &decoder->video_format, sizeof(SchroVideoFormat));
 
   return format;
 }
@@ -604,7 +604,7 @@ schro_decoder_iterate (SchroDecoder *decoder)
 
   if (hdr.parse_code == SCHRO_PARSE_CODE_SEQUENCE_HEADER) {
     SCHRO_INFO ("decoding access unit");
-    schro_decoder_decode_access_unit(&decoder->settings, &unpack);
+    schro_decoder_decode_access_unit(decoder, &unpack);
 
     schro_buffer_unref (decoder->input_buffer);
     decoder->input_buffer = NULL;
@@ -769,7 +769,7 @@ static void
 schro_picture_init (SchroPicture *decoder)
 {
   SchroFrameFormat frame_format;
-  SchroVideoFormat *video_format = &decoder->parent->settings.video_format;
+  SchroVideoFormat *video_format = &decoder->parent->video_format;
   int frame_width, frame_height;
 
   frame_format = schro_params_get_frame_format (16,
@@ -830,7 +830,7 @@ schro_picture_new (SchroDecoder *decoder)
   picture->tmpbuf = malloc(SCHRO_LIMIT_WIDTH * 2);
   picture->tmpbuf2 = malloc(SCHRO_LIMIT_WIDTH * 2);
 
-  picture->params.video_format = &picture->parent->settings.video_format;
+  picture->params.video_format = &picture->parent->video_format;
 
   return picture;
 }
@@ -1141,7 +1141,7 @@ schro_picture_iterate_finish (SchroPicture *decoder)
     }
 
     ref = schro_frame_new_and_alloc (frame_format,
-        decoder->parent->settings.video_format.width, decoder->parent->settings.video_format.height);
+        decoder->parent->video_format.width, decoder->parent->video_format.height);
     schro_frame_convert (ref, decoder->frame);
     ref->frame_number = decoder->pichdr.picture_number;
     
@@ -1370,32 +1370,32 @@ schro_decoder_decode_parse_header (SchroDecoderParseHeader *hdr, SchroUnpack *un
 }
 
 void
-schro_decoder_decode_access_unit (SchroDecoderSettings *hdr, SchroUnpack *unpack)
+schro_decoder_decode_access_unit (SchroDecoder *decoder, SchroUnpack *unpack)
 {
   int bit;
   int index;
-  SchroVideoFormat *format = &hdr->video_format;
+  SchroVideoFormat *format = &decoder->video_format;
 
   SCHRO_DEBUG("decoding access unit");
 
   /* parse parameters */
-  hdr->major_version = schro_unpack_decode_uint (unpack);
-  SCHRO_DEBUG("major_version = %d", hdr->major_version);
-  hdr->minor_version = schro_unpack_decode_uint (unpack);
-  SCHRO_DEBUG("minor_version = %d", hdr->minor_version);
-  hdr->profile = schro_unpack_decode_uint (unpack);
-  SCHRO_DEBUG("profile = %d", hdr->profile);
-  hdr->level = schro_unpack_decode_uint (unpack);
-  SCHRO_DEBUG("level = %d", hdr->level);
+  decoder->major_version = schro_unpack_decode_uint (unpack);
+  SCHRO_DEBUG("major_version = %d", decoder->major_version);
+  decoder->minor_version = schro_unpack_decode_uint (unpack);
+  SCHRO_DEBUG("minor_version = %d", decoder->minor_version);
+  decoder->profile = schro_unpack_decode_uint (unpack);
+  SCHRO_DEBUG("profile = %d", decoder->profile);
+  decoder->level = schro_unpack_decode_uint (unpack);
+  SCHRO_DEBUG("level = %d", decoder->level);
 
-  if (hdr->major_version != 0 || hdr->minor_version != 20071203) {
+  if (decoder->major_version != 0 || decoder->minor_version != 20071203) {
     SCHRO_ERROR("Expecting version number 0.20071203, got %d.%d",
-        hdr->major_version, hdr->minor_version);
+        decoder->major_version, decoder->minor_version);
     //SCHRO_MILD_ASSERT(0);
   }
-  if (hdr->profile != 0 || hdr->level != 0) {
+  if (decoder->profile != 0 || decoder->level != 0) {
     SCHRO_ERROR("Expecting profile/level 0,0, got %d,%d",
-        hdr->profile, hdr->level);
+        decoder->profile, decoder->level);
     SCHRO_MILD_ASSERT(0);
   }
 
@@ -1538,7 +1538,7 @@ schro_decoder_decode_access_unit (SchroDecoderSettings *hdr, SchroUnpack *unpack
     }
   }
 
-  hdr->interlaced_coding = schro_unpack_decode_uint (unpack);
+  decoder->interlaced_coding = schro_unpack_decode_uint (unpack);
 
   MARKER();
 

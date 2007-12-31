@@ -68,9 +68,14 @@ struct _SchroDecoder
   pthread_cond_t worker_statechange;
   pthread_cond_t worker_available;
   
-  /** Current decoder settings. Can change for each access unit. 
+  /** Current decoder settings.
    */
-  SchroDecoderSettings settings;
+  int major_version;
+  int minor_version;
+  int profile;
+  int level;
+  schro_bool interlaced_coding;
+  SchroVideoFormat video_format;
 
   SchroPictureNumber next_frame_number;
   SchroPictureNumber earliest_frame;
