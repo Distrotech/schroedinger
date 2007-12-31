@@ -347,8 +347,7 @@ SchroDecoder *schro_decoder_new()
   for(x=0; x<decoder->worker_count; ++x)
   {
     SCHRO_LOG("creating decoder %i", x);
-    decoder->workers[x] = schro_picture_new();
-    decoder->workers[x]->parent = decoder;
+    decoder->workers[x] = schro_picture_new(decoder);
   }
   
   /** Create worker threads */
@@ -740,7 +739,6 @@ SCHRO_DEBUG("skip value %g ratio %g", decoder->skip_value, decoder->skip_ratio);
   
   /** Propagate our settings */
   w->unpack = unpack;
-  w->settings = decoder->settings;
   w->header = hdr;
   w->pichdr = pichdr;
   w->input_buffer = decoder->input_buffer;
@@ -771,7 +769,7 @@ static void
 schro_picture_init (SchroPicture *decoder)
 {
   SchroFrameFormat frame_format;
-  SchroVideoFormat *video_format = &decoder->settings.video_format;
+  SchroVideoFormat *video_format = &decoder->parent->settings.video_format;
   int frame_width, frame_height;
 
   frame_format = schro_params_get_frame_format (16,
@@ -821,20 +819,20 @@ schro_picture_init (SchroPicture *decoder)
     
 
 SchroPicture *
-schro_picture_new (void)
+schro_picture_new (SchroDecoder *decoder)
 {
-  SchroPicture *decoder;
+  SchroPicture *picture;
 
-  decoder = malloc(sizeof(SchroDecoder));
-  memset (decoder, 0, sizeof(SchroDecoder));
+  picture = malloc(sizeof(SchroDecoder));
+  memset (picture, 0, sizeof(SchroDecoder));
 
-  decoder->tmpbuf = malloc(SCHRO_LIMIT_WIDTH * 2);
-  decoder->tmpbuf2 = malloc(SCHRO_LIMIT_WIDTH * 2);
+  picture->parent = decoder;
+  picture->tmpbuf = malloc(SCHRO_LIMIT_WIDTH * 2);
+  picture->tmpbuf2 = malloc(SCHRO_LIMIT_WIDTH * 2);
 
-  decoder->params.video_format = &decoder->settings.video_format;
+  picture->params.video_format = &picture->parent->settings.video_format;
 
-
-  return decoder;
+  return picture;
 }
 
 #ifdef SCHRO_GPU
@@ -1143,7 +1141,7 @@ schro_picture_iterate_finish (SchroPicture *decoder)
     }
 
     ref = schro_frame_new_and_alloc (frame_format,
-        decoder->settings.video_format.width, decoder->settings.video_format.height);
+        decoder->parent->settings.video_format.width, decoder->parent->settings.video_format.height);
     schro_frame_convert (ref, decoder->frame);
     ref->frame_number = decoder->pichdr.picture_number;
     
@@ -2754,7 +2752,6 @@ static void schro_decoder_init (SchroDecoder *decoder)
   pthread_mutex_lock (&decoder->mutex);
   for(x=0; x<decoder->worker_count; ++x)
   {
-      decoder->workers[x]->settings = decoder->settings;
       decoder->workers[x]->curstate |= SCHRO_DECODER_HAVE_ACCESS_UNIT;
       decoder->workers[x]->skipstate |= SCHRO_DECODER_HAVE_ACCESS_UNIT;
   }

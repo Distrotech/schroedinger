@@ -139,7 +139,6 @@ struct _SchroPicture {
   int time;
   SchroDecoder *parent;
   SchroUnpack unpack;
-  SchroDecoderSettings settings;
   SchroDecoderParseHeader header;
   SchroDecoderPictureHeader pichdr;
 
@@ -207,7 +206,7 @@ enum {
   SCHRO_DECODER_NEED_FRAME
 };
 
-SchroPicture * schro_picture_new (void);
+SchroPicture * schro_picture_new (SchroDecoder *decoder);
 void schro_picture_free (SchroPicture *decoder);
 
 int schro_decoder_is_parse_header (SchroBuffer *buffer);
