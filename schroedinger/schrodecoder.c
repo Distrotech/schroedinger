@@ -179,7 +179,9 @@ static void* schro_decoder_main(void *arg)
       op_w->curstate = op_w->skipstate | SCHRO_DECODER_INITIAL;
       SCHRO_DEBUG("Thread %i reached final state on %p, new state is %04x", thread->id, op_w, op_w->curstate);
       /* Reset subband fifo */
+#ifdef SCHRO_GPU
       op_w->subband_min = op_w->subband_max = 0;
+#endif
       pthread_cond_signal (&decoder->worker_available);
     }
     
