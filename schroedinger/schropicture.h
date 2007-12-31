@@ -21,15 +21,6 @@ SCHRO_BEGIN_DECLS
 typedef struct _SchroDecoder SchroDecoder;
 typedef struct _SchroPicture SchroPicture;
 
-struct _SchroDecoderParseHeader
-{
-  int parse_code;
-  int n_refs;
-  int next_parse_offset;
-  int prev_parse_offset;
-};
-typedef struct _SchroDecoderParseHeader SchroDecoderParseHeader;
-
 #ifdef SCHRO_ENABLE_UNSTABLE_API
 
 /** 
@@ -118,7 +109,11 @@ struct _SchroPicture {
   int time;
   SchroDecoder *parent;
   SchroUnpack unpack;
-  SchroDecoderParseHeader header;
+
+  int parse_code;
+  int n_refs;
+  int next_parse_offset;
+  int prev_parse_offset;
 
   SchroPictureNumber picture_number;
   SchroPictureNumber reference1;
@@ -202,9 +197,9 @@ int schro_decoder_is_end_sequence (SchroBuffer *buffer);
 SchroDecoderOp *schro_get_decoder_ops();
 void schro_decoder_async_transfer(SchroPicture *decoder);
 
-void schro_decoder_decode_parse_header (SchroDecoderParseHeader *hdr, SchroUnpack *unpack);
+void schro_decoder_decode_parse_header (SchroDecoder *decoder, SchroUnpack *unpack);
 void schro_decoder_decode_access_unit (SchroDecoder *decoder, SchroUnpack *unpack);
-void schro_decoder_decode_picture_header (SchroDecoder *decoder, SchroUnpack *unpack, SchroDecoderParseHeader *phdr);
+void schro_decoder_decode_picture_header (SchroDecoder *decoder, SchroUnpack *unpack);
 
 void schro_decoder_decode_picture_prediction_parameters (SchroPicture *decoder);
 void schro_decoder_decode_block_data (SchroPicture *decoder);

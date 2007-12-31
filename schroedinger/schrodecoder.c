@@ -589,7 +589,6 @@ int
 schro_decoder_iterate (SchroDecoder *decoder)
 {
   SchroUnpack unpack;
-  SchroDecoderParseHeader hdr;
   SchroPicture *w;
   
   if (decoder->input_buffer == NULL) {
@@ -599,9 +598,9 @@ schro_decoder_iterate (SchroDecoder *decoder)
   schro_unpack_init_with_data (&unpack, decoder->input_buffer->data,
       decoder->input_buffer->length, 1);
 
-  schro_decoder_decode_parse_header(&hdr, &unpack);
+  schro_decoder_decode_parse_header(decoder, &unpack);
 
-  if (hdr.parse_code == SCHRO_PARSE_CODE_SEQUENCE_HEADER) {
+  if (decoder->parse_code == SCHRO_PARSE_CODE_SEQUENCE_HEADER) {
     SCHRO_INFO ("decoding access unit");
     schro_decoder_decode_access_unit(decoder, &unpack);
 
@@ -616,7 +615,7 @@ schro_decoder_iterate (SchroDecoder *decoder)
     return SCHRO_DECODER_FIRST_ACCESS_UNIT;
   }
 
-  if (hdr.parse_code == SCHRO_PARSE_CODE_AUXILIARY_DATA) {
+  if (decoder->parse_code == SCHRO_PARSE_CODE_AUXILIARY_DATA) {
     int code;
 
     code = schro_unpack_decode_bits (&unpack, 8);
@@ -635,7 +634,7 @@ schro_decoder_iterate (SchroDecoder *decoder)
     return SCHRO_DECODER_OK;
   }
 
-  if (hdr.parse_code == SCHRO_PARSE_CODE_PADDING) {
+  if (decoder->parse_code == SCHRO_PARSE_CODE_PADDING) {
     return SCHRO_DECODER_OK;
   }
 
@@ -657,10 +656,10 @@ schro_decoder_iterate (SchroDecoder *decoder)
     return SCHRO_DECODER_NEED_FRAME;
   }
   
-  schro_decoder_decode_picture_header(decoder, &unpack, &hdr);
+  schro_decoder_decode_picture_header(decoder, &unpack);
 
   if (!decoder->have_frame_number) {
-    if (SCHRO_PARSE_CODE_NUM_REFS (hdr.parse_code) > 0) {
+    if (SCHRO_PARSE_CODE_NUM_REFS (decoder->parse_code) > 0) {
       SCHRO_ERROR("expected I frame after access unit header");
     }
     decoder->next_frame_number = decoder->picture_number;
@@ -669,7 +668,7 @@ schro_decoder_iterate (SchroDecoder *decoder)
   }
 
   /** Retiring */
-  if (SCHRO_PARSE_CODE_IS_REFERENCE (hdr.parse_code)) {
+  if (SCHRO_PARSE_CODE_IS_REFERENCE (decoder->parse_code)) {
     //schro_decoder_reference_retire (decoder, decoder->retired_picture_number);
     /** Mark reference for retirement.
         Should only be done if _all_ the frames up to now have been completed.
@@ -738,7 +737,11 @@ SCHRO_DEBUG("skip value %g ratio %g", decoder->skip_value, decoder->skip_ratio);
   
   /** Propagate our settings */
   w->unpack = unpack;
-  w->header = hdr;
+
+  w->parse_code = decoder->parse_code;
+  w->n_refs = decoder->n_refs;
+  w->next_parse_offset = decoder->next_parse_offset;
+  w->prev_parse_offset = decoder->prev_parse_offset;
 
   w->picture_number = decoder->picture_number;
   w->reference1 = decoder->reference1;
@@ -902,12 +905,12 @@ schro_picture_iterate_motion_decode_params (SchroPicture *decoder)
   /* General worker state initialisation */
   decoder->ref0 = NULL;
   decoder->ref1 = NULL;
-  params->num_refs = SCHRO_PARSE_CODE_NUM_REFS(decoder->header.parse_code);
-  params->is_lowdelay = SCHRO_PARSE_CODE_IS_LOW_DELAY(decoder->header.parse_code);
-  params->is_noarith = !SCHRO_PARSE_CODE_USING_AC(decoder->header.parse_code);
+  params->num_refs = SCHRO_PARSE_CODE_NUM_REFS(decoder->parse_code);
+  params->is_lowdelay = SCHRO_PARSE_CODE_IS_LOW_DELAY(decoder->parse_code);
+  params->is_noarith = !SCHRO_PARSE_CODE_USING_AC(decoder->parse_code);
 
   /* Check for motion comp data */
-  if (decoder->header.n_refs > 0) {
+  if (decoder->n_refs > 0) {
 
     SCHRO_DEBUG("inter");
 
@@ -923,7 +926,7 @@ schro_picture_iterate_motion_decode_params (SchroPicture *decoder)
 static void
 schro_picture_iterate_motion_init (SchroPicture *decoder)
 {
-  if (decoder->header.n_refs > 0)
+  if (decoder->n_refs > 0)
   {
     schro_gpumotion_init (decoder->gpumotion, decoder->motion);
     schro_decoder_skipstate(decoder->parent, decoder, SCHRO_DECODER_MOTION_INIT);
@@ -934,7 +937,7 @@ schro_picture_iterate_motion_init (SchroPicture *decoder)
 static void
 schro_picture_iterate_motion_decode_vectors (SchroPicture *decoder)
 {
-  if (decoder->header.n_refs > 0) {
+  if (decoder->n_refs > 0) {
     schro_unpack_byte_sync (&decoder->unpack);
     schro_decoder_decode_block_data (decoder);
 #ifdef SCHRO_GPU
@@ -1024,22 +1027,22 @@ schro_picture_check_refs (SchroPicture *decoder)
   /** Find reference frames, if we didn't yet. We should check for frames
       that are "stuck" due to their reference frames never appearing. 
    */
-  if(decoder->header.n_refs > 0 && !decoder->ref0)
+  if(decoder->n_refs > 0 && !decoder->ref0)
     decoder->ref0 = schro_decoder_reference_get (decoder->parent, decoder->reference1);
-  if(decoder->header.n_refs > 1 && !decoder->ref1)
+  if(decoder->n_refs > 1 && !decoder->ref1)
     decoder->ref1 = schro_decoder_reference_get (decoder->parent, decoder->reference2);
 
   /** Count number of available reference frames, and compare
       to what we need. 
    */
   rv = (decoder->ref0 != NULL) + (decoder->ref1 != NULL);
-  return rv == decoder->header.n_refs;
+  return rv == decoder->n_refs;
 }
 
 static void
 schro_picture_iterate_motion_transform (SchroPicture *decoder)
 {
-  if (decoder->header.n_refs > 0) {
+  if (decoder->n_refs > 0) {
 #if 0
     /* Moved this to finish frame stage because of race conditions.
        It should really be here, though. */
@@ -1089,7 +1092,7 @@ schro_picture_iterate_finish (SchroPicture *decoder)
       schro_frame_convert (output_picture, decoder->mc_tmp_frame);
     }
   } else if (!_schro_decode_prediction_only) {
-    if (SCHRO_PARSE_CODE_IS_INTER(decoder->header.parse_code)) {
+    if (SCHRO_PARSE_CODE_IS_INTER(decoder->parse_code)) {
       schro_frame_add (decoder->frame, decoder->mc_tmp_frame);
     }
 
@@ -1105,7 +1108,7 @@ schro_picture_iterate_finish (SchroPicture *decoder)
 #else
     SchroGPUFrame *frame;
 #endif
-    if (SCHRO_PARSE_CODE_IS_INTER(decoder->header.parse_code)) {
+    if (SCHRO_PARSE_CODE_IS_INTER(decoder->parse_code)) {
       frame = decoder->mc_tmp_frame;
     } else {
       frame = decoder->frame;
@@ -1117,14 +1120,14 @@ schro_picture_iterate_finish (SchroPicture *decoder)
       schro_frame_convert (output_picture, frame);
     }
 
-    if (SCHRO_PARSE_CODE_IS_INTER(decoder->header.parse_code)) {
+    if (SCHRO_PARSE_CODE_IS_INTER(decoder->parse_code)) {
       schro_frame_add (decoder->frame, decoder->mc_tmp_frame);
     }
   }
 
   output_picture->frame_number = decoder->picture_number;
 
-  if (SCHRO_PARSE_CODE_IS_REFERENCE(decoder->header.parse_code)) {
+  if (SCHRO_PARSE_CODE_IS_REFERENCE(decoder->parse_code)) {
 #ifndef SCHRO_GPU
     SchroFrame *ref;
     SchroFrameFormat frame_format;
@@ -1347,7 +1350,7 @@ SchroDecoderOp *schro_get_decoder_ops()
 #undef schro_frame_add
 #undef schro_frame_new_and_alloc
 void
-schro_decoder_decode_parse_header (SchroDecoderParseHeader *hdr, SchroUnpack *unpack)
+schro_decoder_decode_parse_header (SchroDecoder *decoder, SchroUnpack *unpack)
 {
   int v1, v2, v3, v4;
   
@@ -1361,16 +1364,16 @@ schro_decoder_decode_parse_header (SchroDecoderParseHeader *hdr, SchroUnpack *un
     return;
   }
 
-  hdr->parse_code = schro_unpack_decode_bits (unpack, 8);
-  SCHRO_DEBUG ("parse code %02x", hdr->parse_code);
+  decoder->parse_code = schro_unpack_decode_bits (unpack, 8);
+  SCHRO_DEBUG ("parse code %02x", decoder->parse_code);
 
-  hdr->n_refs = SCHRO_PARSE_CODE_NUM_REFS(hdr->parse_code);
-  SCHRO_DEBUG("n_refs %d", hdr->n_refs);
+  decoder->n_refs = SCHRO_PARSE_CODE_NUM_REFS(decoder->parse_code);
+  SCHRO_DEBUG("n_refs %d", decoder->n_refs);
 
-  hdr->next_parse_offset = schro_unpack_decode_bits (unpack, 32);
-  SCHRO_DEBUG ("next_parse_offset %d", hdr->next_parse_offset);
-  hdr->prev_parse_offset = schro_unpack_decode_bits (unpack, 32);
-  SCHRO_DEBUG ("prev_parse_offset %d", hdr->prev_parse_offset);
+  decoder->next_parse_offset = schro_unpack_decode_bits (unpack, 32);
+  SCHRO_DEBUG ("next_parse_offset %d", decoder->next_parse_offset);
+  decoder->prev_parse_offset = schro_unpack_decode_bits (unpack, 32);
+  SCHRO_DEBUG ("prev_parse_offset %d", decoder->prev_parse_offset);
 }
 
 void
@@ -1550,26 +1553,26 @@ schro_decoder_decode_access_unit (SchroDecoder *decoder, SchroUnpack *unpack)
 }
 
 void
-schro_decoder_decode_picture_header (SchroDecoder *decoder, SchroUnpack *unpack, SchroDecoderParseHeader *phdr)
+schro_decoder_decode_picture_header (SchroDecoder *decoder, SchroUnpack *unpack)
 {
   schro_unpack_byte_sync(unpack);
 
   decoder->picture_number = schro_unpack_decode_bits (unpack, 32);
   SCHRO_DEBUG("picture number %d", decoder->picture_number);
 
-  if (phdr->n_refs > 0) {
+  if (decoder->n_refs > 0) {
     decoder->reference1 = decoder->picture_number +
       schro_unpack_decode_sint (unpack);
     SCHRO_DEBUG("ref1 %d", decoder->reference1);
   }
 
-  if (phdr->n_refs > 1) {
+  if (decoder->n_refs > 1) {
     decoder->reference2 = decoder->picture_number +
       schro_unpack_decode_sint (unpack);
     SCHRO_DEBUG("ref2 %d", decoder->reference2);
   }
 
-  if (SCHRO_PARSE_CODE_IS_REFERENCE(phdr->parse_code)) {
+  if (SCHRO_PARSE_CODE_IS_REFERENCE(decoder->parse_code)) {
     decoder->retired_picture_number = decoder->picture_number +
       schro_unpack_decode_sint (unpack);
   }
@@ -1953,7 +1956,7 @@ schro_decoder_decode_transform_parameters (SchroPicture *decoder)
   params->transform_depth = schro_unpack_decode_uint (&decoder->unpack);
   SCHRO_DEBUG ("transform depth %d", params->transform_depth);
 
-  if (!SCHRO_PARSE_CODE_IS_LOW_DELAY(decoder->header.parse_code)) {
+  if (!SCHRO_PARSE_CODE_IS_LOW_DELAY(decoder->parse_code)) {
     /* codeblock parameters */
     params->codeblock_mode_index = 0;
     for(i=0;i<params->transform_depth + 1;i++) {
@@ -2596,7 +2599,7 @@ schro_decoder_decode_subband (SchroPicture *decoder,
   }
   schro_unpack_skip_bits (&decoder->unpack, ctx->subband_length*8);
 
-  if (ctx->position == 0 && decoder->header.n_refs == 0) {
+  if (ctx->position == 0 && decoder->n_refs == 0) {
     SchroFrameData fd;
     fd.data = ctx->data;
     fd.stride = ctx->stride;
