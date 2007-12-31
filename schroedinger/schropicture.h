@@ -128,7 +128,11 @@ struct _SchroPicture {
   SchroDecoder *parent;
   SchroUnpack unpack;
   SchroDecoderParseHeader header;
-  SchroDecoderPictureHeader pichdr;
+
+  SchroPictureNumber picture_number;
+  SchroPictureNumber reference1;
+  SchroPictureNumber reference2;
+  SchroPictureNumber retired_picture_number;
 
   int has_md5;
   uint8_t md5_checksum[32];

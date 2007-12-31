@@ -740,7 +740,12 @@ SCHRO_DEBUG("skip value %g ratio %g", decoder->skip_value, decoder->skip_ratio);
   /** Propagate our settings */
   w->unpack = unpack;
   w->header = hdr;
-  w->pichdr = pichdr;
+
+  w->picture_number = pichdr.picture_number;
+  w->reference1 = pichdr.reference1;
+  w->reference2 = pichdr.reference2;
+  w->retired_picture_number = pichdr.retired_picture_number;
+
   w->input_buffer = decoder->input_buffer;
   w->output_picture = schro_queue_pull (decoder->output_queue);
   w->has_md5 = decoder->has_md5;
@@ -1021,9 +1026,9 @@ schro_picture_check_refs (SchroPicture *decoder)
       that are "stuck" due to their reference frames never appearing. 
    */
   if(decoder->header.n_refs > 0 && !decoder->ref0)
-    decoder->ref0 = schro_decoder_reference_get (decoder->parent, decoder->pichdr.reference1);
+    decoder->ref0 = schro_decoder_reference_get (decoder->parent, decoder->reference1);
   if(decoder->header.n_refs > 1 && !decoder->ref1)
-    decoder->ref1 = schro_decoder_reference_get (decoder->parent, decoder->pichdr.reference2);
+    decoder->ref1 = schro_decoder_reference_get (decoder->parent, decoder->reference2);
 
   /** Count number of available reference frames, and compare
       to what we need. 
@@ -1118,7 +1123,7 @@ schro_picture_iterate_finish (SchroPicture *decoder)
     }
   }
 
-  output_picture->frame_number = decoder->pichdr.picture_number;
+  output_picture->frame_number = decoder->picture_number;
 
   if (SCHRO_PARSE_CODE_IS_REFERENCE(decoder->header.parse_code)) {
 #ifndef SCHRO_GPU
@@ -1143,7 +1148,7 @@ schro_picture_iterate_finish (SchroPicture *decoder)
     ref = schro_frame_new_and_alloc (frame_format,
         decoder->parent->video_format.width, decoder->parent->video_format.height);
     schro_frame_convert (ref, decoder->frame);
-    ref->frame_number = decoder->pichdr.picture_number;
+    ref->frame_number = decoder->picture_number;
     
     upsampler = schro_upsampled_frame_new(ref);
     
@@ -1151,7 +1156,7 @@ schro_picture_iterate_finish (SchroPicture *decoder)
        demand. */
     schro_upsampled_frame_upsample (upsampler);
     
-    schro_decoder_reference_add (decoder->parent, upsampler, decoder->pichdr.picture_number);
+    schro_decoder_reference_add (decoder->parent, upsampler, decoder->picture_number);
 #else
     SchroGPUFrame *ref;
     SchroUpsampledGPUFrame *rv;
