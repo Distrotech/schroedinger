@@ -3,7 +3,7 @@
 #endif
 #define SCHRO_ARITH_DEFINE_INLINE
 #include <schroedinger/schro.h>
-#include <schroedinger/schrodecoderworker.h>
+#include <schroedinger/schropicture.h>
 
 #include <liboil/liboil.h>
 #include <schroedinger/schrooil.h>
@@ -79,23 +79,23 @@ struct _SchroDecoderSubbandContext {
 
 int _schro_decode_prediction_only;
 
-static void schro_decoder_decode_macroblock(SchroDecoderWorker *decoder,
+static void schro_decoder_decode_macroblock(SchroPicture *decoder,
     SchroArith **arith, SchroUnpack *unpack, int i, int j);
-static void schro_decoder_decode_prediction_unit(SchroDecoderWorker *decoder,
+static void schro_decoder_decode_prediction_unit(SchroPicture *decoder,
     SchroArith **arith, SchroUnpack *unpack, SchroMotionVector *motion_vectors, int x, int y);
 
 #ifdef SCHRO_GPU
-static void schro_decoder_decode_transform_data_serial (SchroDecoderWorker *decoder, schro_subband_storage *store, SchroGPUFrame *frame);
+static void schro_decoder_decode_transform_data_serial (SchroPicture *decoder, schro_subband_storage *store, SchroGPUFrame *frame);
 #endif
 
-static int schro_decoder_decode_subband (SchroDecoderWorker *decoder,
+static int schro_decoder_decode_subband (SchroPicture *decoder,
     SchroDecoderSubbandContext *ctx);
 
 #ifndef ASSUME_ZERO
 static void schro_decoder_zero_block (SchroDecoderSubbandContext *ctx, int x1, int y1, int x2, int y2);
 #endif
 
-static void schro_decoder_error (SchroDecoderWorker *decoder, const char *s);
+static void schro_decoder_error (SchroPicture *decoder, const char *s);
 
 
 static void schro_decoder_init(SchroDecoder *decoder);
@@ -109,7 +109,7 @@ static void schro_decoder_gpu_cleanup(SchroDecoder *decoder);
     - check global quit flag to signify if thread should die
       - if so, unlock and break out
     - thread looks for work (scheduling)
-      - go over all decoderworker structures
+      - go over all picture structures
       - find which one is most important
         - prefer reference frames, especially those that we are waiting for.
       - given curstate, find out what needs/can be done
@@ -153,7 +153,7 @@ static void* schro_decoder_main(void *arg)
   while(1)
   {
     SchroDecoderOp *op = NULL;
-    SchroDecoderWorker *op_w = NULL;    
+    SchroPicture *op_w = NULL;    
     int priority = INT_MIN;
 #ifdef SCHRO_GPU
 #if 0
@@ -176,7 +176,7 @@ static void* schro_decoder_main(void *arg)
     {
       for(x=0; x<decoder->worker_count; ++x)
       {
-        SchroDecoderWorker *w = decoder->workers[x];
+        SchroPicture *w = decoder->workers[x];
         int curstate = w->curstate;
         int exclude = w->busystate | w->curstate;
         int w_pri;
@@ -347,7 +347,7 @@ SchroDecoder *schro_decoder_new()
   for(x=0; x<decoder->worker_count; ++x)
   {
     SCHRO_LOG("creating decoder %i", x);
-    decoder->workers[x] = schro_decoderworker_new();
+    decoder->workers[x] = schro_picture_new();
     decoder->workers[x]->parent = decoder;
   }
   
@@ -391,7 +391,7 @@ void schro_decoder_free(SchroDecoder *decoder)
   for(x=0; x<decoder->worker_count; ++x)
   {
     SCHRO_LOG("freeing decoder %i", x);
-    schro_decoderworker_free(decoder->workers[x]);
+    schro_picture_free(decoder->workers[x]);
   }
 #endif
 
@@ -559,7 +559,7 @@ schro_decoder_push (SchroDecoder *decoder, SchroBuffer *buffer)
   decoder->input_buffer = buffer;
 }
 
-static SchroDecoderWorker *get_free_worker(SchroDecoder *decoder)
+static SchroPicture *get_free_worker(SchroDecoder *decoder)
 {
   int x;
   for(x=0; x<decoder->worker_count; ++x)
@@ -592,7 +592,7 @@ schro_decoder_iterate (SchroDecoder *decoder)
   SchroUnpack unpack;
   SchroDecoderParseHeader hdr;
   SchroDecoderPictureHeader pichdr;
-  SchroDecoderWorker *w;
+  SchroPicture *w;
   
   if (decoder->input_buffer == NULL) {
     return SCHRO_DECODER_NEED_BITS;
@@ -768,7 +768,7 @@ SCHRO_DEBUG("skip value %g ratio %g", decoder->skip_value, decoder->skip_ratio);
 /* This must be executed in the GPU thread 
 */
 static void
-schro_decoderworker_init (SchroDecoderWorker *decoder)
+schro_picture_init (SchroPicture *decoder)
 {
   SchroFrameFormat frame_format;
   SchroVideoFormat *video_format = &decoder->settings.video_format;
@@ -820,10 +820,10 @@ schro_decoderworker_init (SchroDecoderWorker *decoder)
 
     
 
-SchroDecoderWorker *
-schro_decoderworker_new (void)
+SchroPicture *
+schro_picture_new (void)
 {
-  SchroDecoderWorker *decoder;
+  SchroPicture *decoder;
 
   decoder = malloc(sizeof(SchroDecoder));
   memset (decoder, 0, sizeof(SchroDecoder));
@@ -842,7 +842,7 @@ schro_decoderworker_new (void)
 #endif
 
 void
-schro_decoderworker_free (SchroDecoderWorker *decoder)
+schro_picture_free (SchroPicture *decoder)
 {
   if (decoder->frame) {
     schro_frame_unref (decoder->frame);
@@ -878,7 +878,7 @@ schro_decoderworker_free (SchroDecoderWorker *decoder)
 
 #ifdef SCHRO_GPU
 static void
-schro_decoderworker_iterate_init_output (SchroDecoderWorker *decoder)
+schro_picture_iterate_init_output (SchroPicture *decoder)
 {
   /* GPU clone output frame. This must be here as we cannot know in advance
      what frame format (interleaved, planar, bit depth) the user expects. 
@@ -893,7 +893,7 @@ schro_decoderworker_iterate_init_output (SchroDecoderWorker *decoder)
 #endif
 
 static void
-schro_decoderworker_iterate_motion_decode_params (SchroDecoderWorker *decoder)
+schro_picture_iterate_motion_decode_params (SchroPicture *decoder)
 {
   SchroParams *params = &decoder->params;
 
@@ -919,7 +919,7 @@ schro_decoderworker_iterate_motion_decode_params (SchroDecoderWorker *decoder)
 
 #ifdef SCHRO_GPU
 static void
-schro_decoderworker_iterate_motion_init (SchroDecoderWorker *decoder)
+schro_picture_iterate_motion_init (SchroPicture *decoder)
 {
   if (decoder->header.n_refs > 0)
   {
@@ -930,7 +930,7 @@ schro_decoderworker_iterate_motion_init (SchroDecoderWorker *decoder)
 #endif
 
 static void
-schro_decoderworker_iterate_motion_decode_vectors (SchroDecoderWorker *decoder)
+schro_picture_iterate_motion_decode_vectors (SchroPicture *decoder)
 {
   if (decoder->header.n_refs > 0) {
     schro_unpack_byte_sync (&decoder->unpack);
@@ -942,7 +942,7 @@ schro_decoderworker_iterate_motion_decode_vectors (SchroDecoderWorker *decoder)
 }
 
 static void
-schro_decoderworker_iterate_wavelet_decode_params (SchroDecoderWorker *decoder)  
+schro_picture_iterate_wavelet_decode_params (SchroPicture *decoder)  
 {
   SchroParams *params = &decoder->params;
   
@@ -963,7 +963,7 @@ schro_decoderworker_iterate_wavelet_decode_params (SchroDecoderWorker *decoder)
 
 #ifdef SCHRO_GPU
 void
-schro_decoderworker_iterate_wavelet_init (SchroDecoderWorker *decoder)
+schro_picture_iterate_wavelet_init (SchroPicture *decoder)
 {
   if (!decoder->zero_residual) {
     if(!decoder->store)
@@ -974,7 +974,7 @@ schro_decoderworker_iterate_wavelet_init (SchroDecoderWorker *decoder)
 #endif         
 
 static void
-schro_decoderworker_iterate_wavelet_decode_image (SchroDecoderWorker *decoder)
+schro_picture_iterate_wavelet_decode_image (SchroPicture *decoder)
 {
   SchroParams *params = &decoder->params;
   if (!decoder->zero_residual) {
@@ -999,7 +999,7 @@ schro_decoderworker_iterate_wavelet_decode_image (SchroDecoderWorker *decoder)
 
 
 static void
-schro_decoderworker_iterate_wavelet_transform (SchroDecoderWorker *decoder)
+schro_picture_iterate_wavelet_transform (SchroPicture *decoder)
 {
   if (!decoder->zero_residual) {
 #ifdef SCHRO_GPU
@@ -1015,7 +1015,7 @@ schro_decoderworker_iterate_wavelet_transform (SchroDecoderWorker *decoder)
 }
 
 static int 
-schro_decoderworker_check_refs (SchroDecoderWorker *decoder)
+schro_picture_check_refs (SchroPicture *decoder)
 {
   int rv;
 
@@ -1035,7 +1035,7 @@ schro_decoderworker_check_refs (SchroDecoderWorker *decoder)
 }
 
 static void
-schro_decoderworker_iterate_motion_transform (SchroDecoderWorker *decoder)
+schro_picture_iterate_motion_transform (SchroPicture *decoder)
 {
   if (decoder->header.n_refs > 0) {
 #if 0
@@ -1067,7 +1067,7 @@ schro_decoderworker_iterate_motion_transform (SchroDecoderWorker *decoder)
 #endif
 
 static void
-schro_decoderworker_iterate_finish (SchroDecoderWorker *decoder)
+schro_picture_iterate_finish (SchroPicture *decoder)
 {
 #ifdef SCHRO_GPU
   SchroFrame *cpu_output_picture = decoder->output_picture;
@@ -1233,37 +1233,37 @@ static SchroDecoderOp schro_decoder_ops[] = {
 /* One-time initialisation */
 {SCHRO_DECODER_INITIALIZED,
  SCHRO_DECODER_HAVE_ACCESS_UNIT, NULL,
- schro_decoderworker_init
+ schro_picture_init
 },
 /* Start of frame decoding */
 {SCHRO_DECODER_MOTION_DECODE_PARAMS,
  SCHRO_DECODER_START|SCHRO_DECODER_INITIALIZED, NULL, 
- schro_decoderworker_iterate_motion_decode_params, 
+ schro_picture_iterate_motion_decode_params, 
 },
 {SCHRO_DECODER_MOTION_DECODE_VECTORS, 
  SCHRO_DECODER_MOTION_DECODE_PARAMS, NULL, 
- schro_decoderworker_iterate_motion_decode_vectors, 
+ schro_picture_iterate_motion_decode_vectors, 
 },
 {SCHRO_DECODER_WAVELET_DECODE_PARAMS, 
  SCHRO_DECODER_MOTION_DECODE_VECTORS, NULL, 
- schro_decoderworker_iterate_wavelet_decode_params, 
+ schro_picture_iterate_wavelet_decode_params, 
 },
 {SCHRO_DECODER_WAVELET_DECODE_IMAGE, 
  SCHRO_DECODER_WAVELET_DECODE_PARAMS, NULL, 
- schro_decoderworker_iterate_wavelet_decode_image, 
+ schro_picture_iterate_wavelet_decode_image, 
 },
 
 {SCHRO_DECODER_MOTION_RENDER, 
- SCHRO_DECODER_MOTION_DECODE_VECTORS, schro_decoderworker_check_refs, 
- schro_decoderworker_iterate_motion_transform, 
+ SCHRO_DECODER_MOTION_DECODE_VECTORS, schro_picture_check_refs, 
+ schro_picture_iterate_motion_transform, 
 },
 {SCHRO_DECODER_WAVELET_TRANSFORM, 
  SCHRO_DECODER_WAVELET_DECODE_IMAGE, NULL, 
- schro_decoderworker_iterate_wavelet_transform, 
+ schro_picture_iterate_wavelet_transform, 
 },
 {SCHRO_DECODER_FINISHED, 
  SCHRO_DECODER_MOTION_RENDER|SCHRO_DECODER_WAVELET_TRANSFORM, NULL, 
- schro_decoderworker_iterate_finish, 
+ schro_picture_iterate_finish, 
 },
 /* End of frame decoding */
 {SCHRO_DECODER_EMPTY}
@@ -1274,59 +1274,59 @@ static SchroDecoderOp schro_decoder_ops[] = {
 /* One-time initialisation */
 {SCHRO_DECODER_INITIALIZED,
  SCHRO_DECODER_HAVE_ACCESS_UNIT, NULL,
- schro_decoderworker_init,
+ schro_picture_init,
  TRUE
 },
 /* Start of frame decoding */
 {SCHRO_DECODER_OUTPUT_INIT,
  SCHRO_DECODER_START|SCHRO_DECODER_INITIALIZED, NULL, 
- schro_decoderworker_iterate_init_output, 
+ schro_picture_iterate_init_output, 
  TRUE
 },
 {SCHRO_DECODER_MOTION_DECODE_PARAMS,
  SCHRO_DECODER_START|SCHRO_DECODER_INITIALIZED, NULL, 
- schro_decoderworker_iterate_motion_decode_params, 
+ schro_picture_iterate_motion_decode_params, 
  FALSE
 },
 {SCHRO_DECODER_MOTION_INIT, 
  SCHRO_DECODER_MOTION_DECODE_PARAMS, NULL, 
- schro_decoderworker_iterate_motion_init, 
+ schro_picture_iterate_motion_init, 
  TRUE
 },
 {SCHRO_DECODER_MOTION_DECODE_VECTORS, 
  SCHRO_DECODER_MOTION_INIT|SCHRO_DECODER_MOTION_DECODE_PARAMS, NULL, 
- schro_decoderworker_iterate_motion_decode_vectors, 
+ schro_picture_iterate_motion_decode_vectors, 
  FALSE
 },
 {SCHRO_DECODER_WAVELET_DECODE_PARAMS, 
  SCHRO_DECODER_MOTION_DECODE_VECTORS, NULL, 
- schro_decoderworker_iterate_wavelet_decode_params, 
+ schro_picture_iterate_wavelet_decode_params, 
  FALSE
 },
 {SCHRO_DECODER_WAVELET_INIT, 
  SCHRO_DECODER_WAVELET_DECODE_PARAMS, NULL, 
- schro_decoderworker_iterate_wavelet_init, 
+ schro_picture_iterate_wavelet_init, 
  TRUE
 },
 {SCHRO_DECODER_WAVELET_DECODE_IMAGE, 
  SCHRO_DECODER_WAVELET_INIT|SCHRO_DECODER_WAVELET_DECODE_PARAMS, NULL, 
- schro_decoderworker_iterate_wavelet_decode_image, 
+ schro_picture_iterate_wavelet_decode_image, 
  FALSE
 },
 
 {SCHRO_DECODER_MOTION_RENDER, 
- SCHRO_DECODER_MOTION_DECODE_VECTORS, schro_decoderworker_check_refs, 
- schro_decoderworker_iterate_motion_transform, 
+ SCHRO_DECODER_MOTION_DECODE_VECTORS, schro_picture_check_refs, 
+ schro_picture_iterate_motion_transform, 
  TRUE
 },
 {SCHRO_DECODER_WAVELET_TRANSFORM, 
  SCHRO_DECODER_WAVELET_DECODE_IMAGE, NULL, 
- schro_decoderworker_iterate_wavelet_transform, 
+ schro_picture_iterate_wavelet_transform, 
  TRUE
 },
 {SCHRO_DECODER_FINISHED, 
  SCHRO_DECODER_OUTPUT_INIT|SCHRO_DECODER_MOTION_RENDER|SCHRO_DECODER_WAVELET_TRANSFORM, NULL, 
- schro_decoderworker_iterate_finish, 
+ schro_picture_iterate_finish, 
  TRUE
 },
 /* End of frame decoding */
@@ -1574,7 +1574,7 @@ schro_decoder_decode_picture_header (SchroDecoderPictureHeader *hdr, SchroUnpack
 }
 
 void
-schro_decoder_decode_picture_prediction_parameters (SchroDecoderWorker *decoder)
+schro_decoder_decode_picture_prediction_parameters (SchroPicture *decoder)
 {
   SchroParams *params = &decoder->params;
   int bit;
@@ -1691,7 +1691,7 @@ enum {
 };
 
 void
-schro_decoder_decode_block_data (SchroDecoderWorker *decoder)
+schro_decoder_decode_block_data (SchroPicture *decoder)
 {
   SchroParams *params = &decoder->params;
   SchroArith *arith[9];
@@ -1754,7 +1754,7 @@ schro_decoder_decode_block_data (SchroDecoderWorker *decoder)
 }
 
 static void
-schro_decoder_decode_macroblock(SchroDecoderWorker *decoder, SchroArith **arith,
+schro_decoder_decode_macroblock(SchroPicture *decoder, SchroArith **arith,
     SchroUnpack *unpack, int i, int j)
 {
   SchroParams *params = &decoder->params;
@@ -1816,7 +1816,7 @@ schro_decoder_decode_macroblock(SchroDecoderWorker *decoder, SchroArith **arith,
 }
 
 static void
-schro_decoder_decode_prediction_unit(SchroDecoderWorker *decoder, SchroArith **arith,
+schro_decoder_decode_prediction_unit(SchroPicture *decoder, SchroArith **arith,
     SchroUnpack *unpack, SchroMotionVector *motion_vectors, int x, int y)
 {
   SchroParams *params = &decoder->params;
@@ -1937,7 +1937,7 @@ schro_decoder_decode_prediction_unit(SchroDecoderWorker *decoder, SchroArith **a
 }
 
 void
-schro_decoder_decode_transform_parameters (SchroDecoderWorker *decoder)
+schro_decoder_decode_transform_parameters (SchroPicture *decoder)
 {
   int bit;
   int i;
@@ -1993,7 +1993,7 @@ schro_decoder_decode_transform_parameters (SchroDecoderWorker *decoder)
 
 #ifndef SCHRO_GPU
 void
-schro_decoder_decode_transform_data (SchroDecoderWorker *decoder)
+schro_decoder_decode_transform_data (SchroPicture *decoder)
 {
   int i;
   int component;
@@ -2045,7 +2045,7 @@ schro_subband_get_s (int component, int position,
 }
 
 static void
-schro_decoder_decode_transform_data_serial (SchroDecoderWorker *decoder, schro_subband_storage *store, SchroGPUFrame *frame)
+schro_decoder_decode_transform_data_serial (SchroPicture *decoder, schro_subband_storage *store, SchroGPUFrame *frame)
 {
   int i;
   int component;
@@ -2108,7 +2108,7 @@ schro_decoder_decode_transform_data_serial (SchroDecoderWorker *decoder, schro_s
   SCHRO_DEBUG("coefficients in buffer: %i (%f%%)", total_length, 100.0*(double)total_length/store->maxsize);
 }
 
-void schro_decoder_async_transfer(SchroDecoderWorker *decoder)
+void schro_decoder_async_transfer(SchroPicture *decoder)
 {
   /* Start transfers in FIFO order */
   int x;
@@ -2199,7 +2199,7 @@ codeblock_line_decode_generic (SchroDecoderSubbandContext *ctx,
 
 static void
 codeblock_line_decode_noarith (SchroDecoderSubbandContext *ctx,
-    int16_t *line, SchroDecoderWorker *decoder)
+    int16_t *line, SchroPicture *decoder)
 {
   int i;
 
@@ -2406,7 +2406,7 @@ schro_decoder_subband_dc_predict (SchroFrameData *fd)
 }
 
 static void
-schro_decoder_setup_codeblocks (SchroDecoderWorker *decoder,
+schro_decoder_setup_codeblocks (SchroPicture *decoder,
     SchroDecoderSubbandContext *ctx)
 {
   SchroParams *params = &decoder->params;
@@ -2451,7 +2451,7 @@ schro_decoder_zero_block (SchroDecoderSubbandContext *ctx,
 #endif
 
 static void
-schro_decoder_decode_codeblock (SchroDecoderWorker *decoder,
+schro_decoder_decode_codeblock (SchroPicture *decoder,
     SchroDecoderSubbandContext *ctx)
 {
   SchroParams *params = &decoder->params;
@@ -2527,7 +2527,7 @@ schro_decoder_decode_codeblock (SchroDecoderWorker *decoder,
 }
 
 int
-schro_decoder_decode_subband (SchroDecoderWorker *decoder,
+schro_decoder_decode_subband (SchroPicture *decoder,
     SchroDecoderSubbandContext *ctx)
 {
   SchroParams *params = &decoder->params;
@@ -2606,7 +2606,7 @@ schro_decoder_decode_subband (SchroDecoderWorker *decoder,
 }
 
 static void
-schro_decoder_error (SchroDecoderWorker *decoder, const char *s)
+schro_decoder_error (SchroPicture *decoder, const char *s)
 {
   SCHRO_DEBUG("decoder error");
   decoder->error = TRUE;
@@ -2738,7 +2738,7 @@ schro_decoder_add_finished_frame (SchroDecoder *decoder, SchroFrame *output_pict
 
 }
 
-void schro_decoder_skipstate (SchroDecoder *decoder, SchroDecoderWorker *w, int state)
+void schro_decoder_skipstate (SchroDecoder *decoder, SchroPicture *w, int state)
 {
   pthread_mutex_lock (&decoder->mutex);
   w->skipstate |= state;
@@ -2769,7 +2769,7 @@ static void schro_decoder_gpu_cleanup(SchroDecoder *decoder)
   SCHRO_DEBUG("Cleaning up GPU structures");
   /* Release workers */
   for(x=0; x<decoder->worker_count; ++x) {
-    schro_decoderworker_free(decoder->workers[x]);
+    schro_picture_free(decoder->workers[x]);
   }
   /* Release reference queue entries */
   for(x=0;x<decoder->reference_queue->n;x++){

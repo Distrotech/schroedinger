@@ -1,7 +1,7 @@
 #ifndef __SCHRO_DECODER_H__
 #define __SCHRO_DECODER_H__
 
-#include <schroedinger/schrodecoderworker.h>
+#include <schroedinger/schropicture.h>
 #include <schroedinger/schroasync.h>
 #include <pthread.h> /** TODO generalize condition variables in schroasync */
 
@@ -63,7 +63,7 @@ struct _SchroDecoder
   /** List of schrodecoders slave objects.
       NEED LOCKING
    */
-  SchroDecoderWorker *workers[SCHRO_MAX_DECODERS];
+  SchroPicture *workers[SCHRO_MAX_DECODERS];
   SchroDecoderThread threads[SCHRO_MAX_THREADS];
   pthread_cond_t worker_statechange;
   pthread_cond_t worker_available;
@@ -130,7 +130,7 @@ SchroUpsampledGPUFrame * schro_decoder_reference_get (SchroDecoder *decoder,
 //    SchroPictureNumber frame_number);
 #endif
 void schro_decoder_add_finished_frame (SchroDecoder *decoder, SchroFrame *frame);
-void schro_decoder_skipstate (SchroDecoder *decoder, SchroDecoderWorker *w, int state);
+void schro_decoder_skipstate (SchroDecoder *decoder, SchroPicture *w, int state);
 
 void schro_decoder_free(SchroDecoder *self);
 

@@ -72,7 +72,7 @@ ilog2up (unsigned int x)
 
 #ifndef SCHRO_GPU
 void
-schro_decoder_decode_slice (SchroDecoderWorker *decoder,
+schro_decoder_decode_slice (SchroPicture *decoder,
     SchroLowDelay *lowdelay,
     int slice_x, int slice_y, int slice_bytes)
 {
@@ -181,7 +181,7 @@ schro_lowdelay_init (SchroLowDelay *lowdelay, SchroFrame *frame,
 
 #ifndef SCHRO_GPU
 void
-schro_decoder_decode_lowdelay_transform_data (SchroDecoderWorker *decoder)
+schro_decoder_decode_lowdelay_transform_data (SchroPicture *decoder)
 {
   SchroParams *params = &decoder->params;
   SchroLowDelay lowdelay;

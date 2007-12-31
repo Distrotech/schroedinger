@@ -1,6 +1,6 @@
 
-#ifndef __SCHRO_DECODERWORKER_H__
-#define __SCHRO_DECODERWORKER_H__
+#ifndef __SCHRO_PICTURE_H__
+#define __SCHRO_PICTURE_H__
 
 #include <schroedinger/schrobuffer.h>
 #include <schroedinger/schroparams.h>
@@ -19,7 +19,7 @@
 SCHRO_BEGIN_DECLS
 
 typedef struct _SchroDecoder SchroDecoder;
-typedef struct _SchroDecoderWorker SchroDecoderWorker;
+typedef struct _SchroPicture SchroPicture;
 
 struct _SchroDecoderSettings 
 {
@@ -121,13 +121,13 @@ struct _SchroDecoderOp
 {
   int state;
   int reqstate;
-  int (*check)(SchroDecoderWorker *decoder);
-  void (*exec)(SchroDecoderWorker *decoder);
+  int (*check)(SchroPicture *decoder);
+  void (*exec)(SchroPicture *decoder);
   int gpu;
 };
 typedef struct _SchroDecoderOp SchroDecoderOp;
 
-struct _SchroDecoderWorker {
+struct _SchroPicture {
   /* operations completed on this frame */
   int curstate;
   /* operations in progress */
@@ -207,8 +207,8 @@ enum {
   SCHRO_DECODER_NEED_FRAME
 };
 
-SchroDecoderWorker * schro_decoderworker_new (void);
-void schro_decoderworker_free (SchroDecoderWorker *decoder);
+SchroPicture * schro_picture_new (void);
+void schro_picture_free (SchroPicture *decoder);
 
 int schro_decoder_is_parse_header (SchroBuffer *buffer);
 int schro_decoder_is_access_unit (SchroBuffer *buffer);
@@ -218,23 +218,23 @@ int schro_decoder_is_end_sequence (SchroBuffer *buffer);
 
 #ifdef SCHRO_ENABLE_UNSTABLE_API
 SchroDecoderOp *schro_get_decoder_ops();
-void schro_decoder_async_transfer(SchroDecoderWorker *decoder);
+void schro_decoder_async_transfer(SchroPicture *decoder);
 
 void schro_decoder_decode_parse_header (SchroDecoderParseHeader *hdr, SchroUnpack *unpack);
 void schro_decoder_decode_access_unit (SchroDecoderSettings *hdr, SchroUnpack *unpack);
 void schro_decoder_decode_picture_header (SchroDecoderPictureHeader *hdr, SchroUnpack *unpack, SchroDecoderParseHeader *phdr);
 
-void schro_decoder_decode_picture_prediction_parameters (SchroDecoderWorker *decoder);
-void schro_decoder_decode_block_data (SchroDecoderWorker *decoder);
-void schro_decoder_decode_transform_parameters (SchroDecoderWorker *decoder);
-void schro_decoder_decode_transform_data (SchroDecoderWorker *decoder);
-void schro_decoder_decode_lowdelay_transform_data (SchroDecoderWorker *decoder);
-void schro_decoder_iwt_transform (SchroDecoderWorker *decoder, int component);
-void schro_decoder_copy_from_frame_buffer (SchroDecoderWorker *decoder, SchroBuffer *buffer);
+void schro_decoder_decode_picture_prediction_parameters (SchroPicture *decoder);
+void schro_decoder_decode_block_data (SchroPicture *decoder);
+void schro_decoder_decode_transform_parameters (SchroPicture *decoder);
+void schro_decoder_decode_transform_data (SchroPicture *decoder);
+void schro_decoder_decode_lowdelay_transform_data (SchroPicture *decoder);
+void schro_decoder_iwt_transform (SchroPicture *decoder, int component);
+void schro_decoder_copy_from_frame_buffer (SchroPicture *decoder, SchroBuffer *buffer);
 
 void schro_decoder_subband_dc_predict (SchroFrameData *fd);
 
-void schro_decoder_decode_lowdelay_transform_data_2 (SchroDecoderWorker *decoder);
+void schro_decoder_decode_lowdelay_transform_data_2 (SchroPicture *decoder);
 
 #endif
 

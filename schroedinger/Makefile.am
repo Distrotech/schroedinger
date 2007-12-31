@@ -45,7 +45,7 @@ pkginclude_HEADERS = \
 	schrowavelet.h \
 	schrobitstream.h \
 	schromotion.h \
-	schrodecoderworker.h
+	schropicture.h
 
 noinst_HEADERS = \
 	schrooil.h
@@ -92,7 +92,7 @@ libschroedinger_@SCHRO_MAJORMINOR@_la_SOURCES = \
 	schrovideoformat.c \
 	schrowavelet.c \
 	schrowavelettables.c \
-	schrodecoderworker.c \
+	schropicture.c \
 	$(cuda_sources)
 
 libschroedinger_@SCHRO_MAJORMINOR@_la_CFLAGS = \
