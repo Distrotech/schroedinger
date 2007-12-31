@@ -42,6 +42,12 @@
 #define ASSUME_ZERO
 #endif
 
+#ifdef SCHRO_GPU
+#define schro_frame_convert schro_gpuframe_convert
+#define schro_frame_add schro_gpuframe_add
+#define schro_frame_new_and_alloc schro_gpuframe_new_and_alloc
+#endif
+
 typedef struct _SchroPictureSubbandContext SchroPictureSubbandContext;
 
 struct _SchroPictureSubbandContext {
@@ -874,11 +880,6 @@ schro_picture_free (SchroPicture *picture)
 #undef schro_frame_unref
 
 
-#ifdef SCHRO_GPU
-#define schro_frame_convert schro_gpuframe_convert
-#define schro_frame_add schro_gpuframe_add
-#define schro_frame_new_and_alloc schro_gpuframe_new_and_alloc
-#endif
 
 
 #ifdef SCHRO_GPU
@@ -1175,12 +1176,12 @@ schro_picture_iterate_finish (SchroPicture *picture)
     /* Try to re-use a frame from freestack */
     rv = schro_decoder_reference_getfree(picture->parent);
     if(rv == NULL)
-        rv = schro_upsampled_gpuframe_new(&picture->settings.video_format);
+        rv = schro_upsampled_gpuframe_new(&picture->parent->video_format);
     
     schro_gpuframe_setstream(picture->parent->gupsample_temp, picture->stream);
-    schro_upsampled_gpuframe_upsample(rv, picture->parent->gupsample_temp, ref, &picture->settings.video_format);
+    schro_upsampled_gpuframe_upsample(rv, picture->parent->gupsample_temp, ref, &picture->parent->video_format);
     
-    schro_decoder_reference_add (picture->parent, rv, picture->pichdr.picture_number);
+    schro_decoder_reference_add (picture->parent, rv, picture->picture_number);
 #endif
   }
 
@@ -1582,16 +1583,17 @@ void
 schro_decoder_decode_picture_prediction_parameters (SchroPicture *picture)
 {
   SchroParams *params = &picture->params;
+  SchroUnpack *unpack = &picture->unpack;
   int bit;
   int index;
 
   /* block parameters */
-  index = schro_unpack_decode_uint (&picture->unpack);
+  index = schro_unpack_decode_uint (unpack);
   if (index == 0) {
-    params->xblen_luma = schro_unpack_decode_uint (&picture->unpack);
-    params->yblen_luma = schro_unpack_decode_uint (&picture->unpack);
-    params->xbsep_luma = schro_unpack_decode_uint (&picture->unpack);
-    params->ybsep_luma = schro_unpack_decode_uint (&picture->unpack);
+    params->xblen_luma = schro_unpack_decode_uint (unpack);
+    params->yblen_luma = schro_unpack_decode_uint (unpack);
+    params->xbsep_luma = schro_unpack_decode_uint (unpack);
+    params->ybsep_luma = schro_unpack_decode_uint (unpack);
   } else {
     schro_params_set_block_params (params, index);
   }
@@ -1602,13 +1604,13 @@ schro_decoder_decode_picture_prediction_parameters (SchroPicture *picture)
   MARKER();
 
   /* mv precision */
-  params->mv_precision = schro_unpack_decode_uint (&picture->unpack);
+  params->mv_precision = schro_unpack_decode_uint (unpack);
   SCHRO_DEBUG("mv_precision %d", params->mv_precision);
 
   MARKER();
 
   /* global motion */
-  params->have_global_motion = schro_unpack_decode_bit (&picture->unpack);
+  params->have_global_motion = schro_unpack_decode_bit (unpack);
   if (params->have_global_motion) {
     int i;
 
@@ -1616,23 +1618,23 @@ schro_decoder_decode_picture_prediction_parameters (SchroPicture *picture)
       SchroGlobalMotion *gm = params->global_motion + i;
 
       /* pan/tilt */
-      bit = schro_unpack_decode_bit (&picture->unpack);
+      bit = schro_unpack_decode_bit (unpack);
       if (bit) {
-        gm->b0 = schro_unpack_decode_sint (&picture->unpack);
-        gm->b1 = schro_unpack_decode_sint (&picture->unpack);
+        gm->b0 = schro_unpack_decode_sint (unpack);
+        gm->b1 = schro_unpack_decode_sint (unpack);
       } else {
         gm->b0 = 0;
         gm->b1 = 0;
       }
 
       /* zoom/rotate/shear */
-      bit = schro_unpack_decode_bit (&picture->unpack);
+      bit = schro_unpack_decode_bit (unpack);
       if (bit) {
-        gm->a_exp = schro_unpack_decode_uint (&picture->unpack);
-        gm->a00 = schro_unpack_decode_sint (&picture->unpack);
-        gm->a01 = schro_unpack_decode_sint (&picture->unpack);
-        gm->a10 = schro_unpack_decode_sint (&picture->unpack);
-        gm->a11 = schro_unpack_decode_sint (&picture->unpack);
+        gm->a_exp = schro_unpack_decode_uint (unpack);
+        gm->a00 = schro_unpack_decode_sint (unpack);
+        gm->a01 = schro_unpack_decode_sint (unpack);
+        gm->a10 = schro_unpack_decode_sint (unpack);
+        gm->a11 = schro_unpack_decode_sint (unpack);
       } else {
         gm->a_exp = 0;
         gm->a00 = 1;
@@ -1642,11 +1644,11 @@ schro_decoder_decode_picture_prediction_parameters (SchroPicture *picture)
       }
 
       /* perspective */
-      bit = schro_unpack_decode_bit (&picture->unpack);
+      bit = schro_unpack_decode_bit (unpack);
       if (bit) {
-        gm->c_exp = schro_unpack_decode_uint (&picture->unpack);
-        gm->c0 = schro_unpack_decode_sint (&picture->unpack);
-        gm->c1 = schro_unpack_decode_sint (&picture->unpack);
+        gm->c_exp = schro_unpack_decode_uint (unpack);
+        gm->c0 = schro_unpack_decode_sint (unpack);
+        gm->c1 = schro_unpack_decode_sint (unpack);
       } else {
         gm->c_exp = 0;
         gm->c0 = 0;
@@ -1662,7 +1664,7 @@ schro_decoder_decode_picture_prediction_parameters (SchroPicture *picture)
   MARKER();
 
   /* picture prediction mode */
-  params->picture_pred_mode = schro_unpack_decode_uint (&picture->unpack);
+  params->picture_pred_mode = schro_unpack_decode_uint (unpack);
   if (params->picture_pred_mode != 0) {
     schro_decoder_error (picture, "picture prediction mode != 0");
   }
@@ -1671,12 +1673,12 @@ schro_decoder_decode_picture_prediction_parameters (SchroPicture *picture)
   params->picture_weight_bits = 1;
   params->picture_weight_1 = 1;
   params->picture_weight_2 = 1;
-  bit = schro_unpack_decode_bit (&picture->unpack);
+  bit = schro_unpack_decode_bit (unpack);
   if (bit) {
-    params->picture_weight_bits = schro_unpack_decode_uint (&picture->unpack);
-    params->picture_weight_1 = schro_unpack_decode_sint (&picture->unpack);
+    params->picture_weight_bits = schro_unpack_decode_uint (unpack);
+    params->picture_weight_1 = schro_unpack_decode_sint (unpack);
     if (params->num_refs > 1) {
-      params->picture_weight_2 = schro_unpack_decode_sint (&picture->unpack);
+      params->picture_weight_2 = schro_unpack_decode_sint (unpack);
     }
   }
 
@@ -1763,11 +1765,12 @@ schro_decoder_decode_macroblock(SchroPicture *picture, SchroArith **arith,
     SchroUnpack *unpack, int i, int j)
 {
   SchroParams *params = &picture->params;
-  SchroMotionVector *mv = &picture->motion->motion_vectors[j*params->x_num_blocks + i];
+  SchroMotion *motion = picture->motion;
+  SchroMotionVector *mv = &motion->motion_vectors[j*params->x_num_blocks + i];
   int k,l;
   int split_prediction;
 
-  split_prediction = schro_motion_split_prediction (picture->motion, i, j);
+  split_prediction = schro_motion_split_prediction (motion, i, j);
   if (!params->is_noarith) {
     mv->split = (split_prediction +
         _schro_arith_decode_uint (arith[SCHRO_DECODER_ARITH_SUPERBLOCK],
@@ -1780,7 +1783,7 @@ schro_decoder_decode_macroblock(SchroPicture *picture, SchroArith **arith,
   switch (mv->split) {
     case 0:
       schro_decoder_decode_prediction_unit (picture, arith, unpack,
-          picture->motion->motion_vectors, i, j);
+          motion->motion_vectors, i, j);
       mv[1] = mv[0];
       mv[2] = mv[0];
       mv[3] = mv[0];
@@ -1790,19 +1793,19 @@ schro_decoder_decode_macroblock(SchroPicture *picture, SchroArith **arith,
       break;
     case 1:
       schro_decoder_decode_prediction_unit (picture, arith, unpack,
-          picture->motion->motion_vectors, i, j);
+          motion->motion_vectors, i, j);
       mv[1] = mv[0];
       schro_decoder_decode_prediction_unit (picture, arith, unpack,
-          picture->motion->motion_vectors, i + 2, j);
+          motion->motion_vectors, i + 2, j);
       mv[3] = mv[2];
       memcpy(mv + params->x_num_blocks, mv, 4*sizeof(*mv));
 
       mv += 2*params->x_num_blocks;
       schro_decoder_decode_prediction_unit (picture, arith, unpack,
-          picture->motion->motion_vectors, i, j + 2);
+          motion->motion_vectors, i, j + 2);
       mv[1] = mv[0];
       schro_decoder_decode_prediction_unit (picture, arith, unpack,
-          picture->motion->motion_vectors, i + 2, j + 2);
+          motion->motion_vectors, i + 2, j + 2);
       mv[3] = mv[2];
       memcpy(mv + params->x_num_blocks, mv, 4*sizeof(*mv));
       break;
@@ -1810,7 +1813,7 @@ schro_decoder_decode_macroblock(SchroPicture *picture, SchroArith **arith,
       for (l=0;l<4;l++) {
         for (k=0;k<4;k++) {
           schro_decoder_decode_prediction_unit (picture, arith, unpack,
-              picture->motion->motion_vectors, i + k, j + l);
+              motion->motion_vectors, i + k, j + l);
         }
       }
       break;
@@ -1820,14 +1823,15 @@ schro_decoder_decode_macroblock(SchroPicture *picture, SchroArith **arith,
   }
 }
 
-static void
+void
 schro_decoder_decode_prediction_unit(SchroPicture *picture, SchroArith **arith,
     SchroUnpack *unpack, SchroMotionVector *motion_vectors, int x, int y)
 {
   SchroParams *params = &picture->params;
+  SchroMotion *motion = picture->motion;
   SchroMotionVector *mv = &motion_vectors[y*params->x_num_blocks + x];
 
-  mv->pred_mode = schro_motion_get_mode_prediction (picture->motion,
+  mv->pred_mode = schro_motion_get_mode_prediction (motion,
       x, y);
   if (!params->is_noarith) {
     mv->pred_mode ^= 
@@ -1852,7 +1856,7 @@ schro_decoder_decode_prediction_unit(SchroPicture *picture, SchroArith **arith,
     int pred[3];
     SchroMotionVectorDC *mvdc = (SchroMotionVectorDC *)mv;
 
-    schro_motion_dc_prediction (picture->motion, x, y, pred);
+    schro_motion_dc_prediction (motion, x, y, pred);
 
     if (!params->is_noarith) {
       mvdc->dc[0] = pred[0] + _schro_arith_decode_sint (
@@ -1880,7 +1884,7 @@ schro_decoder_decode_prediction_unit(SchroPicture *picture, SchroArith **arith,
 
     if (params->have_global_motion) {
       int pred;
-      pred = schro_motion_get_global_prediction (picture->motion, x, y);
+      pred = schro_motion_get_global_prediction (motion, x, y);
       if (!params->is_noarith) {
         mv->using_global = pred ^ _schro_arith_decode_bit (
             arith[SCHRO_DECODER_ARITH_PRED_MODE], SCHRO_CTX_GLOBAL_BLOCK);
@@ -1893,7 +1897,7 @@ schro_decoder_decode_prediction_unit(SchroPicture *picture, SchroArith **arith,
     }
     if (!mv->using_global) {
       if (mv->pred_mode & 1) {
-        schro_motion_vector_prediction (picture->motion, x, y,
+        schro_motion_vector_prediction (motion, x, y,
             &pred_x, &pred_y, 1);
 
         if (!params->is_noarith) {
@@ -1913,7 +1917,7 @@ schro_decoder_decode_prediction_unit(SchroPicture *picture, SchroArith **arith,
         }
       }
       if (mv->pred_mode & 2) {
-        schro_motion_vector_prediction (picture->motion, x, y,
+        schro_motion_vector_prediction (motion, x, y,
             &pred_x, &pred_y, 2);
 
         if (!params->is_noarith) {

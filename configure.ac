@@ -70,12 +70,6 @@ fi
 SCHRO_CFLAGS="$SCHRO_CFLAGS -I\$(top_srcdir)"
 AC_SUBST(SCHRO_CFLAGS)
 
-SCHRO_LIBS="\$(top_builddir)/schroedinger/libschroedinger-$SCHRO_MAJORMINOR.la"
-# hack around ld bug
-SCHRO_LIBS="$SCHRO_LIBS $LIBOIL_LIBS -lpthread"
-#SCHRO_LIBS="$SCHRO_LIBS -lprofiler"
-AC_SUBST(SCHRO_LIBS)
-
 ########################
 # GStreamer stuff
 ########################
@@ -126,7 +120,7 @@ fi
 
 if test "x$with_cuda" != xno; then
   CUDA_CFLAGS="-I$with_cuda/include"
-  CUDA_LIBS="-L$with_cuda/lib -lcuda -lcudart"
+  CUDA_LIBS="-L$with_cuda/lib -lcudart"
   NVCC="$with_cuda/bin/nvcc"
   NVCCFLAGS="-O2 -use_fast_math"
   HAVE_CUDA=yes
@@ -152,6 +146,12 @@ AM_PATH_CHECK(0.9.2, HAVE_CHECK=yes, HAVE_CHECK=no)
 AM_CONDITIONAL(HAVE_CHECK, test "x$HAVE_CHECK" = "xyes")
 
 AM_CONDITIONAL(BUILD_BROKEN_TESTS, false)
+
+SCHRO_LIBS="\$(top_builddir)/schroedinger/libschroedinger-$SCHRO_MAJORMINOR.la"
+# hack around ld bug
+SCHRO_LIBS="$SCHRO_LIBS $LIBOIL_LIBS $CUDA_LIBS -lpthread"
+#SCHRO_LIBS="$SCHRO_LIBS -lprofiler"
+AC_SUBST(SCHRO_LIBS)
 
 AS_HOST_DEFINES()
 	
