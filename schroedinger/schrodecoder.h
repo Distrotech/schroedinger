@@ -32,19 +32,9 @@ struct _SchroDecoderThread
 
 typedef struct _SchroDecoderThread SchroDecoderThread;
 
-/** Thread management -- global object */
-struct _SchroDecoder
-{
-  int time; /* monotonically increasing time */
-  int worker_count;
-  int n_threads;
-  
-  /** Worker thread management. The lock of this async object also protects
-      the fields of this structure marked with NEED LOCKING.
-   */
-  //SchroAsync *async;
-  pthread_mutex_t mutex;
-  
+#ifdef SCHRO_ENABLE_UNSTABLE_API
+struct _SchroDecoder {
+  /*< private >*/
   /** Reference queue. The list of reference pictures. NEED LOCKING.
       Managed using two condition variables.
   */
@@ -55,6 +45,18 @@ struct _SchroDecoder
    */
   SchroQueue *output_queue;
 
+  SchroPictureNumber next_frame_number;
+
+  int time; /* monotonically increasing time */
+  int worker_count;
+  int n_threads;
+  
+  /** Worker thread management. The lock of this async object also protects
+      the fields of this structure marked with NEED LOCKING.
+   */
+  //SchroAsync *async;
+  pthread_mutex_t mutex;
+  
   /** Frame queue. Queue of decoded, finished frames, for display. 
       NEED LOCKING
    */
@@ -87,20 +89,20 @@ struct _SchroDecoder
   SchroPictureNumber reference2;
   SchroPictureNumber retired_picture_number;
 
-  SchroPictureNumber next_frame_number;
   SchroPictureNumber earliest_frame;
   
+  int have_access_unit;
+  int have_frame_number;
+
   double skip_value;
   double skip_ratio;
   
+  int has_md5;
+  uint8_t md5_checksum[32];
+
   /** Working state 
    */
   SchroBuffer *input_buffer;
-
-  int have_access_unit;
-  int have_frame_number;
-  int has_md5;
-  uint8_t md5_checksum[32];
 
   /** Retired frame management.
    */
@@ -115,19 +117,97 @@ struct _SchroDecoder
 #endif
 };
 
-SchroDecoder *schro_decoder_new();
+struct _SchroPicture {
+  /*< private >*/
+  /* operations completed on this frame */
+  int curstate;
+  /* operations in progress */
+  int busystate;
+  /* persistent state, will be kept for next frame */
+  int skipstate;
+  
+  /* Passed in from parent object */
+  int time;
+  SchroDecoder *parent;
+
+
+  SchroBuffer *input_buffer;
+  SchroParams params;
+  SchroPictureNumber picture_number;
+  int n_refs;
+  SchroPictureNumber reference1;
+  SchroPictureNumber reference2;
+  SchroPictureNumber retired_picture_number;
+
+  int has_md5;
+  uint8_t md5_checksum[32];
+
+  
+#ifdef SCHRO_GPU
+  SchroStream stream; /* CUDA stream handle */
+  int subband_min; /* last band+1 that was transferred to the GPU (updated only by GPU thread) */
+  int subband_max; /* last band+1 that was decoded (updated only by CPU threads) */
+#endif
+  
+#ifndef SCHRO_GPU
+  SchroUpsampledFrame *ref0;
+  SchroUpsampledFrame *ref1;
+#else
+  SchroUpsampledGPUFrame *ref0;
+  SchroUpsampledGPUFrame *ref1;
+#endif
+
+  int16_t *tmpbuf;
+  int16_t *tmpbuf2;
+
+  int parse_code;
+  int next_parse_offset;
+  int prev_parse_offset;
+
+  SchroUnpack unpack;
+
+  int zero_residual;
+
+#ifndef SCHRO_GPU
+  SchroFrame *frame;
+  SchroFrame *mc_tmp_frame;
+  SchroFrame *planar_output_frame;
+#else
+  SchroGPUFrame *frame;
+  SchroGPUFrame *mc_tmp_frame;
+#endif
+  SchroMotion *motion;
+  SchroFrame *output_picture;
+
+  int error;
+  char *error_message;
+
+#ifdef SCHRO_GPU
+  /// Output frame on GPU
+  
+  SchroGPUFrame *goutput_frame;
+
+  schro_subband_storage *store;  
+
+  SchroGPUMotion *gpumotion;
+#endif
+
+};
+#endif
+
+SchroDecoder * schro_decoder_new (void);
+void schro_decoder_free (SchroDecoder *decoder);
 void schro_decoder_reset (SchroDecoder *decoder);
-SchroVideoFormat *schro_decoder_get_video_format (SchroDecoder *decoder);
+SchroVideoFormat * schro_decoder_get_video_format (SchroDecoder *decoder);
+void schro_decoder_push (SchroDecoder *decoder, SchroBuffer *buffer);
+SchroFrame *schro_decoder_pull (SchroDecoder *decoder);
+int schro_decoder_iterate (SchroDecoder *decoder);
 
 void schro_decoder_set_earliest_frame (SchroDecoder *decoder, SchroPictureNumber earliest_frame);
 void schro_decoder_set_skip_ratio (SchroDecoder *decoder, double ratio);
 void schro_decoder_add_output_picture (SchroDecoder *decoder, SchroFrame *frame);
 
-void schro_decoder_push (SchroDecoder *decoder, SchroBuffer *buffer);
-SchroFrame *schro_decoder_pull (SchroDecoder *decoder);
-int schro_decoder_iterate (SchroDecoder *decoder);
-
-void *schro_decoder_reference_getfree(SchroDecoder *decoder);
+void *schro_decoder_reference_getfree (SchroDecoder *decoder);
 
 #ifndef SCHRO_GPU
 void schro_decoder_reference_add (SchroDecoder *decoder,
@@ -147,7 +227,6 @@ SchroUpsampledGPUFrame * schro_decoder_reference_get (SchroDecoder *decoder,
 void schro_decoder_add_finished_frame (SchroDecoder *decoder, SchroFrame *frame);
 void schro_decoder_skipstate (SchroDecoder *decoder, SchroPicture *w, int state);
 
-void schro_decoder_free(SchroDecoder *self);
 
 SCHRO_END_DECLS
 
