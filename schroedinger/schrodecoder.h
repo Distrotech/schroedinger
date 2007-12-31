@@ -77,6 +77,11 @@ struct _SchroDecoder
   schro_bool interlaced_coding;
   SchroVideoFormat video_format;
 
+  SchroPictureNumber picture_number;
+  SchroPictureNumber reference1;
+  SchroPictureNumber reference2;
+  SchroPictureNumber retired_picture_number;
+
   SchroPictureNumber next_frame_number;
   SchroPictureNumber earliest_frame;
   

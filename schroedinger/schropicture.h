@@ -30,15 +30,6 @@ struct _SchroDecoderParseHeader
 };
 typedef struct _SchroDecoderParseHeader SchroDecoderParseHeader;
 
-struct _SchroDecoderPictureHeader
-{
-  SchroPictureNumber picture_number;
-  SchroPictureNumber reference1;
-  SchroPictureNumber reference2;
-  SchroPictureNumber retired_picture_number;
-};
-typedef struct _SchroDecoderPictureHeader SchroDecoderPictureHeader;
-
 #ifdef SCHRO_ENABLE_UNSTABLE_API
 
 /** 
@@ -213,7 +204,7 @@ void schro_decoder_async_transfer(SchroPicture *decoder);
 
 void schro_decoder_decode_parse_header (SchroDecoderParseHeader *hdr, SchroUnpack *unpack);
 void schro_decoder_decode_access_unit (SchroDecoder *decoder, SchroUnpack *unpack);
-void schro_decoder_decode_picture_header (SchroDecoderPictureHeader *hdr, SchroUnpack *unpack, SchroDecoderParseHeader *phdr);
+void schro_decoder_decode_picture_header (SchroDecoder *decoder, SchroUnpack *unpack, SchroDecoderParseHeader *phdr);
 
 void schro_decoder_decode_picture_prediction_parameters (SchroPicture *decoder);
 void schro_decoder_decode_block_data (SchroPicture *decoder);

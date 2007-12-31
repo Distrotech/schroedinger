@@ -590,7 +590,6 @@ schro_decoder_iterate (SchroDecoder *decoder)
 {
   SchroUnpack unpack;
   SchroDecoderParseHeader hdr;
-  SchroDecoderPictureHeader pichdr;
   SchroPicture *w;
   
   if (decoder->input_buffer == NULL) {
@@ -658,13 +657,13 @@ schro_decoder_iterate (SchroDecoder *decoder)
     return SCHRO_DECODER_NEED_FRAME;
   }
   
-  schro_decoder_decode_picture_header(&pichdr, &unpack, &hdr);
+  schro_decoder_decode_picture_header(decoder, &unpack, &hdr);
 
   if (!decoder->have_frame_number) {
     if (SCHRO_PARSE_CODE_NUM_REFS (hdr.parse_code) > 0) {
       SCHRO_ERROR("expected I frame after access unit header");
     }
-    decoder->next_frame_number = pichdr.picture_number;
+    decoder->next_frame_number = decoder->picture_number;
     decoder->have_frame_number = TRUE;
     SCHRO_INFO("next frame number after seek %d", decoder->next_frame_number);
   }
@@ -679,14 +678,14 @@ schro_decoder_iterate (SchroDecoder *decoder)
        Record current 'time'
        at every retire check, look at the min time of running threads
     */
-    if(pichdr.retired_picture_number < pichdr.picture_number)
+    if(decoder->retired_picture_number < decoder->picture_number)
     {
-        SCHRO_INFO("Need to retire frame %i when mintime >= %i", pichdr.retired_picture_number, decoder->time);
-        /** record decoder->time, pichdr.retired_picture_number */
+        SCHRO_INFO("Need to retire frame %i when mintime >= %i", decoder->retired_picture_number, decoder->time);
+        /** record decoder->time, decoder->retired_picture_number */
         pthread_mutex_lock (&decoder->mutex);
         SCHRO_ASSERT(decoder->retired_count < SCHRO_RETIRE_QUEUE_SIZE);
         decoder->retired[decoder->retired_count].time = decoder->time;
-        decoder->retired[decoder->retired_count].frame = pichdr.retired_picture_number;
+        decoder->retired[decoder->retired_count].frame = decoder->retired_picture_number;
         ++decoder->retired_count;
         pthread_mutex_unlock (&decoder->mutex);
     }
@@ -741,10 +740,10 @@ SCHRO_DEBUG("skip value %g ratio %g", decoder->skip_value, decoder->skip_ratio);
   w->unpack = unpack;
   w->header = hdr;
 
-  w->picture_number = pichdr.picture_number;
-  w->reference1 = pichdr.reference1;
-  w->reference2 = pichdr.reference2;
-  w->retired_picture_number = pichdr.retired_picture_number;
+  w->picture_number = decoder->picture_number;
+  w->reference1 = decoder->reference1;
+  w->reference2 = decoder->reference2;
+  w->retired_picture_number = decoder->retired_picture_number;
 
   w->input_buffer = decoder->input_buffer;
   w->output_picture = schro_queue_pull (decoder->output_queue);
@@ -753,7 +752,7 @@ SCHRO_DEBUG("skip value %g ratio %g", decoder->skip_value, decoder->skip_ratio);
   w->time = decoder->time;
   ++decoder->time;
   
-  SCHRO_DEBUG("decode picture here -- %i with decoder %p", pichdr.picture_number, w);
+  SCHRO_DEBUG("decode picture here -- %i with decoder %p", decoder->picture_number, w);
 
   /* Wake up worker threads */
   pthread_mutex_lock (&decoder->mutex);
@@ -1551,27 +1550,27 @@ schro_decoder_decode_access_unit (SchroDecoder *decoder, SchroUnpack *unpack)
 }
 
 void
-schro_decoder_decode_picture_header (SchroDecoderPictureHeader *hdr, SchroUnpack *unpack, SchroDecoderParseHeader *phdr)
+schro_decoder_decode_picture_header (SchroDecoder *decoder, SchroUnpack *unpack, SchroDecoderParseHeader *phdr)
 {
   schro_unpack_byte_sync(unpack);
 
-  hdr->picture_number = schro_unpack_decode_bits (unpack, 32);
-  SCHRO_DEBUG("picture number %d", hdr->picture_number);
+  decoder->picture_number = schro_unpack_decode_bits (unpack, 32);
+  SCHRO_DEBUG("picture number %d", decoder->picture_number);
 
   if (phdr->n_refs > 0) {
-    hdr->reference1 = hdr->picture_number +
+    decoder->reference1 = decoder->picture_number +
       schro_unpack_decode_sint (unpack);
-    SCHRO_DEBUG("ref1 %d", hdr->reference1);
+    SCHRO_DEBUG("ref1 %d", decoder->reference1);
   }
 
   if (phdr->n_refs > 1) {
-    hdr->reference2 = hdr->picture_number +
+    decoder->reference2 = decoder->picture_number +
       schro_unpack_decode_sint (unpack);
-    SCHRO_DEBUG("ref2 %d", hdr->reference2);
+    SCHRO_DEBUG("ref2 %d", decoder->reference2);
   }
 
   if (SCHRO_PARSE_CODE_IS_REFERENCE(phdr->parse_code)) {
-    hdr->retired_picture_number = hdr->picture_number +
+    decoder->retired_picture_number = decoder->picture_number +
       schro_unpack_decode_sint (unpack);
   }
 }
