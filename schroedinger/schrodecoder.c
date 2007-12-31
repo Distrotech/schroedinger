@@ -1947,13 +1947,14 @@ schro_decoder_decode_transform_parameters (SchroPicture *picture)
   int bit;
   int i;
   SchroParams *params = &picture->params;
+  SchroUnpack *unpack = &picture->unpack;
 
   /* transform */
-  params->wavelet_filter_index = schro_unpack_decode_uint (&picture->unpack);
+  params->wavelet_filter_index = schro_unpack_decode_uint (unpack);
   SCHRO_DEBUG ("wavelet filter index %d", params->wavelet_filter_index);
 
   /* transform depth */
-  params->transform_depth = schro_unpack_decode_uint (&picture->unpack);
+  params->transform_depth = schro_unpack_decode_uint (unpack);
   SCHRO_DEBUG ("transform depth %d", params->transform_depth);
 
   if (!SCHRO_PARSE_CODE_IS_LOW_DELAY(picture->parse_code)) {
@@ -1964,31 +1965,31 @@ schro_decoder_decode_transform_parameters (SchroPicture *picture)
       params->vert_codeblocks[i] = 1;
     }
 
-    bit = schro_unpack_decode_bit (&picture->unpack);
+    bit = schro_unpack_decode_bit (unpack);
     if (bit) {
       int i;
       for(i=0;i<params->transform_depth + 1;i++) {
-        params->horiz_codeblocks[i] = schro_unpack_decode_uint (&picture->unpack);
-        params->vert_codeblocks[i] = schro_unpack_decode_uint (&picture->unpack);
+        params->horiz_codeblocks[i] = schro_unpack_decode_uint (unpack);
+        params->vert_codeblocks[i] = schro_unpack_decode_uint (unpack);
       }
-      params->codeblock_mode_index = schro_unpack_decode_uint (&picture->unpack);
+      params->codeblock_mode_index = schro_unpack_decode_uint (unpack);
     }
   } else {
     /* slice parameters */
-    params->n_horiz_slices = schro_unpack_decode_uint(&picture->unpack);
-    params->n_vert_slices = schro_unpack_decode_uint(&picture->unpack);
+    params->n_horiz_slices = schro_unpack_decode_uint(unpack);
+    params->n_vert_slices = schro_unpack_decode_uint(unpack);
 
-    params->slice_bytes_num = schro_unpack_decode_uint(&picture->unpack);
-    params->slice_bytes_denom = schro_unpack_decode_uint(&picture->unpack);
+    params->slice_bytes_num = schro_unpack_decode_uint(unpack);
+    params->slice_bytes_denom = schro_unpack_decode_uint(unpack);
 
     /* quant matrix */
-    bit = schro_unpack_decode_bit (&picture->unpack);
+    bit = schro_unpack_decode_bit (unpack);
     if (bit) {
-      params->quant_matrix[0] = schro_unpack_decode_uint (&picture->unpack);
+      params->quant_matrix[0] = schro_unpack_decode_uint (unpack);
       for(i=0;i<params->transform_depth;i++){
-        params->quant_matrix[1+3*i] = schro_unpack_decode_uint (&picture->unpack);
-        params->quant_matrix[2+3*i] = schro_unpack_decode_uint (&picture->unpack);
-        params->quant_matrix[3+3*i] = schro_unpack_decode_uint (&picture->unpack);
+        params->quant_matrix[1+3*i] = schro_unpack_decode_uint (unpack);
+        params->quant_matrix[2+3*i] = schro_unpack_decode_uint (unpack);
+        params->quant_matrix[3+3*i] = schro_unpack_decode_uint (unpack);
       }
     } else {
       schro_params_set_default_quant_matrix (params);
@@ -2204,7 +2205,7 @@ codeblock_line_decode_generic (SchroPictureSubbandContext *ctx,
 
 static void
 codeblock_line_decode_noarith (SchroPictureSubbandContext *ctx,
-    int16_t *line, SchroPicture *picture)
+    int16_t *line)
 {
   int i;
 
@@ -2516,7 +2517,7 @@ schro_decoder_decode_codeblock (SchroPicture *picture,
       prev_line = OFFSET(ctx->data, (j-1)*ctx->stride);
     }
     if (params->is_noarith) {
-      codeblock_line_decode_noarith (ctx, p, picture);
+      codeblock_line_decode_noarith (ctx, p);
     } else if (ctx->position >= 4) {
       if (SCHRO_SUBBAND_IS_HORIZONTALLY_ORIENTED(ctx->position)) {
         codeblock_line_decode_p_horiz (ctx, p, j, parent_line, prev_line);
@@ -2536,37 +2537,38 @@ schro_decoder_decode_subband (SchroPicture *picture,
     SchroPictureSubbandContext *ctx)
 {
   SchroParams *params = &picture->params;
+  SchroUnpack *unpack = &picture->unpack;
   int x,y;
   SchroBuffer *buffer = NULL;
 
-  ctx->subband_length = schro_unpack_decode_uint (&picture->unpack);
+  ctx->subband_length = schro_unpack_decode_uint (unpack);
   SCHRO_DEBUG("subband %d %d length %d", ctx->component, ctx->position,
       ctx->subband_length);
 
   if (ctx->subband_length == 0) {
     SCHRO_DEBUG("subband is zero");
-    schro_unpack_byte_sync (&picture->unpack);
+    schro_unpack_byte_sync (unpack);
     //schro_decoder_zero_block (ctx, 0, 0, ctx->width, ctx->height);
     return 0;
   }
 
-  ctx->quant_index = schro_unpack_decode_uint (&picture->unpack);
+  ctx->quant_index = schro_unpack_decode_uint (unpack);
   SCHRO_DEBUG("quant index %d", ctx->quant_index);
 
   /* FIXME check quant_index */
   SCHRO_MILD_ASSERT(ctx->quant_index >= 0);
   SCHRO_MILD_ASSERT(ctx->quant_index <= 60);
 
-  schro_unpack_byte_sync (&picture->unpack);
+  schro_unpack_byte_sync (unpack);
   if (!params->is_noarith) {
     buffer = schro_buffer_new_subbuffer (picture->input_buffer,
-        schro_unpack_get_bits_read (&picture->unpack)/8,
+        schro_unpack_get_bits_read (unpack)/8,
         ctx->subband_length);
 
     ctx->arith = schro_arith_new ();
     schro_arith_decode_init (ctx->arith, buffer);
   } else {
-    schro_unpack_copy (&ctx->unpack, &picture->unpack);
+    schro_unpack_copy (&ctx->unpack, unpack);
     schro_unpack_limit_bits_remaining (&ctx->unpack, ctx->subband_length*8);
   }
 
@@ -2597,7 +2599,7 @@ schro_decoder_decode_subband (SchroPicture *picture,
     schro_arith_free (ctx->arith);
     schro_buffer_unref (buffer);
   }
-  schro_unpack_skip_bits (&picture->unpack, ctx->subband_length*8);
+  schro_unpack_skip_bits (unpack, ctx->subband_length*8);
 
   if (ctx->position == 0 && picture->n_refs == 0) {
     SchroFrameData fd;
