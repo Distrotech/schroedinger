@@ -16,9 +16,6 @@ typedef void (*SchroGPUFrameFreeFunc)(SchroFrame *frame, void *priv);
 
 SchroGPUFrame * schro_gpuframe_new (void);
 SchroGPUFrame * schro_gpuframe_new_and_alloc (SchroFrameFormat format, int width, int height);
-SchroGPUFrame * schro_gpuframe_new_from_data_I420 (void *data, int width, int height);
-SchroGPUFrame * schro_gpuframe_new_from_data_YUY2 (void *data, int width, int height);
-SchroGPUFrame * schro_gpuframe_new_from_data_AYUV (void *data, int width, int height);
 SchroGPUFrame * schro_gpuframe_new_clone (SchroFrame *src);
 
 void schro_gpuframe_setstream(SchroGPUFrame *frame, SchroCUDAStream stream);

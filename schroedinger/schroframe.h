@@ -71,6 +71,7 @@ struct _SchroFrame {
   /* for CUDA only */
   void *gregions[3];
   int is_cuda_frame;
+  int is_cuda_shared;
   SchroCUDAStream stream;
 
   SchroFrameFormat format;
