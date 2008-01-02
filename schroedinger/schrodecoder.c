@@ -302,7 +302,7 @@ SchroDecoder *schro_decoder_new()
   memset (decoder, 0, sizeof(SchroDecoder));
 
   pthread_mutex_init(&decoder->mutex, NULL);
-  pthread_cond_init(&decoder->reference_notfull, NULL);
+  //pthread_cond_init(&decoder->reference_notfull, NULL);
   //pthread_cond_init(&decoder->reference_newframe, NULL);
   pthread_cond_init(&decoder->worker_statechange, NULL);
   pthread_cond_init(&decoder->worker_available, NULL);
@@ -406,7 +406,7 @@ void schro_decoder_free(SchroDecoder *decoder)
   
   /** Destroy mutexes and conditions */
   pthread_mutex_destroy(&decoder->mutex);
-  pthread_cond_destroy(&decoder->reference_notfull);
+  //pthread_cond_destroy(&decoder->reference_notfull);
   //pthread_cond_destroy(&decoder->reference_newframe);
   pthread_cond_destroy(&decoder->worker_statechange);
   pthread_cond_destroy(&decoder->worker_available);
@@ -2649,19 +2649,15 @@ schro_decoder_reference_add (SchroDecoder *decoder, SchroUpsampledFrame *frame,
   pthread_mutex_lock (&decoder->mutex);
   SCHRO_DEBUG("adding %d", picture_number);
   
-  /* Block while queue is full */
-  while(schro_queue_is_full(decoder->reference_queue)) {
-    pthread_cond_wait (&decoder->reference_notfull, &decoder->mutex);
+  if(schro_queue_is_full(decoder->reference_queue)) {
+    SCHRO_ERROR("Reference queue is full -- dropping frame");
+    schro_upsampled_frame_free(frame);
   }
-  schro_queue_add (decoder->reference_queue, frame, picture_number);
+  else
+  {
+    schro_queue_add (decoder->reference_queue, frame, picture_number);
+  }
   pthread_mutex_unlock (&decoder->mutex);
-#if 0
-  /** Broadcast signal that a new frame is waiting */
-  pthread_cond_broadcast(&decoder->reference_newframe);
-#else
-  /** Wake up worker threads that might be waiting for this reference to appear */
-  //pthread_cond_broadcast (&decoder->worker_statechange);
-#endif
 }
 
 #ifdef SCHRO_GPU
@@ -2729,8 +2725,6 @@ schro_retirement_check(SchroDecoder *decoder)
   
   pthread_mutex_unlock (&decoder->mutex);
   SCHRO_DEBUG("retired %i of %i in retirement queue", x, x+decoder->retired_count);
-  if(x != 0)
-    pthread_cond_signal(&decoder->reference_notfull);
 }
 
 void 

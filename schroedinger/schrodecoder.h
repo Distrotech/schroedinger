@@ -39,7 +39,6 @@ struct _SchroDecoder {
       Managed using two condition variables.
   */
   SchroQueue *reference_queue;
-  pthread_cond_t reference_notfull;//, reference_newframe;
 
   /** Output queue. A list of frames provided by the app that we'll decode into.
    */
@@ -54,7 +53,6 @@ struct _SchroDecoder {
   /** Worker thread management. The lock of this async object also protects
       the fields of this structure marked with NEED LOCKING.
    */
-  //SchroAsync *async;
   pthread_mutex_t mutex;
   
   /** Frame queue. Queue of decoded, finished frames, for display. 
