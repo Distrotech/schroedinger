@@ -72,11 +72,11 @@ ilog2up (unsigned int x)
 
 #ifndef SCHRO_GPU
 void
-schro_decoder_decode_slice (SchroPicture *decoder,
+schro_decoder_decode_slice (SchroPicture *picture,
     SchroLowDelay *lowdelay,
     int slice_x, int slice_y, int slice_bytes)
 {
-  SchroParams *params = &decoder->params;
+  SchroParams *params = &picture->params;
   SchroUnpack y_unpack;
   SchroUnpack uv_unpack;
   int quant_index;
@@ -88,7 +88,7 @@ schro_decoder_decode_slice (SchroPicture *decoder,
   int x,y;
   int value;
 
-  schro_unpack_copy (&y_unpack, &decoder->unpack);
+  schro_unpack_copy (&y_unpack, &picture->unpack);
   schro_unpack_limit_bits_remaining (&y_unpack, slice_bytes*8);
 
   base_index = schro_unpack_decode_bits (&y_unpack, 7);
@@ -157,7 +157,7 @@ schro_decoder_decode_slice (SchroPicture *decoder,
     }
   }
 
-  schro_unpack_skip_bits (&decoder->unpack, slice_bytes*8);
+  schro_unpack_skip_bits (&picture->unpack, slice_bytes*8);
 }
 #endif
 
@@ -181,9 +181,9 @@ schro_lowdelay_init (SchroLowDelay *lowdelay, SchroFrame *frame,
 
 #ifndef SCHRO_GPU
 void
-schro_decoder_decode_lowdelay_transform_data (SchroPicture *decoder)
+schro_decoder_decode_lowdelay_transform_data (SchroPicture *picture)
 {
-  SchroParams *params = &decoder->params;
+  SchroParams *params = &picture->params;
   SchroLowDelay lowdelay;
   int x,y;
   int n_bytes;
@@ -191,7 +191,7 @@ schro_decoder_decode_lowdelay_transform_data (SchroPicture *decoder)
   int accumulator;
   int extra;
 
-  schro_lowdelay_init (&lowdelay, decoder->frame, params);
+  schro_lowdelay_init (&lowdelay, picture->frame, params);
 
   lowdelay.n_horiz_slices = params->n_horiz_slices;
   lowdelay.n_vert_slices = params->n_vert_slices;
@@ -211,7 +211,7 @@ schro_decoder_decode_lowdelay_transform_data (SchroPicture *decoder)
         extra = 0;
       }
 
-      schro_decoder_decode_slice (decoder, &lowdelay,
+      schro_decoder_decode_slice (picture, &lowdelay,
           x, y, n_bytes + extra);
     }
   }

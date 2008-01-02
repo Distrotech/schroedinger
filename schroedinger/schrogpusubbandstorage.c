@@ -9,7 +9,7 @@
 
 #define OFFSET_S16(ptr,offset) ((int16_t *)(((uint8_t *)(ptr)) + (offset)))
 
-schro_subband_storage* schro_subband_storage_new(SchroParams *params, SchroStream stream)
+schro_subband_storage* schro_subband_storage_new(SchroParams *params, SchroCUDAStream stream)
 {
     schro_subband_storage *store;
     int zeroes_length;

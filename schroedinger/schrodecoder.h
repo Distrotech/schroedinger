@@ -140,9 +140,8 @@ struct _SchroPicture {
   int has_md5;
   uint8_t md5_checksum[32];
 
-  
+  SchroCUDAStream stream; /* CUDA stream handle */
 #ifdef SCHRO_GPU
-  SchroStream stream; /* CUDA stream handle */
   int subband_min; /* last band+1 that was transferred to the GPU (updated only by GPU thread) */
   int subband_max; /* last band+1 that was decoded (updated only by CPU threads) */
 #endif
