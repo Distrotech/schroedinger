@@ -2651,7 +2651,11 @@ schro_decoder_reference_add (SchroDecoder *decoder, SchroUpsampledFrame *frame,
   
   if(schro_queue_is_full(decoder->reference_queue)) {
     SCHRO_ERROR("Reference queue is full -- dropping frame");
+#ifdef SCHRO_GPU
+    schro_upsampled_gpuframe_free(frame);
+#else
     schro_upsampled_frame_free(frame);
+#endif
   }
   else
   {
