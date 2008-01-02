@@ -7,44 +7,11 @@
 
 SCHRO_BEGIN_DECLS
 
-typedef struct _SchroGPUFrame SchroGPUFrame;
+typedef SchroFrame SchroGPUFrame;
+typedef SchroFrameData SchroGPUFrameComponent;
+typedef SchroUpsampledFrame SchroUpsampledGPUFrame;
 
-typedef struct _SchroGPUFrameComponent SchroGPUFrameComponent;
-
-typedef void (*SchroGPUFrameFreeFunc)(SchroGPUFrame *frame, void *priv);
-
-struct _SchroGPUFrameComponent {
-  void *gdata;
-  int stride;
-  int width;
-  int height;
-  int length;
-  int h_shift;
-  int v_shift;
-};
-
-
-struct _SchroGPUFrame {
-  SchroCUDAStream stream;
-  int refcount;
-  SchroGPUFrameFreeFunc free;
-  void *gregions[3];
-  void *priv;
-
-  SchroFrameFormat format;
-  int width;
-  int height;
-
-  SchroGPUFrameComponent components[3];
-
-  uint32_t frame_number;
-};
-
-struct _CudaUpsampledFrame
-{
-    struct cudaArray *components[3];
-};
-typedef struct _CudaUpsampledFrame SchroUpsampledGPUFrame;
+typedef void (*SchroGPUFrameFreeFunc)(SchroFrame *frame, void *priv);
 
 
 SchroGPUFrame * schro_gpuframe_new (void);
