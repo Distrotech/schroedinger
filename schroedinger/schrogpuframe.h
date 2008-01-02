@@ -25,7 +25,7 @@ struct _SchroGPUFrameComponent {
 
 
 struct _SchroGPUFrame {
-  SchroStream stream;
+  SchroCUDAStream stream;
   int refcount;
   SchroGPUFrameFreeFunc free;
   void *gregions[3];
@@ -54,7 +54,7 @@ SchroGPUFrame * schro_gpuframe_new_from_data_YUY2 (void *data, int width, int he
 SchroGPUFrame * schro_gpuframe_new_from_data_AYUV (void *data, int width, int height);
 SchroGPUFrame * schro_gpuframe_new_clone (SchroFrame *src);
 
-void schro_gpuframe_setstream(SchroGPUFrame *frame, SchroStream stream);
+void schro_gpuframe_setstream(SchroGPUFrame *frame, SchroCUDAStream stream);
 
 void schro_gpuframe_to_cpu (SchroFrame *dest, SchroGPUFrame *src);
 void schro_frame_to_gpu (SchroGPUFrame *dest, SchroFrame *src);
