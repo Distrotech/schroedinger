@@ -31,15 +31,14 @@
 #define SCHRO_SKIP_TIME_CONSTANT 0.1
 
 #ifdef SCHRO_GPU
-// Don't copy frame out
-// #define GPU_NOCOPY_OUT
+/* Don't copy frame out from the GPU. When benchmarking, this can give an 
+   indication of the performance for direct rendering through OpenGL.
+ */
+//#define GPU_NOCOPY_OUT 
 
-// Load balancing tests -- corrupts output
-#define DEBUGGPU
-
-
-/// Assume subbands and blocks are zero, to prevent expensive filling operations
+/* Assume subbands and blocks are zero, to prevent expensive filling operations */
 #define ASSUME_ZERO
+
 #endif
 
 #ifdef SCHRO_GPU
