@@ -31,15 +31,14 @@
 #define SCHRO_SKIP_TIME_CONSTANT 0.1
 
 #ifdef SCHRO_GPU
-// Don't copy frame out
-// #define GPU_NOCOPY_OUT
+/* Don't copy frame out from the GPU. When benchmarking, this can give an 
+   indication of the performance for direct rendering through OpenGL.
+ */
+//#define GPU_NOCOPY_OUT 
 
-// Load balancing tests -- corrupts output
-#define DEBUGGPU
-
-
-/// Assume subbands and blocks are zero, to prevent expensive filling operations
+/* Assume subbands and blocks are zero, to prevent expensive filling operations */
 #define ASSUME_ZERO
+
 #endif
 
 #ifdef SCHRO_GPU
@@ -2651,7 +2650,11 @@ schro_decoder_reference_add (SchroDecoder *decoder, SchroUpsampledFrame *frame,
   
   if(schro_queue_is_full(decoder->reference_queue)) {
     SCHRO_ERROR("Reference queue is full -- dropping frame");
+#ifdef SCHRO_GPU
+    schro_upsampled_gpuframe_free(frame);
+#else
     schro_upsampled_frame_free(frame);
+#endif
   }
   else
   {
