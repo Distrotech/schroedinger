@@ -10,7 +10,7 @@
 #include <schroedinger/schrobitstream.h>
 #include <schroedinger/schroqueue.h>
 
-#ifdef SCHRO_GPU
+#ifdef HAVE_CUDA
 #include <schroedinger/schrogpuframe.h>
 #include <schroedinger/schrogpusubbandstorage.h>
 #include <schroedinger/schrogpumotion.h>

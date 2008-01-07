@@ -125,7 +125,6 @@ if test "x$with_cuda" != xno; then
   NVCCFLAGS="-O2 -use_fast_math"
   HAVE_CUDA=yes
   AC_DEFINE(HAVE_CUDA, 1, [Compile in CUDA rendering backend])
-  AC_DEFINE(SCHRO_GPU, 1, [Compile in CUDA rendering backend])
 else
   CUDA_CFLAGS=
   CUDA_LIBS=

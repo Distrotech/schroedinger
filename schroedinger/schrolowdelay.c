@@ -70,7 +70,7 @@ ilog2up (unsigned int x)
 }
 
 
-#ifndef SCHRO_GPU
+#ifndef HAVE_CUDA
 void
 schro_decoder_decode_slice (SchroPicture *picture,
     SchroLowDelay *lowdelay,
@@ -179,7 +179,7 @@ schro_lowdelay_init (SchroLowDelay *lowdelay, SchroFrame *frame,
   }
 }
 
-#ifndef SCHRO_GPU
+#ifndef HAVE_CUDA
 void
 schro_decoder_decode_lowdelay_transform_data (SchroPicture *picture)
 {

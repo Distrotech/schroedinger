@@ -106,7 +106,7 @@ struct _SchroDecoder {
    */
   struct _RetireEntry retired[SCHRO_RETIRE_QUEUE_SIZE];
   int retired_count;
-#ifdef SCHRO_GPU
+#ifdef HAVE_CUDA
   void *free_stack[UQUEUE_SIZE];
   int free_count;
 
@@ -146,12 +146,12 @@ struct _SchroPicture {
   uint8_t md5_checksum[32];
 
   SchroCUDAStream stream; /* CUDA stream handle */
-#ifdef SCHRO_GPU
+#ifdef HAVE_CUDA
   int subband_min; /* last band+1 that was transferred to the GPU (updated only by GPU thread) */
   int subband_max; /* last band+1 that was decoded (updated only by CPU threads) */
 #endif
   
-#ifndef SCHRO_GPU
+#ifndef HAVE_CUDA
   SchroUpsampledFrame *ref0;
   SchroUpsampledFrame *ref1;
 #else
@@ -170,7 +170,7 @@ struct _SchroPicture {
 
   int zero_residual;
 
-#ifndef SCHRO_GPU
+#ifndef HAVE_CUDA
   SchroFrame *frame;
   SchroFrame *mc_tmp_frame;
   SchroFrame *planar_output_frame;
@@ -184,7 +184,7 @@ struct _SchroPicture {
   int error;
   char *error_message;
 
-#ifdef SCHRO_GPU
+#ifdef HAVE_CUDA
   /// Output frame on GPU
   
   SchroFrame *goutput_frame;
@@ -211,7 +211,7 @@ void schro_decoder_add_output_picture (SchroDecoder *decoder, SchroFrame *frame)
 
 void *schro_decoder_reference_getfree (SchroDecoder *decoder);
 
-#ifndef SCHRO_GPU
+#ifndef HAVE_CUDA
 void schro_decoder_reference_add (SchroDecoder *decoder,
     SchroUpsampledFrame *frame, SchroPictureNumber picture_number);
 SchroUpsampledFrame * schro_decoder_reference_get (SchroDecoder *decoder,

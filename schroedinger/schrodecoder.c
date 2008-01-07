@@ -14,7 +14,7 @@
 #include <unistd.h>
 #include <limits.h>
 
-#ifdef SCHRO_GPU
+#ifdef HAVE_CUDA
 #include <cuda.h>
 #include <cuda_runtime_api.h>
 #endif
@@ -30,7 +30,7 @@
 
 #define SCHRO_SKIP_TIME_CONSTANT 0.1
 
-#ifdef SCHRO_GPU
+#ifdef HAVE_CUDA
 /* Don't copy frame out from the GPU. When benchmarking, this can give an 
    indication of the performance for direct rendering through OpenGL.
  */
@@ -41,7 +41,7 @@
 
 #endif
 
-#ifdef SCHRO_GPU
+#ifdef HAVE_CUDA
 #define schro_frame_convert schro_gpuframe_convert
 #define schro_frame_add schro_gpuframe_add
 #define schro_frame_new_and_alloc schro_gpuframe_new_and_alloc
@@ -83,7 +83,7 @@ static void schro_decoder_decode_macroblock(SchroPicture *picture,
 static void schro_decoder_decode_prediction_unit(SchroPicture *picture,
     SchroArith **arith, SchroUnpack *unpack, SchroMotionVector *motion_vectors, int x, int y);
 
-#ifdef SCHRO_GPU
+#ifdef HAVE_CUDA
 static void schro_decoder_decode_transform_data_serial (SchroPicture *picture, schro_subband_storage *store, SchroFrame *frame);
 #endif
 
@@ -98,7 +98,7 @@ static void schro_decoder_error (SchroPicture *picture, const char *s);
 
 
 static void schro_decoder_init(SchroDecoder *decoder);
-#ifdef SCHRO_GPU
+#ifdef HAVE_CUDA
 static void schro_decoder_gpu_cleanup(SchroDecoder *decoder);
 #endif
 
@@ -154,7 +154,7 @@ static void* schro_decoder_main(void *arg)
     SchroDecoderOp *op = NULL;
     SchroPicture *op_w = NULL;    
     int priority = INT_MIN;
-#ifdef SCHRO_GPU
+#ifdef HAVE_CUDA
 #if 0
     if(thread->gpu)
     {
@@ -231,7 +231,7 @@ static void* schro_decoder_main(void *arg)
     /* Break out of main loop if quit flag is set */
     if(thread->quit)
       break;
-#ifdef SCHRO_GPU
+#ifdef HAVE_CUDA
     if(thread->gpu)
     {
       /* Set up asynchronous subband transfers */
@@ -262,7 +262,7 @@ static void* schro_decoder_main(void *arg)
       op_w->curstate = op_w->skipstate | SCHRO_DECODER_INITIAL;
       SCHRO_DEBUG("Thread %i reached final state on %p, new state is %04x", thread->id, op_w, op_w->curstate);
       /* Reset subband fifo */
-#ifdef SCHRO_GPU
+#ifdef HAVE_CUDA
       op_w->subband_min = op_w->subband_max = 0;
 #endif
       pthread_cond_signal (&decoder->worker_available);
@@ -272,7 +272,7 @@ static void* schro_decoder_main(void *arg)
     pthread_cond_broadcast (&decoder->worker_statechange);
   } 
    
-#ifdef SCHRO_GPU
+#ifdef HAVE_CUDA
   /** If this is the GPU thread, make sure we have freed all GPU structures before
       exiting, otherwise there is no chance of ever doing this again.
   */
@@ -300,7 +300,7 @@ SchroDecoder *schro_decoder_new()
   pthread_cond_init(&decoder->worker_statechange, NULL);
   pthread_cond_init(&decoder->worker_available, NULL);
 
-#ifdef SCHRO_GPU
+#ifdef HAVE_CUDA
   decoder->reference_queue = schro_queue_new (SCHRO_LIMIT_REFERENCE_FRAMES, NULL);
 //      (SchroQueueFreeFunc)schro_upsampled_gpuframe_free);
 //  schro_queue_alloc_freestack(decoder->reference_queue, UQUEUE_SIZE);
@@ -354,7 +354,7 @@ SchroDecoder *schro_decoder_new()
   {
     decoder->threads[x].parent = decoder;
     decoder->threads[x].id = x;
-#ifdef SCHRO_GPU 
+#ifdef HAVE_CUDA 
     decoder->threads[x].gpu = (x==0);
 #else
     decoder->threads[x].gpu = FALSE;
@@ -385,7 +385,7 @@ void schro_decoder_free(SchroDecoder *decoder)
     pthread_join (decoder->threads[x].thread, &ignore);
   }
   
-#ifndef SCHRO_GPU
+#ifndef HAVE_CUDA
   for(x=0; x<decoder->worker_count; ++x)
   {
     SCHRO_LOG("freeing decoder %i", x);
@@ -791,7 +791,7 @@ schro_picture_init (SchroPicture *picture)
   frame_format = schro_params_get_frame_format (8,
       video_format->chroma_format);
 
-#ifdef SCHRO_GPU
+#ifdef HAVE_CUDA
   /** We can use the fact that there is only one GPU thread to conserve
       memory, and allocate temporary structures only once.
    */
@@ -811,7 +811,7 @@ schro_picture_init (SchroPicture *picture)
   SCHRO_DEBUG("planar output frame %dx%d",
       video_format->width, video_format->height);
 #endif
-#ifdef SCHRO_GPU
+#ifdef HAVE_CUDA
   cudaStreamCreate(&picture->stream);
   picture->gpumotion = schro_gpumotion_new(picture->stream);
   
@@ -841,7 +841,7 @@ schro_picture_new (SchroDecoder *decoder)
   return picture;
 }
 
-#ifdef SCHRO_GPU
+#ifdef HAVE_CUDA
 #define schro_frame_unref schro_gpuframe_unref
 #endif
 
@@ -864,14 +864,14 @@ schro_picture_free (SchroPicture *picture)
   }
 
   if (picture->mc_tmp_frame) schro_frame_unref (picture->mc_tmp_frame);
-#ifndef SCHRO_GPU
+#ifndef HAVE_CUDA
   if (picture->planar_output_frame) schro_frame_unref (picture->planar_output_frame);
 #endif
   if (picture->tmpbuf) free (picture->tmpbuf);
   if (picture->tmpbuf2) free (picture->tmpbuf2);
   if (picture->error_message) free (picture->error_message);
   
-#ifdef SCHRO_GPU
+#ifdef HAVE_CUDA
   if (picture->goutput_frame) schro_gpuframe_unref (picture->goutput_frame);
   if (picture->store) schro_subband_storage_free(picture->store);
   schro_gpumotion_free(picture->gpumotion);
@@ -886,7 +886,7 @@ schro_picture_free (SchroPicture *picture)
 
 
 
-#ifdef SCHRO_GPU
+#ifdef HAVE_CUDA
 static void
 schro_picture_iterate_init_output (SchroPicture *picture)
 {
@@ -927,7 +927,7 @@ schro_picture_iterate_motion_decode_params (SchroPicture *picture)
   }
 }
 
-#ifdef SCHRO_GPU
+#ifdef HAVE_CUDA
 static void
 schro_picture_iterate_motion_init (SchroPicture *picture)
 {
@@ -945,7 +945,7 @@ schro_picture_iterate_motion_decode_vectors (SchroPicture *picture)
   if (picture->n_refs > 0) {
     schro_unpack_byte_sync (&picture->unpack);
     schro_decoder_decode_block_data (picture);
-#ifdef SCHRO_GPU
+#ifdef HAVE_CUDA
     schro_gpumotion_copy (picture->gpumotion, picture->motion);
 #endif
   }
@@ -971,7 +971,7 @@ schro_picture_iterate_wavelet_decode_params (SchroPicture *picture)
   }
 }
 
-#ifdef SCHRO_GPU
+#ifdef HAVE_CUDA
 void
 schro_picture_iterate_wavelet_init (SchroPicture *picture)
 {
@@ -989,7 +989,7 @@ schro_picture_iterate_wavelet_decode_image (SchroPicture *picture)
   SchroParams *params = &picture->params;
   if (!picture->zero_residual) {
     schro_unpack_byte_sync (&picture->unpack);
-#ifdef SCHRO_GPU
+#ifdef HAVE_CUDA
     SCHRO_ASSERT(!params->is_lowdelay);
     schro_decoder_parse_transform_data (picture);
     schro_decoder_init_subband_frame_data_serial (picture);
@@ -1016,7 +1016,7 @@ static void
 schro_picture_iterate_wavelet_transform (SchroPicture *picture)
 {
   if (!picture->zero_residual) {
-#ifdef SCHRO_GPU
+#ifdef HAVE_CUDA
     SCHRO_ASSERT(picture->subband_min == picture->subband_max);
     SCHRO_ASSERT(picture->subband_min == 3*(1+3*picture->params.transform_depth));
     schro_gpuframe_inverse_iwt_transform (picture->frame, &picture->params);
@@ -1065,7 +1065,7 @@ schro_picture_iterate_motion_transform (SchroPicture *picture)
     picture->motion->src1 = (SchroUpsampledFrame*)picture->ref0;
     picture->motion->src2 = (SchroUpsampledFrame*)picture->ref1;
 
-#ifndef SCHRO_GPU
+#ifndef HAVE_CUDA
     schro_motion_render (picture->motion, picture->mc_tmp_frame);
 #else
     schro_gpumotion_render (picture->gpumotion, picture->motion, picture->mc_tmp_frame);
@@ -1076,14 +1076,14 @@ schro_picture_iterate_motion_transform (SchroPicture *picture)
   }
 }
 
-#ifdef SCHRO_GPU
+#ifdef HAVE_CUDA
 #define planar_output_frame parent->planar_output_frame
 #endif
 
 static void
 schro_picture_iterate_finish (SchroPicture *picture)
 {
-#ifdef SCHRO_GPU
+#ifdef HAVE_CUDA
   SchroFrame *cpu_output_picture = picture->output_picture;
   SchroFrame *output_picture = picture->goutput_frame;
   
@@ -1112,7 +1112,7 @@ schro_picture_iterate_finish (SchroPicture *picture)
       schro_frame_convert (output_picture, picture->frame);
     }
   } else {
-#ifndef SCHRO_GPU
+#ifndef HAVE_CUDA
     SchroFrame *frame;
 #else
     SchroFrame *frame;
@@ -1137,7 +1137,7 @@ schro_picture_iterate_finish (SchroPicture *picture)
   output_picture->frame_number = picture->picture_number;
 
   if (SCHRO_PARSE_CODE_IS_REFERENCE(picture->parse_code)) {
-#ifndef SCHRO_GPU
+#ifndef HAVE_CUDA
     SchroFrame *ref;
     SchroFrameFormat frame_format;
     SchroUpsampledFrame *upsampler;
@@ -1194,7 +1194,7 @@ schro_picture_iterate_finish (SchroPicture *picture)
   }
 
 
-#ifndef SCHRO_GPU
+#ifndef HAVE_CUDA
   if (picture->has_md5) {
     uint32_t state[4];
 
@@ -1214,7 +1214,7 @@ schro_picture_iterate_finish (SchroPicture *picture)
 #endif
 
   SCHRO_DEBUG("adding %d to queue", output_picture->frame_number);
-#ifndef SCHRO_GPU
+#ifndef HAVE_CUDA
   schro_decoder_add_finished_frame (picture->parent, output_picture);
 #else
 #ifndef GPU_NOCOPY_OUT
@@ -1241,7 +1241,7 @@ schro_picture_iterate_finish (SchroPicture *picture)
  exec,
  [gpu,]
 */
-#ifndef SCHRO_GPU
+#ifndef HAVE_CUDA
 /* CPU version */
 static SchroDecoderOp schro_decoder_ops[] = {
 /* One-time initialisation */
@@ -2052,7 +2052,7 @@ schro_decoder_init_subband_frame_data_interleaved (SchroPicture *picture)
   }
 }
 
-#ifdef SCHRO_GPU
+#ifdef HAVE_CUDA
 /* FIXME: wumpus, please check this */
 void
 schro_decoder_init_subband_frame_data_serial (SchroPicture *picture)
@@ -2160,7 +2160,7 @@ schro_decoder_parse_transform_data (SchroPicture *picture)
   }
 }
 
-#ifndef SCHRO_GPU
+#ifndef HAVE_CUDA
 void
 schro_decoder_decode_transform_data (SchroPicture *picture)
 {
@@ -2192,7 +2192,7 @@ schro_decoder_decode_transform_data (SchroPicture *picture)
 }
 #endif
 
-#ifdef SCHRO_GPU
+#ifdef HAVE_CUDA
 void
 schro_subband_get_s (int component, int position,
     SchroParams *params,
@@ -2779,7 +2779,7 @@ schro_decoder_add_output_picture (SchroDecoder *decoder, SchroFrame *frame)
 }
 
 
-#ifdef SCHRO_GPU
+#ifdef HAVE_CUDA
 void
 schro_decoder_reference_add (SchroDecoder *decoder, SchroUpsampledFrame *frame,
     SchroPictureNumber picture_number)
@@ -2794,7 +2794,7 @@ schro_decoder_reference_add (SchroDecoder *decoder, SchroUpsampledFrame *frame,
   
   if(schro_queue_is_full(decoder->reference_queue)) {
     SCHRO_ERROR("Reference queue is full -- dropping frame");
-#ifdef SCHRO_GPU
+#ifdef HAVE_CUDA
     schro_upsampled_gpuframe_free(frame);
 #else
     schro_upsampled_frame_free(frame);
@@ -2807,7 +2807,7 @@ schro_decoder_reference_add (SchroDecoder *decoder, SchroUpsampledFrame *frame,
   pthread_mutex_unlock (&decoder->mutex);
 }
 
-#ifdef SCHRO_GPU
+#ifdef HAVE_CUDA
 SchroUpsampledFrame *
 schro_decoder_reference_get (SchroDecoder *decoder,
     SchroPictureNumber picture_number)
@@ -2825,7 +2825,7 @@ schro_decoder_reference_get (SchroDecoder *decoder,
   return ret;
 }
 
-#ifdef SCHRO_GPU
+#ifdef HAVE_CUDA
 void *schro_decoder_reference_getfree(SchroDecoder *decoder)
 {
   void *ret = NULL;
@@ -2853,7 +2853,7 @@ schro_retirement_check(SchroDecoder *decoder)
   for(x=0; x<decoder->retired_count && mintime >= decoder->retired[x].time; ++x)
   {
     SCHRO_DEBUG("retiring %i", decoder->retired[x].frame);
-#ifdef SCHRO_GPU
+#ifdef HAVE_CUDA
     /* Retired frames will not actually be freed, but moved to the free
        stack, otherwise we run into problems, as the delete function for GPU
        frames must be called in the GPU thread. This also gives a slight
@@ -2913,7 +2913,7 @@ static void schro_decoder_init (SchroDecoder *decoder)
   pthread_cond_broadcast (&decoder->worker_statechange);
 }
 
-#ifdef SCHRO_GPU
+#ifdef HAVE_CUDA
 static void schro_decoder_gpu_cleanup(SchroDecoder *decoder)
 {
   int x;
