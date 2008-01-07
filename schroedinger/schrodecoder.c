@@ -54,15 +54,8 @@ struct _SchroPictureSubbandContext {
   int index;
   int position;
 
-  int16_t *data;
-  int height;
-  int width;
-  int stride;
-
-  int16_t *parent_data;
-  int parent_stride;
-  int parent_width;
-  int parent_height;
+  SchroFrameData *frame_data;
+  SchroFrameData *parent_frame_data;
 
   int quant_index;
   int subband_length;
@@ -998,12 +991,15 @@ schro_picture_iterate_wavelet_decode_image (SchroPicture *picture)
     schro_unpack_byte_sync (&picture->unpack);
 #ifdef SCHRO_GPU
     SCHRO_ASSERT(!params->is_lowdelay);
+    schro_decoder_parse_transform_data (picture);
+    schro_decoder_init_subband_frame_data_serial (picture);
     schro_decoder_decode_transform_data_serial(picture, picture->store, picture->frame);
 #else
     if (params->is_lowdelay) {
       schro_decoder_decode_lowdelay_transform_data (picture);
     } else {
       schro_decoder_parse_transform_data (picture);
+      schro_decoder_init_subband_frame_data_interleaved (picture);
       schro_decoder_decode_transform_data (picture);
     }
 #endif
@@ -2013,7 +2009,108 @@ schro_decoder_decode_transform_parameters (SchroPicture *picture)
   }
 }
 
-#ifndef SCHRO_GPU
+void
+schro_decoder_init_subband_frame_data_interleaved (SchroPicture *picture)
+{
+  int i;
+  int component;
+  SchroFrameData *comp;
+  SchroFrameData *fd;
+  SchroParams *params = &picture->params;
+  int shift;
+  int position;
+
+  for(component=0;component<3;component++){
+    comp = &picture->frame->components[component];
+    for(i=0;i<1+3*params->transform_depth;i++) {
+      position = schro_subband_get_position (i);
+
+      fd = &picture->subband_data[component][i];
+
+      shift = params->transform_depth - SCHRO_SUBBAND_SHIFT(position);
+
+      fd->format = picture->frame->format;
+      fd->h_shift = comp->h_shift + shift;
+      fd->v_shift = comp->v_shift + shift;
+      fd->stride = comp->stride << shift;
+      if (component == 0) {
+        fd->width = params->iwt_luma_width >> shift;
+        fd->height = params->iwt_luma_height >> shift;
+      } else {
+        fd->width = params->iwt_chroma_width >> shift;
+        fd->height = params->iwt_chroma_height >> shift;
+      }
+
+      fd->data = comp->data;
+      if (position & 2) {
+        fd->data = OFFSET(fd->data, fd->stride>>1);
+      }
+      if (position & 1) {
+        fd->data = OFFSET(fd->data, fd->width*sizeof(int16_t));
+      }
+    }
+  }
+}
+
+#ifdef SCHRO_GPU
+/* FIXME: wumpus, please check this */
+void
+schro_decoder_init_subband_frame_data_serial (SchroPicture *picture)
+{
+  int i;
+  int component;
+  SchroFrameData *comp;
+  SchroFrameData *fd;
+  SchroParams *params = &picture->params;
+  int shift;
+  int position;
+  int total_length;
+  int bandid;
+
+  total_length = 0;
+  bandid = 0;
+  for(component=0;component<3;component++){
+    comp = &picture->frame->components[component];
+    for(i=0;i<1+3*params->transform_depth;i++) {
+      position = schro_subband_get_position (i);
+
+      fd = &picture->subband_data[component][i];
+
+      shift = params->transform_depth - SCHRO_SUBBAND_SHIFT(position);
+
+      fd->format = picture->frame->format;
+      fd->h_shift = comp->h_shift + shift;
+      fd->v_shift = comp->v_shift + shift;
+      if (component == 0) {
+        fd->width = params->iwt_luma_width >> shift;
+        fd->height = params->iwt_luma_height >> shift;
+      } else {
+        fd->width = params->iwt_chroma_width >> shift;
+        fd->height = params->iwt_chroma_height >> shift;
+      }
+
+      fd->data = OFFSET(picture->store->data, total_length);
+      fd->stride = fd->width * sizeof(int16_t);
+
+      if (picture->subband_length[component][i] > 0) {
+        picture->store->offsets[bandid] = total_length;
+
+        total_length += fd->height * fd->stride;
+        /* Align to 64 bytes */
+        total_length = ROUND_UP_POW2(total_length,6);
+      } else {
+          /** Empty block */
+          picture->store->offsets[bandid] = -1;
+      }
+      bandid++;
+
+    }
+  }
+
+  SCHRO_ASSERT(total_length <= picture->store->maxsize);
+}
+#endif
+
 void
 schro_decoder_parse_transform_data (SchroPicture *picture)
 {
@@ -2063,6 +2160,7 @@ schro_decoder_parse_transform_data (SchroPicture *picture)
   }
 }
 
+#ifndef SCHRO_GPU
 void
 schro_decoder_decode_transform_data (SchroPicture *picture)
 {
@@ -2076,18 +2174,16 @@ schro_decoder_decode_transform_data (SchroPicture *picture)
       ctx->component = component;
       ctx->index = i;
       ctx->position = schro_subband_get_position(i);
+      ctx->frame_data = &picture->subband_data[component][i];
 
-      schro_subband_get (picture->frame, ctx->component, ctx->position, &picture->params, &ctx->data, &ctx->stride, &ctx->width, &ctx->height);
       if (ctx->position >= 4) {
-        schro_subband_get (picture->frame, ctx->component, ctx->position - 4,
-            &picture->params, &ctx->parent_data, &ctx->parent_stride, &ctx->parent_width, &ctx->parent_height);
+        ctx->parent_frame_data = &picture->subband_data[component][i-3];
       } else {
-        ctx->parent_data = NULL;
-        ctx->parent_stride = 0;
+        ctx->parent_frame_data = NULL;
       }
 
       if (picture->subband_length[component][i] == 0) {
-        schro_decoder_zero_block (ctx, 0, 0, ctx->width, ctx->height);
+        schro_decoder_zero_block (ctx, 0, 0, ctx->frame_data->width, ctx->frame_data->height);
       } else {
         schro_decoder_decode_subband (picture, ctx);
       }
@@ -2116,6 +2212,8 @@ schro_subband_get_s (int component, int position,
   *stride = (*width) *2;
 }
 
+/* FIXME: wumpus, it should now be possible to replace this with
+ * schro_decoder_decode_transform_data() */
 static void
 schro_decoder_decode_transform_data_serial (SchroPicture *picture, schro_subband_storage *store, SchroGPUFrame *frame)
 {
@@ -2128,38 +2226,42 @@ schro_decoder_decode_transform_data_serial (SchroPicture *picture, schro_subband
 
   for(component=0;component<3;component++) {
     for(i=0;i<1+3*params->transform_depth;i++) {
+      int length;
     
       // 64 byte (32 pixel) align up
       total_length = ROUND_UP_POW2(total_length,5);
 
       ctx->component = component;
       ctx->position = schro_subband_get_position(i);
-      ctx->data = &store->data[total_length];
+      ctx->frame_data->data = &store->data[total_length];
 
-      schro_subband_get_s(ctx->component, ctx->position, &picture->params, &ctx->stride, &ctx->width, &ctx->height);
+      schro_subband_get_s(ctx->component, ctx->position,
+          &picture->params, &ctx->frame_data->stride, &ctx->frame_data->width, &ctx->frame_data->height);
 
-      int length = ctx->height*ctx->stride/2;
+      length = ctx->frame_data->height*ctx->frame_data->stride/2;
 
       SCHRO_ASSERT((total_length+length) <= store->maxsize);
 
       if (ctx->position >= 4) {
-          schro_subband_get_s(ctx->component, ctx->position-4, &picture->params, &ctx->parent_stride, &ctx->parent_width, &ctx->parent_height);
+          schro_subband_get_s(ctx->component, ctx->position-4,
+              &picture->params, &ctx->parent_frame_data->stride,
+              &ctx->parent_frame_data->width,
+              &ctx->parent_frame_data->height);
           int parent_offset = store->offsets[bandid-3];
           if(parent_offset != -1)
           {
-              ctx->parent_data = &store->data[parent_offset];
+              ctx->parent_frame_data->data = &store->data[parent_offset];
           } else {
               /** If the parent block was zero, we must provide a generic block filled with zeroes for reference */
-              ctx->parent_data = store->zeroes;
+              ctx->parent_frame_data->data = store->zeroes;
           }
       } else {
-          ctx->parent_data = NULL;
-          ctx->parent_stride = 0;
+          ctx->parent_frame_data->data = NULL;
+          ctx->parent_frame_data->stride = 0;
       }
 #ifdef ASSUME_ZERO
-      memset(ctx->data, 0, length*2);
+      memset(ctx->frame_data->data, 0, length*2);
 #endif
-      schro_unpack_byte_sync (&picture->unpack);
       if(schro_decoder_decode_subband (picture, ctx))
       {
           store->offsets[bandid] = total_length;
@@ -2516,7 +2618,7 @@ schro_decoder_zero_block (SchroPictureSubbandContext *ctx,
 
   SCHRO_DEBUG("subband is zero");
   for(j=y1;j<y2;j++){
-    line = OFFSET(ctx->data, j*ctx->stride);
+    line = SCHRO_FRAME_DATA_GET_LINE (ctx->frame_data, j);
     oil_splat_s16_ns (line + x1, schro_zero, x2 - x1);
   }
 }
@@ -2569,18 +2671,19 @@ schro_decoder_decode_codeblock (SchroPicture *picture,
   }
 
   for(j=ctx->ymin;j<ctx->ymax;j++){
-    int16_t *p = OFFSET(ctx->data,j*ctx->stride);
+    int16_t *p = SCHRO_FRAME_DATA_GET_LINE(ctx->frame_data,j);
     const int16_t *parent_line;
     const int16_t *prev_line;
+
     if (ctx->position >= 4) {
-      parent_line = OFFSET(ctx->parent_data, (j>>1)*ctx->parent_stride);
+      parent_line = SCHRO_FRAME_DATA_GET_LINE(ctx->parent_frame_data, (j>>1));
     } else {
       parent_line = NULL;
     }
     if (j==0) {
       prev_line = schro_zero;
     } else {
-      prev_line = OFFSET(ctx->data, (j-1)*ctx->stride);
+      prev_line = SCHRO_FRAME_DATA_GET_LINE (ctx->frame_data, (j-1));
     }
     if (params->is_noarith) {
       codeblock_line_decode_noarith (ctx, p);
@@ -2624,13 +2727,13 @@ schro_decoder_decode_subband (SchroPicture *picture,
   schro_decoder_setup_codeblocks (picture, ctx);
 
   for(y=0;y<ctx->vert_codeblocks;y++){
-    ctx->ymin = (ctx->height*y)/ctx->vert_codeblocks;
-    ctx->ymax = (ctx->height*(y+1))/ctx->vert_codeblocks;
+    ctx->ymin = (ctx->frame_data->height*y)/ctx->vert_codeblocks;
+    ctx->ymax = (ctx->frame_data->height*(y+1))/ctx->vert_codeblocks;
 
     for(x=0;x<ctx->horiz_codeblocks;x++){
 
-      ctx->xmin = (ctx->width*x)/ctx->horiz_codeblocks;
-      ctx->xmax = (ctx->width*(x+1))/ctx->horiz_codeblocks;
+      ctx->xmin = (ctx->frame_data->width*x)/ctx->horiz_codeblocks;
+      ctx->xmax = (ctx->frame_data->width*(x+1))/ctx->horiz_codeblocks;
       
       schro_decoder_decode_codeblock (picture, ctx);
     }
@@ -2651,12 +2754,7 @@ schro_decoder_decode_subband (SchroPicture *picture,
   }
 
   if (ctx->position == 0 && picture->n_refs == 0) {
-    SchroFrameData fd;
-    fd.data = ctx->data;
-    fd.stride = ctx->stride;
-    fd.height = ctx->height;
-    fd.width = ctx->width;
-    schro_decoder_subband_dc_predict (&fd);
+    schro_decoder_subband_dc_predict (ctx->frame_data);
   }
   return 1;
 }
