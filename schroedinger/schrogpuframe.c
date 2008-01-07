@@ -17,9 +17,9 @@
 #include "cudamotion.h"
 #include <stdio.h>
 
-SchroGPUFrame *schro_gpuframe_new (void)
+SchroFrame *schro_gpuframe_new (void)
 {
-  SchroGPUFrame *frame;
+  SchroFrame *frame;
 
   frame = malloc (sizeof(*frame));
   memset (frame, 0, sizeof(*frame));
@@ -28,7 +28,7 @@ SchroGPUFrame *schro_gpuframe_new (void)
   return frame;
 }
 
-void schro_gpuframe_setstream(SchroGPUFrame *frame, SchroCUDAStream stream)
+void schro_gpuframe_setstream(SchroFrame *frame, SchroCUDAStream stream)
 {
   SCHRO_ASSERT(frame->is_cuda_frame == TRUE);
 
@@ -90,9 +90,9 @@ int schro_components(int format)
   return comp;
 }
 
-SchroGPUFrame *schro_gpuframe_new_and_alloc (SchroFrameFormat format, int width, int height)
+SchroFrame *schro_gpuframe_new_and_alloc (SchroFrameFormat format, int width, int height)
 {
-  SchroGPUFrame *frame = schro_gpuframe_new();
+  SchroFrame *frame = schro_gpuframe_new();
   int bytes_pp;
   int h_shift, v_shift;
   int chroma_width;
@@ -169,9 +169,9 @@ SchroGPUFrame *schro_gpuframe_new_and_alloc (SchroFrameFormat format, int width,
   return frame;
 }
 
-SchroGPUFrame *schro_gpuframe_new_clone (SchroFrame *src)
+SchroFrame *schro_gpuframe_new_clone (SchroFrame *src)
 {
-  SchroGPUFrame *frame = schro_gpuframe_new();
+  SchroFrame *frame = schro_gpuframe_new();
   int i, length;
   void *ptr;
   
@@ -210,7 +210,7 @@ SchroGPUFrame *schro_gpuframe_new_clone (SchroFrame *src)
   return frame;
 }
 
-SchroGPUFrame *schro_gpuframe_ref (SchroGPUFrame *frame)
+SchroFrame *schro_gpuframe_ref (SchroFrame *frame)
 {
   SCHRO_ASSERT(frame->is_cuda_frame == TRUE);
 
@@ -218,7 +218,7 @@ SchroGPUFrame *schro_gpuframe_ref (SchroGPUFrame *frame)
   return frame;
 }
 
-void schro_gpuframe_unref (SchroGPUFrame *frame)
+void schro_gpuframe_unref (SchroFrame *frame)
 {
   SCHRO_ASSERT(frame->is_cuda_frame == TRUE);
 
@@ -235,8 +235,8 @@ void schro_gpuframe_unref (SchroGPUFrame *frame)
   }
 }
 
-void schro_gpuframe_set_free_callback (SchroGPUFrame *frame,
-    SchroGPUFrameFreeFunc free_func, void *priv)
+void schro_gpuframe_set_free_callback (SchroFrame *frame,
+    SchroFrameFreeFunc free_func, void *priv)
 {
   SCHRO_ASSERT(frame->is_cuda_frame == TRUE);
 
@@ -244,7 +244,7 @@ void schro_gpuframe_set_free_callback (SchroGPUFrame *frame,
   frame->priv = priv;
 }
 
-void schro_gpuframe_convert (SchroGPUFrame *dest, SchroGPUFrame *src)
+void schro_gpuframe_convert (SchroFrame *dest, SchroFrame *src)
 {
   int i;
 
@@ -373,7 +373,7 @@ void schro_gpuframe_convert (SchroGPUFrame *dest, SchroGPUFrame *src)
   }
 }
 
-void schro_gpuframe_add (SchroGPUFrame *dest, SchroGPUFrame *src)
+void schro_gpuframe_add (SchroFrame *dest, SchroFrame *src)
 {
   int i;
 
@@ -411,7 +411,7 @@ void schro_gpuframe_add (SchroGPUFrame *dest, SchroGPUFrame *src)
   }
 }
 
-void schro_gpuframe_subtract (SchroGPUFrame *dest, SchroGPUFrame *src)
+void schro_gpuframe_subtract (SchroFrame *dest, SchroFrame *src)
 {
   int i;
 
@@ -450,7 +450,7 @@ void schro_gpuframe_subtract (SchroGPUFrame *dest, SchroGPUFrame *src)
 }
 
 
-void schro_gpuframe_iwt_transform (SchroGPUFrame *frame, SchroParams *params)
+void schro_gpuframe_iwt_transform (SchroFrame *frame, SchroParams *params)
 {
   int16_t *frame_data;
   int component;
@@ -462,7 +462,7 @@ void schro_gpuframe_iwt_transform (SchroGPUFrame *frame, SchroParams *params)
   SCHRO_ASSERT(frame->is_cuda_frame == TRUE);
 
   for(component=0;component<3;component++){
-    SchroGPUFrameComponent *comp = &frame->components[component];
+    SchroFrameData *comp = &frame->components[component];
 
     if (component == 0) {
       width = params->iwt_luma_width;
@@ -487,7 +487,7 @@ void schro_gpuframe_iwt_transform (SchroGPUFrame *frame, SchroParams *params)
   }
 }
 
-void schro_gpuframe_inverse_iwt_transform (SchroGPUFrame *frame, SchroParams *params)
+void schro_gpuframe_inverse_iwt_transform (SchroFrame *frame, SchroParams *params)
 {
   int16_t *frame_data;
   int width;
@@ -505,7 +505,7 @@ void schro_gpuframe_inverse_iwt_transform (SchroGPUFrame *frame, SchroParams *pa
   SCHRO_ASSERT(frame->is_cuda_frame == TRUE);
 
   for(component=0;component<3;component++){
-    SchroGPUFrameComponent *comp = &frame->components[component];
+    SchroFrameData *comp = &frame->components[component];
 
     if (component == 0) {
       width = params->iwt_luma_width;
@@ -553,7 +553,7 @@ void schro_gpuframe_inverse_iwt_transform (SchroGPUFrame *frame, SchroParams *pa
 #endif
 }
 
-void schro_gpuframe_to_cpu (SchroFrame *dest, SchroGPUFrame *src)
+void schro_gpuframe_to_cpu (SchroFrame *dest, SchroFrame *src)
 {
     int i;
     
@@ -610,7 +610,7 @@ void schro_gpuframe_to_cpu (SchroFrame *dest, SchroGPUFrame *src)
     }
 }
 
-void schro_frame_to_gpu (SchroGPUFrame *dest, SchroFrame *src)
+void schro_frame_to_gpu (SchroFrame *dest, SchroFrame *src)
 {
     int i;
     
@@ -666,7 +666,7 @@ void schro_frame_to_gpu (SchroGPUFrame *dest, SchroFrame *src)
     }
 }
 
-void schro_gpuframe_compare (SchroGPUFrame *a, SchroFrame *b)
+void schro_gpuframe_compare (SchroFrame *a, SchroFrame *b)
 {
     void *temp;
     int i, bpp;
@@ -717,7 +717,7 @@ void schro_gpuframe_compare (SchroGPUFrame *a, SchroFrame *b)
     free(temp);
 }
 
-void schro_gpuframe_zero (SchroGPUFrame *dest)
+void schro_gpuframe_zero (SchroFrame *dest)
 {
     int i;
 
@@ -741,7 +741,7 @@ void schro_gpuframe_zero (SchroGPUFrame *dest)
 }
 
 
-void schro_gpuframe_upsample(SchroGPUFrame *dst, SchroGPUFrame *src)
+void schro_gpuframe_upsample(SchroFrame *dst, SchroFrame *src)
 {
     int i;
 
@@ -765,14 +765,14 @@ void schro_gpuframe_upsample(SchroGPUFrame *dst, SchroGPUFrame *src)
     }
 }
 
-SchroUpsampledGPUFrame *schro_upsampled_gpuframe_new(SchroVideoFormat *fmt)
+SchroUpsampledFrame *schro_upsampled_gpuframe_new(SchroVideoFormat *fmt)
 {
     struct cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc(8, 0, 0, 0, cudaChannelFormatKindUnsigned);
-    SchroUpsampledGPUFrame *rv;
+    SchroUpsampledFrame *rv;
 
     SCHRO_DEBUG("schro_upsampled_gpuframe_new");
-    rv = (SchroUpsampledGPUFrame*)malloc(sizeof(SchroUpsampledGPUFrame));
-    memset((void*)rv, 0, sizeof(SchroUpsampledGPUFrame));
+    rv = (SchroUpsampledFrame*)malloc(sizeof(SchroUpsampledFrame));
+    memset((void*)rv, 0, sizeof(SchroUpsampledFrame));
 
     /** Make an 8 bit texture for each component */
     cudaMallocArray(&rv->components[0], &channelDesc, fmt->width*2, fmt->height*2);
@@ -782,7 +782,7 @@ SchroUpsampledGPUFrame *schro_upsampled_gpuframe_new(SchroVideoFormat *fmt)
     return rv;
 }
 
-void schro_upsampled_gpuframe_upsample(SchroUpsampledGPUFrame *rv, SchroGPUFrame *temp_f, SchroGPUFrame *src, SchroVideoFormat *fmt)
+void schro_upsampled_gpuframe_upsample(SchroUpsampledFrame *rv, SchroFrame *temp_f, SchroFrame *src, SchroVideoFormat *fmt)
 {
     SCHRO_ASSERT(temp_f->is_cuda_frame == TRUE);
     SCHRO_ASSERT(src->is_cuda_frame == TRUE);
@@ -804,7 +804,7 @@ void schro_upsampled_gpuframe_upsample(SchroUpsampledGPUFrame *rv, SchroGPUFrame
         
 }
 
-void schro_upsampled_gpuframe_free(SchroUpsampledGPUFrame *x)
+void schro_upsampled_gpuframe_free(SchroUpsampledFrame *x)
 {
     int i;
 

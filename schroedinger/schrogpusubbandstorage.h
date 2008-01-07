@@ -33,8 +33,8 @@ struct _schro_subband_storage
 
 schro_subband_storage* schro_subband_storage_new(SchroParams *params, SchroCUDAStream stream);
 void schro_subband_storage_free(schro_subband_storage *store);
-//void schro_subband_storage_to_gpuframe(schro_subband_storage *store, SchroGPUFrame *frame);
-void schro_subband_storage_to_gpuframe_init(schro_subband_storage *store, SchroGPUFrame *frame);
-void schro_subband_storage_to_gpuframe(schro_subband_storage *store, SchroGPUFrame *frame, int comp, int position, int offset);
+//void schro_subband_storage_to_gpuframe(schro_subband_storage *store, SchroFrame *frame);
+void schro_subband_storage_to_gpuframe_init(schro_subband_storage *store, SchroFrame *frame);
+void schro_subband_storage_to_gpuframe(schro_subband_storage *store, SchroFrame *frame, int comp, int position, int offset);
 
 #endif

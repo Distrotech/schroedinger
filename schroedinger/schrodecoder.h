@@ -110,8 +110,8 @@ struct _SchroDecoder {
   void *free_stack[UQUEUE_SIZE];
   int free_count;
 
-  SchroGPUFrame *planar_output_frame;
-  SchroGPUFrame *gupsample_temp;
+  SchroFrame *planar_output_frame;
+  SchroFrame *gupsample_temp;
 #endif
 };
 
@@ -155,8 +155,8 @@ struct _SchroPicture {
   SchroUpsampledFrame *ref0;
   SchroUpsampledFrame *ref1;
 #else
-  SchroUpsampledGPUFrame *ref0;
-  SchroUpsampledGPUFrame *ref1;
+  SchroUpsampledFrame *ref0;
+  SchroUpsampledFrame *ref1;
 #endif
 
   int16_t *tmpbuf;
@@ -175,8 +175,8 @@ struct _SchroPicture {
   SchroFrame *mc_tmp_frame;
   SchroFrame *planar_output_frame;
 #else
-  SchroGPUFrame *frame;
-  SchroGPUFrame *mc_tmp_frame;
+  SchroFrame *frame;
+  SchroFrame *mc_tmp_frame;
 #endif
   SchroMotion *motion;
   SchroFrame *output_picture;
@@ -187,7 +187,7 @@ struct _SchroPicture {
 #ifdef SCHRO_GPU
   /// Output frame on GPU
   
-  SchroGPUFrame *goutput_frame;
+  SchroFrame *goutput_frame;
 
   schro_subband_storage *store;  
 
@@ -220,8 +220,8 @@ SchroUpsampledFrame * schro_decoder_reference_get (SchroDecoder *decoder,
 //    SchroPictureNumber frame_number);
 #else
 void schro_decoder_reference_add (SchroDecoder *decoder,
-    SchroUpsampledGPUFrame *frame, SchroPictureNumber picture_number);
-SchroUpsampledGPUFrame * schro_decoder_reference_get (SchroDecoder *decoder,
+    SchroUpsampledFrame *frame, SchroPictureNumber picture_number);
+SchroUpsampledFrame * schro_decoder_reference_get (SchroDecoder *decoder,
     SchroPictureNumber frame_number);
 //void schro_decoder_reference_retire (SchroDecoder *decoder,
 //    SchroPictureNumber frame_number);

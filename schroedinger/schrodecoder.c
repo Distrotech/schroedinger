@@ -84,7 +84,7 @@ static void schro_decoder_decode_prediction_unit(SchroPicture *picture,
     SchroArith **arith, SchroUnpack *unpack, SchroMotionVector *motion_vectors, int x, int y);
 
 #ifdef SCHRO_GPU
-static void schro_decoder_decode_transform_data_serial (SchroPicture *picture, schro_subband_storage *store, SchroGPUFrame *frame);
+static void schro_decoder_decode_transform_data_serial (SchroPicture *picture, schro_subband_storage *store, SchroFrame *frame);
 #endif
 
 static int schro_decoder_decode_subband (SchroPicture *picture,
@@ -1085,7 +1085,7 @@ schro_picture_iterate_finish (SchroPicture *picture)
 {
 #ifdef SCHRO_GPU
   SchroFrame *cpu_output_picture = picture->output_picture;
-  SchroGPUFrame *output_picture = picture->goutput_frame;
+  SchroFrame *output_picture = picture->goutput_frame;
   
   schro_gpuframe_setstream(picture->planar_output_frame, picture->stream);
 #else
@@ -1115,7 +1115,7 @@ schro_picture_iterate_finish (SchroPicture *picture)
 #ifndef SCHRO_GPU
     SchroFrame *frame;
 #else
-    SchroGPUFrame *frame;
+    SchroFrame *frame;
 #endif
     if (SCHRO_PARSE_CODE_IS_INTER(picture->parse_code)) {
       frame = picture->mc_tmp_frame;
@@ -1169,8 +1169,8 @@ schro_picture_iterate_finish (SchroPicture *picture)
     
     schro_decoder_reference_add (picture->parent, upsampler, picture->picture_number);
 #else
-    SchroGPUFrame *ref;
-    SchroUpsampledGPUFrame *rv;
+    SchroFrame *ref;
+    SchroUpsampledFrame *rv;
     if(output_picture->format == picture->planar_output_frame->format)
     {
         /* We can skip an extra conversion if we have the output already in the format
@@ -2215,7 +2215,7 @@ schro_subband_get_s (int component, int position,
 /* FIXME: wumpus, it should now be possible to replace this with
  * schro_decoder_decode_transform_data() */
 static void
-schro_decoder_decode_transform_data_serial (SchroPicture *picture, schro_subband_storage *store, SchroGPUFrame *frame)
+schro_decoder_decode_transform_data_serial (SchroPicture *picture, schro_subband_storage *store, SchroFrame *frame)
 {
   int i;
   int component;
@@ -2781,7 +2781,7 @@ schro_decoder_add_output_picture (SchroDecoder *decoder, SchroFrame *frame)
 
 #ifdef SCHRO_GPU
 void
-schro_decoder_reference_add (SchroDecoder *decoder, SchroUpsampledGPUFrame *frame,
+schro_decoder_reference_add (SchroDecoder *decoder, SchroUpsampledFrame *frame,
     SchroPictureNumber picture_number)
 #else
 void
@@ -2808,7 +2808,7 @@ schro_decoder_reference_add (SchroDecoder *decoder, SchroUpsampledFrame *frame,
 }
 
 #ifdef SCHRO_GPU
-SchroUpsampledGPUFrame *
+SchroUpsampledFrame *
 schro_decoder_reference_get (SchroDecoder *decoder,
     SchroPictureNumber picture_number)
 #else

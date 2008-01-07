@@ -16,7 +16,7 @@ void schro_gpumotion_init(SchroGPUMotion *self, SchroMotion *motion);
 /** Copy CPU to GPU structure */
 void schro_gpumotion_copy(SchroGPUMotion *self, SchroMotion *motion);
 /** Render at GPU */
-void schro_gpumotion_render(SchroGPUMotion *self, SchroMotion *motion, SchroGPUFrame *gdest);
+void schro_gpumotion_render(SchroGPUMotion *self, SchroMotion *motion, SchroFrame *gdest);
 
 SCHRO_END_DECLS
 
