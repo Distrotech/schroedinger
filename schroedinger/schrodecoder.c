@@ -841,10 +841,6 @@ schro_picture_new (SchroDecoder *decoder)
   return picture;
 }
 
-#ifdef HAVE_CUDA
-#define schro_frame_unref schro_gpuframe_unref
-#endif
-
 void
 schro_picture_free (SchroPicture *picture)
 {
@@ -872,7 +868,7 @@ schro_picture_free (SchroPicture *picture)
   if (picture->error_message) free (picture->error_message);
   
 #ifdef HAVE_CUDA
-  if (picture->goutput_frame) schro_gpuframe_unref (picture->goutput_frame);
+  if (picture->goutput_frame) schro_frame_unref (picture->goutput_frame);
   if (picture->store) schro_subband_storage_free(picture->store);
   schro_gpumotion_free(picture->gpumotion);
   cudaStreamDestroy(picture->stream);
@@ -880,9 +876,6 @@ schro_picture_free (SchroPicture *picture)
 
   free (picture);
 }
-
-#undef schro_frame_unref
-
 
 
 
@@ -1112,11 +1105,7 @@ schro_picture_iterate_finish (SchroPicture *picture)
       schro_frame_convert (output_picture, picture->frame);
     }
   } else {
-#ifndef HAVE_CUDA
     SchroFrame *frame;
-#else
-    SchroFrame *frame;
-#endif
     if (SCHRO_PARSE_CODE_IS_INTER(picture->parse_code)) {
       frame = picture->mc_tmp_frame;
     } else {
@@ -2779,15 +2768,9 @@ schro_decoder_add_output_picture (SchroDecoder *decoder, SchroFrame *frame)
 }
 
 
-#ifdef HAVE_CUDA
 void
 schro_decoder_reference_add (SchroDecoder *decoder, SchroUpsampledFrame *frame,
     SchroPictureNumber picture_number)
-#else
-void
-schro_decoder_reference_add (SchroDecoder *decoder, SchroUpsampledFrame *frame,
-    SchroPictureNumber picture_number)
-#endif
 {
   pthread_mutex_lock (&decoder->mutex);
   SCHRO_DEBUG("adding %d", picture_number);
@@ -2799,23 +2782,15 @@ schro_decoder_reference_add (SchroDecoder *decoder, SchroUpsampledFrame *frame,
 #else
     schro_upsampled_frame_free(frame);
 #endif
-  }
-  else
-  {
+  } else {
     schro_queue_add (decoder->reference_queue, frame, picture_number);
   }
   pthread_mutex_unlock (&decoder->mutex);
 }
 
-#ifdef HAVE_CUDA
 SchroUpsampledFrame *
 schro_decoder_reference_get (SchroDecoder *decoder,
     SchroPictureNumber picture_number)
-#else
-SchroUpsampledFrame *
-schro_decoder_reference_get (SchroDecoder *decoder,
-    SchroPictureNumber picture_number)
-#endif
 {
   void *ret;
 
@@ -2932,8 +2907,9 @@ static void schro_decoder_gpu_cleanup(SchroDecoder *decoder)
   }
   /* Release temporary frames */
   if(decoder->planar_output_frame)
-    schro_gpuframe_unref(decoder->planar_output_frame);
+    schro_frame_unref(decoder->planar_output_frame);
   if(decoder->gupsample_temp)
-    schro_gpuframe_unref(decoder->gupsample_temp);
+    schro_frame_unref(decoder->gupsample_temp);
 }
 #endif
+

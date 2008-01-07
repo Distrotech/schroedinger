@@ -17,17 +17,6 @@
 #include "cudamotion.h"
 #include <stdio.h>
 
-SchroFrame *schro_gpuframe_new (void)
-{
-  SchroFrame *frame;
-
-  frame = malloc (sizeof(*frame));
-  memset (frame, 0, sizeof(*frame));
-  frame->refcount = 1;
-
-  return frame;
-}
-
 void schro_gpuframe_setstream(SchroFrame *frame, SchroCUDAStream stream)
 {
   SCHRO_ASSERT(frame->is_cuda_frame == TRUE);
@@ -92,7 +81,7 @@ int schro_components(int format)
 
 SchroFrame *schro_gpuframe_new_and_alloc (SchroFrameFormat format, int width, int height)
 {
-  SchroFrame *frame = schro_gpuframe_new();
+  SchroFrame *frame = schro_frame_new();
   int bytes_pp;
   int h_shift, v_shift;
   int chroma_width;
@@ -171,7 +160,7 @@ SchroFrame *schro_gpuframe_new_and_alloc (SchroFrameFormat format, int width, in
 
 SchroFrame *schro_gpuframe_new_clone (SchroFrame *src)
 {
-  SchroFrame *frame = schro_gpuframe_new();
+  SchroFrame *frame = schro_frame_new();
   int i, length;
   void *ptr;
   
@@ -210,38 +199,11 @@ SchroFrame *schro_gpuframe_new_clone (SchroFrame *src)
   return frame;
 }
 
-SchroFrame *schro_gpuframe_ref (SchroFrame *frame)
+void _schro_gpuframe_free (SchroFrame *frame)
 {
-  SCHRO_ASSERT(frame->is_cuda_frame == TRUE);
-
-  frame->refcount++;
-  return frame;
-}
-
-void schro_gpuframe_unref (SchroFrame *frame)
-{
-  SCHRO_ASSERT(frame->is_cuda_frame == TRUE);
-
-  frame->refcount--;
-  if (frame->refcount == 0) {
-    if (frame->free) {
-      frame->free (frame, frame->priv);
-    }
-    if (frame->gregions[0]) {
-      cudaFree(frame->gregions[0]);
-    }
-
-    free(frame);
+  if (frame->gregions[0]) {
+    cudaFree(frame->gregions[0]);
   }
-}
-
-void schro_gpuframe_set_free_callback (SchroFrame *frame,
-    SchroFrameFreeFunc free_func, void *priv)
-{
-  SCHRO_ASSERT(frame->is_cuda_frame == TRUE);
-
-  frame->free = free_func;
-  frame->priv = priv;
 }
 
 void schro_gpuframe_convert (SchroFrame *dest, SchroFrame *src)
@@ -817,6 +779,7 @@ void schro_upsampled_gpuframe_free(SchroUpsampledFrame *x)
     //SCHRO_DEBUG("active is now %i", active);
 }
 
+#if 0
 SchroFrame *
 schro_frame_new_and_alloc_locked (SchroFrameFormat format, int width, int height)
 {
@@ -895,3 +858,5 @@ schro_frame_new_and_alloc_locked (SchroFrameFormat format, int width, int height
 
   return frame;
 }
+#endif
+
