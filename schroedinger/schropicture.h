@@ -125,6 +125,8 @@ void schro_decoder_decode_parse_header (SchroDecoder *decoder, SchroUnpack *unpa
 void schro_decoder_decode_access_unit (SchroDecoder *decoder, SchroUnpack *unpack);
 void schro_decoder_decode_picture_header (SchroDecoder *decoder, SchroUnpack *unpack);
 
+void schro_decoder_parse_transform_data (SchroPicture *decoder);
+
 void schro_decoder_decode_picture_prediction_parameters (SchroPicture *decoder);
 void schro_decoder_decode_block_data (SchroPicture *decoder);
 void schro_decoder_decode_transform_parameters (SchroPicture *decoder);

@@ -137,6 +137,10 @@ struct _SchroPicture {
   SchroPictureNumber reference2;
   SchroPictureNumber retired_picture_number;
 
+  int subband_length[3][SCHRO_LIMIT_SUBBANDS];
+  int subband_quant_index[3][SCHRO_LIMIT_SUBBANDS];
+  SchroBuffer *subband_buffer[3][SCHRO_LIMIT_SUBBANDS];
+
   int has_md5;
   uint8_t md5_checksum[32];
 
