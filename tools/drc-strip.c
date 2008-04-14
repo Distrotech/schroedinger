@@ -12,7 +12,6 @@
 #include <schroedinger/schrounpack.h>
 #include <schroedinger/schroparams.h>
 
-
 struct Block {
   void *p;
   size_t s;
@@ -24,8 +23,8 @@ typedef struct SchroPacket {
 } SchroPacket;
 
 
-typedef struct SchroStream {
-  uint32_t l; /* last packet size */
+typedef struct SchroWriter {
+  size_t l; /* last packet size */
   struct Block b;
   int f;
 } SchroStream;
@@ -54,6 +53,11 @@ static void write_uint32_lit(char *b, uint32_t u)
   b[2] = (u>>8)  & 0xff;
   b[3] = (u)     & 0xff;
 }
+
+typedef struct SchroRawPicture {
+  
+  
+} SchroRawPicture;
 
 static uint32_t read_uint32_lit(char *b)
 {
@@ -89,6 +93,7 @@ raw_packet_header(char b[13], SchroParseCode c, uint32_t n, uint32_t p)
   write_uint32_lit(b+9,n);
 }
 
+
 static void schro_write_packet(SchroStream *w, SchroPacket *p)
 {
   if(w->b.s < p->b.s + 13) {
@@ -103,12 +108,13 @@ static void schro_write_packet(SchroStream *w, SchroPacket *p)
 }
 
 
+
 void schro_write_eos(SchroStream *w)
 {
+
   struct SchroPacket p = { SCHRO_PARSE_CODE_END_OF_SEQUENCE,{ NULL, 0}};
   schro_write_packet(w, &p);
 }
-
 
 static void schro_stream_close(SchroStream *p)
 {
