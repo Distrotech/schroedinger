@@ -11,7 +11,6 @@
 #include <schroedinger/schrobitstream.h>
 #include <schroedinger/schrounpack.h>
 #include <schroedinger/schroparams.h>
-
 struct Block {
   void *p;
   size_t s;
@@ -23,12 +22,11 @@ typedef struct SchroPacket {
 } SchroPacket;
 
 
-typedef struct SchroWriter {
+typedef struct SchroStream {
   size_t l; /* last packet size */
   struct Block b;
   int f;
 } SchroStream;
-
 
 struct Block block(size_t s)
 {
@@ -53,11 +51,6 @@ static void write_uint32_lit(char *b, uint32_t u)
   b[2] = (u>>8)  & 0xff;
   b[3] = (u)     & 0xff;
 }
-
-typedef struct SchroRawPicture {
-  
-  
-} SchroRawPicture;
 
 static uint32_t read_uint32_lit(char *b)
 {
@@ -93,7 +86,6 @@ raw_packet_header(char b[13], SchroParseCode c, uint32_t n, uint32_t p)
   write_uint32_lit(b+9,n);
 }
 
-
 static void schro_write_packet(SchroStream *w, SchroPacket *p)
 {
   if(w->b.s < p->b.s + 13) {
@@ -108,10 +100,8 @@ static void schro_write_packet(SchroStream *w, SchroPacket *p)
 }
 
 
-
 void schro_write_eos(SchroStream *w)
 {
-
   struct SchroPacket p = { SCHRO_PARSE_CODE_END_OF_SEQUENCE,{ NULL, 0}};
   schro_write_packet(w, &p);
 }
@@ -141,7 +131,8 @@ SchroStream schro_stream_open(char *n, unsigned m)
 }
 
 
-unsigned schro_stream_eos(SchroStream *r)
+
+unsigned schro_stream_eos(SchroStream *w)
 {
   static int i = 104;
   return (i-- < 0);
@@ -288,9 +279,9 @@ void strip_picture(SchroPacket *p)
 }
 
 
+
 int main(int argc, char **argv) {
   SchroStream r,w;
-  SchroPacket p = {0, {NULL, 0}};
   SCHRO_ASSERT(argc > 1);
   r = schro_stream_open(argv[1], O_RDONLY);  
   w = schro_stream_open("output.drc", O_WRONLY|O_CREAT|O_TRUNC);
