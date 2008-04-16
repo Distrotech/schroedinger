@@ -23,11 +23,44 @@ typedef struct SchroPacket {
 
 
 typedef struct SchroStream {
-  size_t l; /* last packet size */
+  uint32_t l; /* last packet size */
   struct Block b;
   int f;
 } SchroStream;
 
+struct Block block(size_t s)
+{
+  struct Block b;
+  b.p = schro_malloc(s);
+  b.s = s;
+  return b;
+}
+
+static void dispatch_block(struct Block *b)
+{
+  if(b->p && b->s)
+    schro_free(b->p);
+  b->p = NULL;
+  b->s = 0;
+}
+
+static void write_uint32_lit(char *b, uint32_t u)
+{
+  b[0] = (u>>24) & 0xff;
+  b[1] = (u>>16) & 0xff;
+  b[2] = (u>>8)  & 0xff;
+  b[3] = (u)     & 0xff;
+}
+
+static uint32_t read_uint32_lit(char *b)
+{
+  return (b[0]<<24) | ((b[1]<<16)&0xff0000) |
+    ((b[2]<<8)&0xff00) | (b[3]&0xff);
+}
+
+
+<<<<<<< HEAD:tools/drc-strip.c
+=======
 struct Block block(size_t s)
 {
   struct Block b;
@@ -106,6 +139,7 @@ void schro_write_eos(SchroStream *w)
   schro_write_packet(w, &p);
 }
 
+
 static void schro_stream_close(SchroStream *p)
 {
   dispatch_block(&p->b);
@@ -130,6 +164,11 @@ SchroStream schro_stream_open(char *n, unsigned m)
   return s;
 }
 
+unsigned schro_stream_eos(SchroStream *r)
+{
+  static int i = 7;
+  return (i-- < 0);
+}
 
 
 unsigned schro_stream_eos(SchroStream *w)
@@ -282,6 +321,7 @@ void strip_picture(SchroPacket *p)
 
 int main(int argc, char **argv) {
   SchroStream r,w;
+  SchroPacket p = {0, {NULL, 0}};
   SCHRO_ASSERT(argc > 1);
   r = schro_stream_open(argv[1], O_RDONLY);  
   w = schro_stream_open("output.drc", O_WRONLY|O_CREAT|O_TRUNC);
