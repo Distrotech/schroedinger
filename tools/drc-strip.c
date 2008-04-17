@@ -170,6 +170,127 @@ unsigned schro_stream_eos(SchroStream *r)
   return (i-- < 0);
 }
 
+/* we will not use this data, but we need to skip it. */
+
+static void skip_global_parameters(SchroParseCode c, SchroUnpack *u)
+{
+  unsigned i;
+  for(i = 0; i < SCHRO_PARSE_CODE_NUM_REFS(c); i++) {
+    /* pan tilt */
+    if(schro_unpack_decode_bit(u)) {
+      schro_unpack_decode_sint(u);
+      schro_unpack_decode_sint(u);
+    }
+    /* zoom rotation shear */
+    if(schro_unpack_decode_bit(u)) {
+      schro_unpack_decode_uint(u);
+      schro_unpack_decode_sint(u);
+      schro_unpack_decode_sint(u);
+      schro_unpack_decode_sint(u);
+      schro_unpack_decode_sint(u);
+    }
+    /* perspective */
+    if(schro_unpack_decode_bit(u)) {
+      schro_unpack_decode_uint(u);
+      schro_unpack_decode_sint(u);
+      schro_unpack_decode_sint(u);
+    }
+  }
+}
+
+static void preset_block_params(uint32_t i, struct SchroRawPicture *p)
+{
+  p->lxl = p->lyl = (i+1)*8;
+  p->lxs = p->lys = i*8;
+}
+
+struct SchroRawPicture {
+  uint32_t n;
+  uint32_t r[2];
+  uint32_t lxl,lyl,lxs,lys; 
+  uint32_t mvp; /* motion vector precision */
+  uint8_t g;
+  uint32_t wi,dw,cbm; /* wavelet index, dwt depth, codeblock mode */
+};
+
+void strip_picture(SchroPacket *p)
+{
+  SchroUnpack u;
+  struct SchroRawPicture r; 
+  r.n = read_uint32_lit(p->b.p);
+  /* already read 4 bytes */
+  schro_unpack_init_with_data(&u,p->b.p + 4, p->b.s, 1);
+  if(SCHRO_PARSE_CODE_IS_INTER(p->c)) {
+    r.r[0] = r.n +  schro_unpack_decode_sint(&u);
+    if(SCHRO_PARSE_CODE_NUM_REFS(p->c) == 2) {
+      r.r[1] = r.n + schro_unpack_decode_sint(&u);
+    }
+  } else {
+    /* retire */
+    r.r[0] = r.n + schro_unpack_decode_sint(&u); 
+  }
+  if(SCHRO_PARSE_CODE_IS_INTER(p->c)) {
+    uint32_t i;
+    schro_unpack_byte_sync(&u);
+    i = schro_unpack_decode_uint(&u);
+    if(i == 0) { /* we need this data */
+      printf("Custom block parameters");
+      r.lxl = schro_unpack_decode_uint(&u);  
+      r.lyl = schro_unpack_decode_uint(&u);  
+      r.lxs = schro_unpack_decode_uint(&u);  
+      r.lys = schro_unpack_decode_uint(&u);  
+    } else {
+      preset_block_params(i,&r);
+    }
+    r.mvp = schro_unpack_decode_uint(&u);
+    r.g = schro_unpack_decode_bit(&u);
+    if(r.g)
+      skip_global_parameters(p->c, &u);
+    printf("%d\n",schro_unpack_decode_uint(&u));
+    /* reference picture weight data */
+    if(schro_unpack_decode_bit(&u)) {
+      schro_unpack_decode_uint(&u);
+      schro_unpack_decode_sint(&u);
+      if(SCHRO_PARSE_CODE_NUM_REFS(p->c) == 2)
+	schro_unpack_decode_sint(&u);
+    }
+  }
+  schro_unpack_byte_sync(&u);
+  /* wavelet transform parameters */
+  if(!SCRHO_PARSE_CODE_IS_INTER(p->c) ||
+     schro_unpack_decode_bit(&u)) {
+    r.wi = schro_unpack_decode_uint(&u);
+    r.dw = schro_unpack_decode_uint(&u);
+    /* codeblock parameters */
+    if(!SCHRO_PARSE_CODE_IS_LOW_DELAY(p->c)) {
+      if(schro_unpack_decode_bit(&u)) {
+	uint32_t i;
+	for(i = 0; i < r.dw; i++) {
+	  schro_unpack_decode_uint(&u);
+	  schro_unpack_decode_uint(&u);
+	}
+	schro_unpack_decode_uint(&u);
+      }
+    } else { /* lowdelay syntax */
+      /* slice parameters */
+      schro_unpack_decode_uint(&u);
+      schro_unpack_decode_uint(&u);
+      schro_unpack_decode_uint(&u);
+      schro_unpack_decode_uint(&u);
+      /* quantisation matrix */
+      if(schro_unpack_decode_bit(&u)) {
+	uint32_t i;
+	schro_unpack_decode_uint(&u);
+	for(i = 1; i < r.dw; i++) {
+	  schro_unpack_decode_uint(&u);
+	  schro_unpack_decode_uint(&u);
+	  schro_unpack_decode_uint(&u);
+	}
+      }
+    }
+  }
+  
+}
 
 unsigned schro_stream_eos(SchroStream *w)
 {
