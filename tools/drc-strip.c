@@ -198,12 +198,6 @@ static void skip_global_parameters(SchroParseCode c, SchroUnpack *u)
   }
 }
 
-static void preset_block_params(uint32_t i, struct SchroRawPicture *p)
-{
-  p->lxl = p->lyl = (i+1)*8;
-  p->lxs = p->lys = i*8;
-}
-
 struct SchroRawPicture {
   uint32_t n;
   uint32_t r[2];
@@ -212,6 +206,12 @@ struct SchroRawPicture {
   uint8_t g;
   uint32_t wi,dw,cbm; /* wavelet index, dwt depth, codeblock mode */
 };
+
+static void preset_block_params(uint32_t i, struct SchroRawPicture *p)
+{
+  p->lxl = p->lyl = (i+1)*8;
+  p->lxs = p->lys = i*8;
+}
 
 void strip_picture(SchroPacket *p)
 {
@@ -257,7 +257,7 @@ void strip_picture(SchroPacket *p)
   }
   schro_unpack_byte_sync(&u);
   /* wavelet transform parameters */
-  if(!SCRHO_PARSE_CODE_IS_INTER(p->c) ||
+  if(!SCHRO_PARSE_CODE_IS_INTER(p->c) ||
      schro_unpack_decode_bit(&u)) {
     r.wi = schro_unpack_decode_uint(&u);
     r.dw = schro_unpack_decode_uint(&u);
