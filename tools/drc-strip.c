@@ -166,7 +166,7 @@ SchroStream schro_stream_open(char *n, unsigned m)
 
 unsigned schro_stream_eos(SchroStream *r)
 {
-  static int i = 7;
+  static int i = 104;
   return (i-- < 0);
 }
 
@@ -204,7 +204,7 @@ struct SchroRawPicture {
   uint32_t lxl,lyl,lxs,lys; 
   uint32_t mvp; /* motion vector precision */
   uint8_t g;
-  uint32_t wi,dw,cbm; /* wavelet index, dwt depth, codeblock mode */
+  uint32_t wi,wd,cbm; /* wavelet index, dwt depth, codeblock mode */
 };
 
 static void preset_block_params(uint32_t i, struct SchroRawPicture *p)
@@ -217,36 +217,51 @@ void strip_picture(SchroPacket *p)
 {
   SchroUnpack u;
   struct SchroRawPicture r; 
-  r.n = read_uint32_lit(p->b.p);
-  /* already read 4 bytes */
-  schro_unpack_init_with_data(&u,p->b.p + 4, p->b.s, 1);
+  schro_unpack_init_with_data(&u,p->b.p, p->b.s, 1);
+  r.n = schro_unpack_decode_bits(&u,32);
+  printf("Picture number: %d\n", r.n);
   if(SCHRO_PARSE_CODE_IS_INTER(p->c)) {
     r.r[0] = r.n +  schro_unpack_decode_sint(&u);
+    printf("Reference picture 1: %d\n", r.r[0]);
     if(SCHRO_PARSE_CODE_NUM_REFS(p->c) == 2) {
-      r.r[1] = r.n + schro_unpack_decode_sint(&u);
+      r.r[1] = r.n + schro_unpack_decode_sint(&u);  
+      printf("Reference picture 1: %d\n", r.r[1]);
     }
-  } else {
-    /* retire */
-    r.r[0] = r.n + schro_unpack_decode_sint(&u); 
+    
   }
-  if(SCHRO_PARSE_CODE_IS_INTER(p->c)) {
+  if(SCHRO_PARSE_CODE_IS_REFERENCE(p->c)) {
+    /* retire */
+    puts("Intra frame");
+    r.r[0] = r.n + schro_unpack_decode_sint(&u); 
+    if(r.r[0]) {
+      printf("Retire: %d\n", r.r[0]);
+    } else {
+      puts("Retire: none");
+    }
+  }
+  if(SCHRO_PARSE_CODE_NUM_REFS(p->c) > 0) {
+    printf("Inter frame\n");
     uint32_t i;
     schro_unpack_byte_sync(&u);
     i = schro_unpack_decode_uint(&u);
     if(i == 0) { /* we need this data */
-      printf("Custom block parameters");
+      puts("Custom block parameters");
       r.lxl = schro_unpack_decode_uint(&u);  
       r.lyl = schro_unpack_decode_uint(&u);  
       r.lxs = schro_unpack_decode_uint(&u);  
       r.lys = schro_unpack_decode_uint(&u);  
+
     } else {
       preset_block_params(i,&r);
     }
     r.mvp = schro_unpack_decode_uint(&u);
+    printf("motion vector precision %d\n", r.mvp);
     r.g = schro_unpack_decode_bit(&u);
-    if(r.g)
+    if(r.g) {
+      puts("Global motion");
       skip_global_parameters(p->c, &u);
-    printf("%d\n",schro_unpack_decode_uint(&u));
+    }
+    printf("picture prediction mode %d\n",schro_unpack_decode_uint(&u));
     /* reference picture weight data */
     if(schro_unpack_decode_bit(&u)) {
       schro_unpack_decode_uint(&u);
@@ -260,12 +275,15 @@ void strip_picture(SchroPacket *p)
   if(!SCHRO_PARSE_CODE_IS_INTER(p->c) ||
      schro_unpack_decode_bit(&u)) {
     r.wi = schro_unpack_decode_uint(&u);
-    r.dw = schro_unpack_decode_uint(&u);
+    printf("Wavelet index: %d\n", r.wi);
+    r.wd = schro_unpack_decode_uint(&u);
+    printf("Wavelet depth: %d\n", r.wd);
     /* codeblock parameters */
     if(!SCHRO_PARSE_CODE_IS_LOW_DELAY(p->c)) {
+      puts("Codeblock parameters");
       if(schro_unpack_decode_bit(&u)) {
 	uint32_t i;
-	for(i = 0; i < r.dw; i++) {
+	for(i = 0; i < r.wd; i++) {
 	  schro_unpack_decode_uint(&u);
 	  schro_unpack_decode_uint(&u);
 	}
@@ -281,7 +299,7 @@ void strip_picture(SchroPacket *p)
       if(schro_unpack_decode_bit(&u)) {
 	uint32_t i;
 	schro_unpack_decode_uint(&u);
-	for(i = 1; i < r.dw; i++) {
+	for(i = 1; i < r.wd; i++) {
 	  schro_unpack_decode_uint(&u);
 	  schro_unpack_decode_uint(&u);
 	  schro_unpack_decode_uint(&u);
@@ -289,7 +307,7 @@ void strip_picture(SchroPacket *p)
       }
     }
   }
-  
+  putchar('\n');
 }
 
 unsigned schro_stream_eos(SchroStream *w)
