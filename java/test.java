@@ -1,10 +1,16 @@
-
 import Schroedinger.*;
+
 
 public class test {
     public static void main (String [] a) {
-	char d[] = new char[20];
+	byte d[];
+	String s = "Hello, World!";
+	d = s.getBytes();
 	Unpack u = new Unpack(d);
-	System.out.println(u);
+	u.bits(5);
+	u.align();
+	while(u.bitsLeft() >= 8) {
+	    System.out.println((char)u.bits(8));
+	}
     }
 }
