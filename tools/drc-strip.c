@@ -25,17 +25,10 @@ typedef struct SchroPacket {
 
 
 typedef struct SchroStream {
-<<<<<<< HEAD:tools/drc-strip.c
-  size_t l; /* last packet size */
-=======
   uint32_t l; /* last packet size */
->>>>>>> bart:tools/drc-strip.c
   struct Block b;
   int f;
 } SchroStream;
-
-
-
 
 
 struct Block block(size_t s)
@@ -54,9 +47,6 @@ static void dispatch_block(struct Block *b)
   b->s = 0;
 }
 
-<<<<<<< HEAD:tools/drc-strip.c
-void schro_read_packet(SchroStream *r, SchroPacket *p)
-=======
 static void write_uint32_lit(char *b, uint32_t u)
 {
   b[0] = (u>>24) & 0xff;
@@ -73,19 +63,14 @@ static uint32_t read_uint32_lit(char *b)
 
 
 static void schro_read_packet(SchroStream *r, SchroPacket *p)
->>>>>>> bart:tools/drc-strip.c
 {
   char h[13];
   SCHRO_ASSERT(read(r->f, h, 13) == 13);
   SCHRO_ASSERT(memcmp(h, "BBCD", 4) == 0);
   p->c = h[4];
-<<<<<<< HEAD:tools/drc-strip.c
-  r->l = (h[5] << 24 | h[6] << 16 | h[7] << 8 | h[8]);
-=======
   SCHRO_ASSERT(read_uint32_lit(h+9) ==  r->l);
   r->l = read_uint32_lit(h+5);
   r->l = (r->l ? r->l : 13);
->>>>>>> bart:tools/drc-strip.c
   if(r->l - 13 > p->b.s) { /* doesn't fit in packet block */
     dispatch_block(&p->b);
     p->b = block(r->l - 13);
@@ -100,13 +85,8 @@ raw_packet_header(char b[13], SchroParseCode c, uint32_t n, uint32_t p)
 {
   memcpy(b, "BBCD", 4);
   b[4] = c;
-<<<<<<< HEAD:tools/drc-strip.c
-  memcpy(b + 5, &n, 4);
-  memcpy(b + 9, &p, 4);
-=======
   write_uint32_lit(b+5,n);
   write_uint32_lit(b+9,n);
->>>>>>> bart:tools/drc-strip.c
 }
 
 static void schro_write_packet(SchroStream *w, SchroPacket *p)
@@ -154,17 +134,13 @@ SchroStream schro_stream_open(char *n, unsigned m)
   return s;
 }
 
-<<<<<<< HEAD:tools/drc-strip.c
-=======
+
 unsigned schro_stream_eos(SchroStream *r)
 {
   static int i = 104;
   return (i-- < 0);
 }
->>>>>>> bart:tools/drc-strip.c
 
-<<<<<<< HEAD:tools/drc-strip.c
-=======
 /* we will not use this data, but we need to skip it. */
 
 static void skip_global_parameters(SchroParseCode c, SchroUnpack *u)
@@ -304,7 +280,7 @@ void strip_picture(SchroPacket *p)
   }
   putchar('\n');
 }
->>>>>>> bart:tools/drc-strip.c
+
 
 int main(int argc, char **argv) {
   SchroStream r,w;
@@ -312,11 +288,6 @@ int main(int argc, char **argv) {
   SCHRO_ASSERT(argc > 1);
   r = schro_stream_open(argv[1], O_RDONLY);  
   w = schro_stream_open("output.drc", O_WRONLY|O_CREAT|O_TRUNC);
-<<<<<<< HEAD:tools/drc-strip.c
-  schro_read_packet(&r,&p);
-  schro_write_packet(&w,&p);
-  schro_write_eos(&w);
-=======
   while(!schro_stream_eos(&r)) {
     schro_read_packet(&r,&p);
     if(SCHRO_PARSE_CODE_IS_PICTURE(p.c)) {
@@ -326,7 +297,6 @@ int main(int argc, char **argv) {
   }
   if(p.c != SCHRO_PARSE_CODE_END_OF_SEQUENCE)
     schro_write_eos(&w);
->>>>>>> bart:tools/drc-strip.c
   schro_stream_close(&r);
   schro_stream_close(&w);
   exit(0);
