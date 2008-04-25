@@ -1,4 +1,4 @@
-package Schroedinger.WaveletTransform;
+package Schroedinger;
 
 
 public class WaveletTransform {
