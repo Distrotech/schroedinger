@@ -1,7 +1,11 @@
 
 EXTRA_DIST = drc-to-png
 
+<<<<<<< HEAD:tools/Makefile.am
 noinst_PROGRAMS = dump_packets dump_gop drc-cut parse_header
+=======
+noinst_PROGRAMS = dump_packets dump_gop drc-cut drc-strip
+>>>>>>> bart:tools/Makefile.am
 
 
 AM_CFLAGS = $(SCHRO_CFLAGS) $(ERROR_CFLAGS) $(LIBOIL_CFLAGS) \
