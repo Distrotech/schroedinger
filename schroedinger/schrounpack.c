@@ -209,9 +209,13 @@ schro_unpack_decode_bits (SchroUnpack *unpack, int n)
 unsigned int
 schro_unpack_decode_uint (SchroUnpack *unpack)
 {
+  int count;
   int value; 
-  value = 1;
+  
+  count = 0;
+  value = 0;
   while(!schro_unpack_decode_bit (unpack)) {
+    count++;
     value <<= 1;
     value |= schro_unpack_decode_bit (unpack);
   }
