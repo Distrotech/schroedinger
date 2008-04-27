@@ -1,15 +1,12 @@
-FILES = UnpackTest.class TestWavelet2d.class
+FILES = UnpackTest.class TestWavelet2d.class 
 
-test: lib ${FILES}
+test: ${FILES}
 	@java UnpackTest
 	@java TestWavelet2d
 
 
 %.class: %.java
 	javac $<
-
-lib: ./Schroedinger
-	make -C ./Schroedinger
 
 
 clean:

@@ -183,21 +183,17 @@ schro_synth_ext_desl93 (int16_t *hi, int16_t *lo, int n)
 void
 schro_synth_ext_53 (int16_t *hi, int16_t *lo, int n)
 {
-  //static const int16_t stage1_weights[] = { -1, -1 };
-  //static const int16_t stage2_weights[] = { 1, 1 };
   static const int16_t stage1_offset_shift[] = { 2, 2 };
   static const int16_t stage2_offset_shift[] = { 1, 1 };
 
   lo[-1] = lo[0];
   lo[n] = lo[n-1];
 
-  //oil_mas2_add_s16 (hi, hi, lo - 1, stage1_weights, stage1_offset_shift, n);
   oil_add2_rshift_sub_s16 (hi, hi, lo - 1, lo, stage1_offset_shift, n);
 
   hi[-1] = hi[0];
   hi[n] = hi[n-1];
 
-  //oil_mas2_add_s16 (lo, lo, hi, stage2_weights, stage2_offset_shift, n);
   oil_add2_rshift_add_s16 (lo, lo, hi, hi+1, stage2_offset_shift, n);
 }
 

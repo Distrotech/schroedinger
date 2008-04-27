@@ -1,4 +1,4 @@
-package Schroedinger;
+package org.diracvideo.Schroedinger;
 
 public class ArithmeticDecoder {
     byte d[];
