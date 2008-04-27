@@ -1,0 +1,8 @@
+A wavelet is a small wave function (where a wave function is a
+representation of a real-world wave), giving a value y as a function
+of input x.
+
+The bandwidth of a wavelet is the domain where the wave function is
+non-zero. By scaling x by a factor 1/s the resulting value will be in
+the bandwidth of the wave. 
+
