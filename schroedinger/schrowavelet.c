@@ -835,7 +835,7 @@ void schro_iiwt_5_3 (int16_t *data, int stride, int width, int height,
   for(i=-4;i<height + 2;i++){
     int i1 = i + 2;
     int i2 = i + 4;
-
+    /* runs in first loop */
     if ((i2&1) == 0 && i2 >= 0 && i2 < height) {
       int16_t *d;
       if (i2-1>=0) {
@@ -843,13 +843,15 @@ void schro_iiwt_5_3 (int16_t *data, int stride, int width, int height,
       } else {
         d = OFFSET(data, 1*stride);
       }
-      oil_add2_rshift_sub_s16 (
-          OFFSET(data, i2*stride),
+      oil_add2_rshift_sub_s16 ( /* begin data section, begin data section, begin data section
+				 * {2, 2}, width, I don't get this */
+	  OFFSET(data, i2*stride),
           OFFSET(data, i2*stride),
           d,
           OFFSET(data, (i2+1)*stride),
           stage2_offset_shift, width);
     }
+    /* runs in third loop */
     if ((i1&1) == 0 && i1 >= 0 && i1 < height) {
       int16_t *d;
       if (i1+2<height) {
@@ -857,14 +859,16 @@ void schro_iiwt_5_3 (int16_t *data, int stride, int width, int height,
       } else {
         d = OFFSET(data,(height-2)*stride);
       }
-      oil_add2_rshift_add_s16 (
+      oil_add2_rshift_add_s16 ( /* i can only imagine these are supposed 
+				 * to be odd values and this is the lifting
+				 * transform */
           OFFSET(data, (i1+1)*stride),
           OFFSET(data, (i1+1)*stride),
           OFFSET(data, i1*stride),
           d,
           stage1_offset_shift, width);
     } 
-    if (i >=0 && i < height) {
+    if (i >=0 && i < height) { /* runs in fifth loop */
       int16_t *hi = tmp + 2;
       int16_t *lo = tmp + 6 + width/2;
       static const int16_t as[2] = { 1, 1 };

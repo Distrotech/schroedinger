@@ -7,7 +7,8 @@ public class UnpackTest {
 	u.bits(5);
 	u.align();
 	while(u.bitsLeft() > 8) {
-	    System.out.println((char)u.bits(8));
+	    System.out.print((char)u.bits(8));
 	}
+	System.out.println("");
     }
 }

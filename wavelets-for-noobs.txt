@@ -3,6 +3,21 @@ representation of a real-world wave), giving a value y as a function
 of input x.
 
 The bandwidth of a wavelet is the domain where the wave function is
-non-zero. By scaling x by a factor 1/s the resulting value will be in
+non-zero. By scaling x by a factor 1/s the resulting value will be within
 the bandwidth of the wave. 
+
+The `transform' part is derived from the fact that
+* you can represent any transformation as a matrix
+* any such representation must have determinant 1, and
+* thus they can all be factored into type 3 elementary matrices, and
+* as a last treat you can expand any function as a (Laurent) polynomial,
+  which are just polynomials that allow negative powers, allowing them
+  to be factored.
+
+Thus, you can do a wavelet transform without ever seeing a wave at
+all. In practice for the transforms in Dirac, that means predicting
+odd values by their neighbouring even values, subtracting that
+prediction from the value and storing it, and repeating with even and
+odd. Then the odd values are the high band and the even values the low
+band. 
 
