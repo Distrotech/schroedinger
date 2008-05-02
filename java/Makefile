@@ -1,6 +1,6 @@
 FILES = UnpackTest.class TestWavelet2d.class 
 
-test: ${FILES}
+test: clean ${FILES} 
 	@java UnpackTest
 	@java TestWavelet2d
 
