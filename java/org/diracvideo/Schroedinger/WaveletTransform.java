@@ -3,27 +3,35 @@ package org.diracvideo.Schroedinger;
 public class WaveletTransform {
     public static void inverse(short d[], int w) {
 	/* data is assumed to be preinterleaved */
+	for(int s = 8; s >= 1; s >>= 1) {
+	    for(int x = 0; x < w; x++) {
+		synthesize(d,s*w,x,d.length); /* a column */
+	    }
+	    for(int y = 0; y < d.length; y += w) {
+		synthesize(d,s,y,w); /* a row */
+	    }
+	}
 	for(int i = 0; i < d.length; i++) {
 	    d[i] += 1;
 	    d[i] >>= 1;
 	}
     }
 
-    private static void synthesize(short d[]) {
-	for(int i = 0; i < d.length; i += 2) {
+    private static void synthesize(short d[], int s, int b, int e) {
+	for(int i = b; i < e; i += 2*s) {
 	    if(i == 0) {
-		d[0] -= (2*d[1] + 2) >> 2;
-	    } else if (i + 1 == d.length) {
-		d[i] -= (2*d[i-1] + 2) >> 2;
+		d[0] -= (2*d[s] + 2) >> 2;
+	    } else if (i + s >= e) {
+		d[i] -= (2*d[i-s] + 2) >> 2;
 	    } else {
-		d[i] -= (d[i-1] + d[i+1] + 2) >> 2;
+		d[i] -= (d[i-s] + d[i+s] + 2) >> 2;
 	    }
 	}
-	for(int i = 0; i < d.length; i += 2) {
-	    if(i + 2 >= d.length) {
-		d[i+1] += (2*d[i] + 1) >> 1;
+	for(int i = b + s; i < e; i += 2*s) {
+	    if(i + s >= e) {
+		d[i] += (2*d[i-s] + 1) >> 1;
 	    } else {
-		d[i+1] += (d[i] + d[i+2] + 1) >> 1;
+		d[i] += (d[i-s] + d[i+s] + 1) >> 1;
 	    }
 	}
     }
@@ -44,8 +52,10 @@ public class WaveletTransform {
     }
 
     public static void test() {
-	short d[] = {0,0,2,0,4,0,6,0,8,1};
-	synthesize(d);
+	short d[] = {0,0,0,0,0,0,0,0,8,1};
+	synthesize(d,4,0,d.length);
+	synthesize(d,2,0,d.length);
+	synthesize(d,1,0,d.length);
 	for(int i = 0; i < d.length; i++) {
 	    System.out.print(" " + d[i]);
 	}
