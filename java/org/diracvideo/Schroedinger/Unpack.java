@@ -2,7 +2,7 @@ package org.diracvideo.Schroedinger;
 
 public class Unpack {
     private byte d[];
-    private int i = 0,r , l = 0;
+    private int i = 0, r, l = 0;
     
     public Unpack(byte d[]) {
 	this.d = d;
@@ -48,6 +48,28 @@ public class Unpack {
 
     public int bitsLeft() {
 	return (d.length - i) * 8 + l;
+    }
+
+    public void init(byte d[], int o) {
+	this.d = d;
+	l = 0;
+	i = o;
+	fill();
+    }
+
+    public static void test() {
+	String s = "Hello, World";
+	byte r[] = new byte[s.length()-1];
+	Unpack u = new Unpack(s.getBytes());
+	u.bits(5);
+	u.align();
+	for(int i = 0; i < r.length && u.bitsLeft() >= 8; i++) {
+	    r[i] = (byte)u.bits(8);
+	}
+	String o = new String(r);
+	if(s.substring(1).compareTo(o) != 0) {
+	    throw new Error("Something wrong with Unpack");
+	}
     }
 
 }

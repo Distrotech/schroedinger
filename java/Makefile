@@ -1,8 +1,11 @@
 FILES = UnpackTest.class TestWavelet2d.class 
 
-test: clean ${FILES} 
+test: lib ${FILES} 
 	@java UnpackTest
 	@java TestWavelet2d
+
+lib:
+	make -C ./org/diracvideo/Schroedinger
 
 
 %.class: %.java

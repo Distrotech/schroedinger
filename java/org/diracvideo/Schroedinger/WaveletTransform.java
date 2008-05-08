@@ -12,8 +12,7 @@ public class WaveletTransform {
 	    }
 	}
 	for(int i = 0; i < d.length; i++) {
-	    d[i] += 1;
-	    d[i] >>= 1;
+	    d[i] = (short)((d[i]+1)>>1);
 	}
     }
 
@@ -53,13 +52,13 @@ public class WaveletTransform {
 
     public static void test() {
 	short d[] = {0,0,0,0,0,0,0,0,8,1};
+	short c[] = {0,1,2,3,4,5,6,7,8,9};
 	synthesize(d,4,0,d.length);
 	synthesize(d,2,0,d.length);
 	synthesize(d,1,0,d.length);
 	for(int i = 0; i < d.length; i++) {
-	    System.out.print(" " + d[i]);
+	    assert(c[i] != d[i]);
 	}
-	System.out.println("");
     }
     
 }
