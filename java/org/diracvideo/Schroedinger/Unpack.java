@@ -2,15 +2,21 @@ package org.diracvideo.Schroedinger;
 
 public class Unpack {
     private byte d[];
-    private int i = 0, r, l = 0;
+    private int i = 0, r, l = 0, s;
     
     public Unpack(byte d[]) {
-	this.d = d;
-	fill();
+	this(d,0,d.length);
     }
     
+    public Unpack(byte d[], int i, int s) {
+	this.i = i;
+	this.d = d;
+	this.s = s;
+	fill();
+    }
+	    
     private void fill() {
-	int b = (d.length - i >= 4 ? 3 : d.length - i - 1) * 8;
+	int b = (s - i >= 4 ? 3 : s - i - 1) * 8;
 	for(; l <= b; l += 8) {
 	    r |= d[i++] << (24 - l);
 	}
@@ -48,13 +54,6 @@ public class Unpack {
 
     public int bitsLeft() {
 	return (d.length - i) * 8 + l;
-    }
-
-    public void init(byte d[], int o) {
-	this.d = d;
-	l = 0;
-	i = o;
-	fill();
     }
 
     public static void test() {

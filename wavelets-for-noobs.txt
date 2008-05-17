@@ -1,6 +1,9 @@
+Wavelets
+--------
+
 A wavelet is a small wave function (where a wave function is a
 representation of a real-world wave), giving a value y as a function
-of input x.
+of input x. They have extemely little to do with Huygens wavelets.
 
 The bandwidth of a wavelet is the domain where the wave function is
 non-zero. By scaling x by a factor 1/s the resulting value will be within
@@ -20,4 +23,30 @@ odd values by their neighbouring even values, subtracting that
 prediction from the value and storing it, and repeating with even and
 odd. Then the odd values are the high band and the even values the low
 band. 
+
+
+
+The inner workings of schrodecoder.
+-----------------------------------
+
+schrodecoder basically is two things:
+* A state machine for decoding, and
+* A queue for pictures.
+
+(In java terms, it is a Queue, and it is Runnable). schro_decoder_push
+takes a buffer, validates it as a packet, and does one of five things:
+* parses it as a picture and puts it in the queue
+* parses an access unit and uses it as its video format
+* parses it as auxiliary data and does `stuff' with it
+* skips it, or
+* sets the `end of sequence' mark.
+
+schro_decoder_iterate_picture does most of the heavy work of decoding
+the picture. The picture is parsed using parameters, which comes with
+each picture packet, and a video format, which is contained in the
+sequence heaer. This suggests (to me) that Parameters can be a class
+private to Picture (since it is picture-specific) and VideoFormat
+cannot. 
+
+
 
