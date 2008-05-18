@@ -7,12 +7,16 @@ public class Unpack {
     public Unpack(byte d[]) {
 	this(d,0,d.length);
     }
-    
-    public Unpack(byte d[], int i, int s) {
-	this.i = i;
+
+    public Unpack(byte d[], int b, int e) {
 	this.d = d;
-	this.s = s;
+	this.i = b;
+	this.s = e;
 	fill();
+    }
+    
+    public Unpack(Buffer b) {
+	this(b.d, b.b, b.e);	
     }
 	    
     private void fill() {
