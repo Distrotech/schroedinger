@@ -12,21 +12,17 @@ public class Picture {
     public final int n;
 
     private class Parameters {
-	public final int iwt_chroma_width, iwt_chroma_height,
+	/* all that matters for now is wavelet depth */
+	public int iwt_chroma_width, iwt_chroma_height,
 	    iwt_luma_width, iwt_luma_height;
-	public final int xblen_luma, yblen_luma, 
-	    xbsep_luma, ybsep_luma;
-	public final int num_refs;
-	public final boolean have_global_motion;
-	public Parameters(int c) {
-	    num_refs = c & 0x02;
-	    have_global_motion = false; 
+	public int wavelet_filter_index, transform_depth;
+	public boolean is_noarith;
+	public Parameters(int c, VideoFormat f) {
+	    is_noarith = (c & 0x48) == 0x8;
 	    iwt_chroma_width = 0;
 	    iwt_chroma_height = 0;
 	    iwt_luma_height = 0;
 	    iwt_luma_width = 0;
-	    xblen_luma = yblen_luma = 0;
-	    xbsep_luma = ybsep_luma = 0;
 	}
     }    
 
@@ -35,11 +31,10 @@ public class Picture {
 	this.f = f;
 	this.n = n;
 	this.c = c;
+	this.p = new Parameters(c,f);
     }
 
     public void parse() {
-	this.p = new Parameters(c);
-	this.w = new WaveletTransform();
 
     }
     

@@ -17,4 +17,9 @@ public final class Buffer {
     private int clamp(int i, int l, int h) {
 	return (i < l ? l : i > h ? h : i);
     }
+
+    public Buffer sub(int b, int e) {
+	return new Buffer(this.d, this.b + b, this.b + e);
+    }
+
 }
