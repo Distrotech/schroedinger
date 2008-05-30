@@ -8,3 +8,6 @@ all: ${FILES}
 
 %.class: %.java
 	javac $< -classpath ${CLASSPATH}
+
+clean:
+	@rm *.class

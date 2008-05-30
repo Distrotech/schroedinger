@@ -1,8 +1,9 @@
-FILES = UnpackTest.class TestWavelet2d.class 
+FILES = UnpackTest.class Wavelet2dTest.class DecoderTest.class
 
 test: lib ${FILES} 
 	@java UnpackTest
-	@java TestWavelet2d
+	@java Wavelet2dTest	
+	@java DecoderTest
 
 lib:
 	make -C ./org/diracvideo/Schroedinger

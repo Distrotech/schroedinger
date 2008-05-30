@@ -60,6 +60,14 @@ public class Unpack {
 	return (d.length - i) * 8 + l;
     }
 
+    public boolean decodeBool() {
+	return bits(1) == 1;
+    }
+
+    public Buffer remainder() {
+	return new Buffer(d, i - l/8);
+    }
+
     public static void test() {
 	String s = "Hello, World";
 	byte r[] = new byte[s.length()-1];

@@ -9,16 +9,23 @@ public class Picture {
     private VideoFormat f;
     private Parameters p;
     private int c;
+    private Exception e;
+    private Decoder.Status s = Decoder.Status.OK;
     public final int n;
 
-    private class Parameters {
+
+
+    private static class Parameters {
 	/* all that matters for now is wavelet depth */
 	public int iwt_chroma_width, iwt_chroma_height,
 	    iwt_luma_width, iwt_luma_height;
-	public int wavelet_filter_index, transform_depth;
+	public int transform_depth;
+	public WaveletTransform wavelet;
 	public boolean is_noarith;
+	public int num_refs;
 	public Parameters(int c, VideoFormat f) {
 	    is_noarith = (c & 0x48) == 0x8;
+	    num_refs = (c & 0x3);
 	    iwt_chroma_width = 0;
 	    iwt_chroma_height = 0;
 	    iwt_luma_height = 0;
@@ -35,7 +42,8 @@ public class Picture {
     }
 
     public void parse() {
-
+	Unpack u = new Unpack(b);
+	
     }
     
     public void decode() {

@@ -1,7 +1,7 @@
 import org.diracvideo.Schroedinger.*;
 
-public class TestWavelet2d {
+public final class DecoderTest {
     public static void main(String a[]) {
-	WaveletTransform.test();
+	Decoder d = new Decoder();
     }
 }

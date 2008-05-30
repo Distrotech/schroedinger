@@ -6,7 +6,11 @@ public class Decoder {
     private VideoFormat format;
     private boolean eos = false;
     private int next_frame_number;
-
+    private int major_version, minor_version, profile, level;
+    private Status status = Status.OK;
+    private Exception e;
+    
+    public enum Status {OK, WAIT, DONE, ERROR}
 
     public Decoder() {
 	next_frame_number = 0;
@@ -22,10 +26,14 @@ public class Decoder {
 	u.bits(32);
 	u.bits(32);
 	if (0x00 == c) {
-	    VideoFormat f = new VideoFormat(new Buffer(d,13));
+	    major_version = u.decodeUint();
+	    minor_version = u.decodeUint();
+	    profile = u.decodeUint();
+	    level = u.decodeUint();
+	    VideoFormat f = new VideoFormat(u);
 	    if(this.format != null && 
 	       !f.equals(format)) {
-		throw new Error("Differing video formats");
+		throw new Error("Different video formats");
 	    }
 	    format = f;
 	    return;
