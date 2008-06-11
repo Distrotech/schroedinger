@@ -32,6 +32,16 @@ public class Unpack {
 	fill();
     }
 
+    public int decodeLit32() {
+	if(32 > l) {
+	    fill();
+	}
+	int v = r;
+	l = 0;
+	r = 0;
+	return v;
+    }
+
     public int bits(int n) {
 	int v = 0;
 	if (n > l) {
@@ -42,7 +52,7 @@ public class Unpack {
 	r <<= n;
 	return v;
     }
-    
+
     public int decodeUint() {
 	int v = 1;
 	while(bits(1) == 0) {
@@ -83,4 +93,7 @@ public class Unpack {
 	}
     }
 
+    public String toString() {
+	return "Register:" + java.lang.Integer.toHexString(r) + "\nLeft: " + l + "\nIndex: " + i;
+    }
 }

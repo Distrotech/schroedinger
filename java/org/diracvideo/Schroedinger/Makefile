@@ -1,5 +1,5 @@
 FILES= Unpack.class WaveletTransform.class Decoder.class \
-	Picture.class VideoFormat.class Buffer.class
+	Picture.class VideoFormat.class Buffer.class 
 CLASSPATH= ../../../
 
 

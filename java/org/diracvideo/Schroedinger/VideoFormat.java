@@ -48,7 +48,30 @@ public class VideoFormat {
 	{ 16, 4096, 2160, 0444, 0, 1, 24, 1, 1, 1, /* DC4K */
 	  2048, 1536, 0, 0, 256, 3504, 2048, 3584,  3, 0, 0 }
     };
+
+    private static int [][] defaultFrameRates = {
+	{ 0, 0 }, { 24000, 1001 },
+	{ 24, 1 }, { 25, 1 },
+	{ 30000, 1001 }, { 30, 1 }, 
+        { 50, 1 }, { 60000, 1001 },
+        { 60, 1 },  { 15000, 1001 }, { 25, 2 }
+    };
     
+    private static int [][] defaultAspectRatios = {
+	{ 0, 0 }, { 1, 1 },
+        { 10, 11 }, { 12, 11 },
+        { 40, 33 }, { 16, 11 },  { 4, 3 }
+    };
+
+    private static int [][] defaultSignalRanges = {
+	{ 0, 0, 0, 0 },
+	{ 0, 255, 128, 255 },
+	{ 16, 219, 128, 224 },
+	{ 64, 876, 512, 896, },
+	{ 256, 3504, 2048, 3584 }
+    };
+
+
     private void setDefaultVideoFormat(int i) throws Exception {
 	if (i >= VideoFormat.defaultFormats.length) {
 	    throw new Exception("Unsupported Video Format");
@@ -74,19 +97,36 @@ public class VideoFormat {
 	this.chroma_offset = a[17];
     }
 
-    private void setDefaultFrameRate(int i) {
-	
+    private void setDefaultFrameRate(int i) throws Exception {
+	if(i >= VideoFormat.defaultFrameRates.length) {
+	    throw new Exception("Unsuported Frame Rate");
+	}
+	int a[] = VideoFormat.defaultFrameRates[i];
+	this.frame_rate_numerator = a[0];
+	this.frame_rate_denominator = a[1];
     }
 
-    private void setDefaultAspectRatio(int i) {
+    private void setDefaultAspectRatio(int i) throws Exception {
+	if(i >= VideoFormat.defaultAspectRatios.length) {
+	    throw new Exception("Unsupported Aspect Ratio");
+	}
+	int a[] = VideoFormat.defaultAspectRatios[i];
+	this.aspect_ratio_numerator = a[0];
+	this.aspect_ratio_denominator = a[1];
+    }
 
+    private void setDefaultSignalRange(int i) throws Exception {
+	if (i >= VideoFormat.defaultSignalRanges.length) {
+	    throw new Exception("Unsupported Signal Range");
+	}
+	int a[] = VideoFormat.defaultSignalRanges[i];
+	this.luma_offset = a[0];
+	this.luma_excursion = a[1];
+	this.chroma_offset = a[2];
+	this.chroma_excursion = a[3];
     }
 
     private void setDefaultColourSpec(int i) {
-
-    }
-
-    private void setDefaultSignalRange(int i) {
 	
     }
 
@@ -98,7 +138,6 @@ public class VideoFormat {
 	}
 	if(u.decodeBool()) { /* chroma format */
 	    int c = u.decodeUint();
-	    
 	}
 
 	if(u.decodeBool()) { /* scan format */

@@ -18,13 +18,13 @@ public class Decoder {
     
     public void push(byte d[]) throws Exception {
 	Unpack u = new Unpack(d);
-	int v = u.bits(32);
+	int v = u.decodeLit32();
 	if(v != 0x42424344) {
 	    throw new Exception("Cannot handle stream");
 	}
 	int c = u.bits(8);
-	u.bits(32);
-	u.bits(32);
+	u.decodeLit32();
+	u.decodeLit32();
 	if (0x00 == c) {
 	    major_version = u.decodeUint();
 	    minor_version = u.decodeUint();
@@ -43,14 +43,13 @@ public class Decoder {
 	} else if (0x20 == c || 0x30 == c) {
 	    return;
 	}
-	int n = u.bits(32);
+	int n = u.decodeLit32();
 	Picture p = new Picture(c, n, new Buffer(d,17), format);
 	p.parse();
-	/* in.add(p); */
     }
 
-    public void pull() {
-
+    public byte[] pull() {
+	return null;
     }
     
     public void run() {
