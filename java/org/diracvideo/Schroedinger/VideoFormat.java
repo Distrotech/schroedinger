@@ -220,4 +220,25 @@ public class VideoFormat {
 	}
 	
     }
+
+    public boolean equals(VideoFormat o) {
+	boolean diff = false;
+	diff = diff || (o.index != this.index);
+	diff = diff || (o.width != this.width);
+	diff = diff || (o.height != this.height);
+	diff = diff || (o.chroma_format != this.chroma_format);
+	diff = diff || (o.interlaced != this.interlaced);
+	diff = diff || (o.top_field_first != this.top_field_first);
+	diff = diff || (o.frame_rate_numerator != this.frame_rate_numerator);
+	diff = diff || (o.frame_rate_denominator != this.frame_rate_denominator);
+	diff = diff || (o.aspect_ratio_numerator != this.aspect_ratio_numerator);
+	diff = diff || (o.clean_width != this.clean_width);
+	diff = diff || (o.clean_height != this.clean_height);
+	diff = diff || (o.luma_offset != this.luma_offset);
+	diff = diff || (o.luma_excursion != this.luma_excursion);
+	diff = diff || (o.chroma_offset != this.chroma_offset);
+	diff = diff || (o.chroma_excursion != this.chroma_excursion);
+	diff = diff || (o.interlaced_coding != this.interlaced_coding);
+	return diff == false;
+    }
 }

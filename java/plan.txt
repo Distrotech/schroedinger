@@ -1,4 +1,5 @@
 Small steps to java schroedinger:
-#1    Write a test program for the the decoder	x
-#2    Fix the Video Format difference that doesn't exist bug
-
+x#1    Write a test program for the the decoder	
+x#2    Fix the Video Format difference that doesn't exist bug 
+x#3    Fix the `negative array size' (Ie, Unpack error) bug
+#4     Implement picture parsing

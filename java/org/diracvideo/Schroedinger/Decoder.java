@@ -33,7 +33,7 @@ public class Decoder {
 	    VideoFormat f = new VideoFormat(u);
 	    if(this.format != null && 
 	       !f.equals(format)) {
-		throw new Error("Different video formats");
+		throw new Exception("Different video formats");
 	    }
 	    format = f;
 	    return;

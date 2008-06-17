@@ -20,9 +20,9 @@ public class Unpack {
     }
 	    
     private void fill() {
-	int b = (s - i >= 4 ? 3 : s - i - 1) * 8;
+	int b = (s - i >= 4 ? 3  : s - i - 1) * 8;
 	for(; l <= b; l += 8) {
-	    r |= d[i++] << (24 - l);
+	    r |= (d[i++]&0xff) << (24-l);
 	}
     }
     

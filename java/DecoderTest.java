@@ -5,13 +5,10 @@ import java.io.*;
 public final class DecoderTest {
     public static void main(String a[]) {
 	Decoder dec = new Decoder();
-	int i = 43923902;
-	System.out.format("%X\n",i);
-	i <<= 16;
-	System.out.format("%X\n",i);
-	FileInputStream in;
+	int ev = 0;
+	FileInputStream in = null;
 	try {
-	    in = new FileInputStream(a[0]);
+	    in = tryOpen(a);
 	    byte[] packet;
 	    byte[] output;
 	    while(in.available() > 0) {
@@ -22,10 +19,12 @@ public final class DecoderTest {
 	    in.close();
 	} catch(IOException e) {
 	    e.printStackTrace();
-	    System.exit(1);
+	    ev = 1;
 	}  catch(Exception e) {
 	    e.printStackTrace();
-	    System.exit(1);
+	    ev = 1;
+	} finally {
+	    System.exit(ev);
 	}
     }
 
@@ -36,15 +35,62 @@ public final class DecoderTest {
 	if(u.decodeLit32() != 0x42424344) {
 	    throw new IOException("Cannot parse dirac stream");
 	} 
-	System.out.println(u);
-	u.bits(8);
-	System.out.println(u);
+	if(u.bits(8) == 0x10) {
+	    exitGracefully(in);
+	}
 	int size = u.decodeLit32();
-	
-	System.out.format("%X\n",size);
 	byte[] packet = new byte[size];
 	System.arraycopy(header, 0, packet, 0, 13);
 	in.read(packet, 13, size - 13);
 	return packet;
+    }
+
+    private static void dumpBytes(byte[] d) {
+	for(int i = 0; i < d.length; i++) {
+	    System.err.format("%02X ", d[i]);
+	}
+	System.err.println("");
+    }
+
+    private static void exitGracefully(FileInputStream in) {
+	System.err.println("End of sequence reached, exiting");
+	try {
+	    in.close();
+	} catch(IOException e) {
+	    e.printStackTrace();
+	    System.exit(1);
+	}
+	System.exit(0);
+    }
+
+    private static class DiracAcceptor implements FileFilter {
+	public boolean accept(File f) {
+	    String fn = f.getName();
+	    if(fn.length() == fn.indexOf(".drc") + 4 &&
+	       f.isFile() && f.canRead()) {
+		return true;
+	    }
+	    return false;
+	}
+    }
+    
+    private static FileInputStream tryOpen(String a[]) throws IOException {
+	for(int i = 0; i < a.length; i++) {
+	    File f = new File(a[i]);
+	    if (f.canRead()) {
+		return new FileInputStream(f);
+	    }
+	}
+	File[] files = new File(".").listFiles(new DiracAcceptor());
+	for(File f: files) {
+	    try {
+		return new FileInputStream(f);
+	    } catch(IOException e) {
+		e.printStackTrace();
+	    }
+	}
+	System.err.println("No dirac file was found");
+	System.exit(0);
+	return null;
     }
 }
