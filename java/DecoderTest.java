@@ -82,9 +82,9 @@ public final class DecoderTest {
 	    }
 	}
 	File[] files = new File(".").listFiles(new DiracAcceptor());
-	for(File f: files) {
+	for(int i = 0; i < files.length; i++) {
 	    try {
-		return new FileInputStream(f);
+		return new FileInputStream(files[i]);
 	    } catch(IOException e) {
 		e.printStackTrace();
 	    }

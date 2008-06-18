@@ -6,6 +6,7 @@ package org.diracvideo.Schroedinger;
 public class Picture {
     private Buffer b;
     private WaveletTransform w;
+    private Decoder d;
     private VideoFormat f;
     private Parameters p;
     private int c;
@@ -17,28 +18,36 @@ public class Picture {
 
     private static class Parameters {
 	/* all that matters for now is wavelet depth */
-	public int iwt_chroma_width, iwt_chroma_height,
-	    iwt_luma_width, iwt_luma_height;
-	public int transform_depth;
-	public WaveletTransform wavelet;
+	public int iwt_chroma_size[], iwt_luma_size[];
+	public int transform_depth = 4;
 	public boolean is_noarith;
 	public int num_refs;
-	public Parameters(int c, VideoFormat f) {
+	public Parameters(int c) {
 	    is_noarith = (c & 0x48) == 0x8;
 	    num_refs = (c & 0x3);
-	    iwt_chroma_width = 0;
-	    iwt_chroma_height = 0;
-	    iwt_luma_height = 0;
-	    iwt_luma_width = 0;
+	}
+
+	public void calculateIwtSize(VideoFormat f) {
+	    int size[] = new int[2];
+	    iwt_luma_size = new int[2];
+	    iwt_chroma_size = new int[2];
+	    f.getPictureLumaSize(size);
+	    iwt_luma_size[0] = Util.roundUpPow2(size[0], transform_depth);
+	    iwt_luma_size[1] = Util.roundUpPow2(size[1], transform_depth);
+	    f.getPictureChromaSize(size);
+	    iwt_chroma_size[0] = Util.roundUpPow2(size[0], transform_depth);
+	    iwt_chroma_size[1] = Util.roundUpPow2(size[1], transform_depth);
 	}
     }    
 
-    public Picture(int c, int n, Buffer b, VideoFormat f) {
-	this.b = b;
-	this.f = f;
-	this.n = n;
-	this.c = c;
-	this.p = new Parameters(c,f);
+    public Picture(int code, int num, Buffer buf, Decoder dec) {
+	n = num;
+	c = code;
+	b = buf;
+	d = dec;
+	f = dec.getVideoFormat();
+	p = new Parameters(c);
+	System.err.format("Picture with code %02X and number %d\n", code, num);
     }
 
     public void parse() {

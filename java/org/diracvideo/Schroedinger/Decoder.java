@@ -4,7 +4,6 @@ package org.diracvideo.Schroedinger;
 
 public class Decoder {
     private VideoFormat format;
-    private boolean eos = false;
     private int next_frame_number;
     private int major_version, minor_version, profile, level;
     private Status status = Status.OK;
@@ -38,13 +37,13 @@ public class Decoder {
 	    format = f;
 	    return;
 	} else if (0x10 == c) {
-	    eos = true;
+	    status = Status.DONE;
 	    return;
 	} else if (0x20 == c || 0x30 == c) {
 	    return;
 	}
 	int n = u.decodeLit32();
-	Picture p = new Picture(c, n, new Buffer(d,17), format);
+	Picture p = new Picture(c,n,new Buffer(d,17), this);
 	p.parse();
     }
 
@@ -58,5 +57,12 @@ public class Decoder {
 	   out.add(p); */
     }
 
+    public void retire(int n, Picture p) {
+	/* refs.replace(n,p); */
+    }
+    
+    public VideoFormat getVideoFormat() {
+	return format;
+    }
 }
 

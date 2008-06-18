@@ -71,7 +71,6 @@ public class VideoFormat {
 	{ 256, 3504, 2048, 3584 }
     };
 
-
     private void setDefaultVideoFormat(int i) throws Exception {
 	if (i >= VideoFormat.defaultFormats.length) {
 	    throw new Exception("Unsupported Video Format");
@@ -240,5 +239,15 @@ public class VideoFormat {
 	diff = diff || (o.chroma_excursion != this.chroma_excursion);
 	diff = diff || (o.interlaced_coding != this.interlaced_coding);
 	return diff == false;
+    }
+    
+    public void getPictureLumaSize(int[] out) {
+	out[0] = this.width;
+	out[1] = Util.roundUpShift(this.height, this.interlaced_coding);
+    }
+
+    public void getPictureChromaSize(int[] out) {
+	out[0] = Util.roundUpShift(this.width, ( chroma_format == 444 ? 0 : 1));
+	out[1] = Util.roundUpShift(this.height, ( chroma_format == 444 ? 0 : 1) + interlaced_coding);
     }
 }
