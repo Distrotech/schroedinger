@@ -16,4 +16,5 @@ lib:
 clean:
 	@find -name "*.class" -delete
 	@find -name "*~" -delete
+	@rm -f *.drc
 	@echo "Done"
