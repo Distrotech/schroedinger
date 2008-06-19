@@ -8,11 +8,13 @@ public class Decoder {
     private int major_version, minor_version, profile, level;
     private Status status = Status.OK;
     private Exception e;
-    
+    private Picture[] refs;
+
     public enum Status {OK, WAIT, DONE, ERROR}
 
     public Decoder() {
 	next_frame_number = 0;
+	refs = new Picture[4];
     }
     
     public void push(byte d[]) throws Exception {
@@ -57,10 +59,45 @@ public class Decoder {
 	   out.add(p); */
     }
 
-    public void retire(int n, Picture p) {
-	/* refs.replace(n,p); */
+    public void retire(int n) {
+	for(int i = 0; i < refs.length; i++) {
+	    if(refs[i] != null &&
+	       refs[i].num == n)
+		refs[i] = null;
+	}
+    }
+
+    public void addReference(Picture p) {
+	int min = ~(1 << 31), loc = 0;
+	for(int i = 0; i < refs.length; i++) {
+	    if(refs[i] == null) {
+		refs[i] = p;
+		return;
+	    } 
+	    if(min < refs[i].num) {
+		min = refs[i].num;
+		loc = i;
+	    }
+	}
+	refs[loc] = p;
+    }
+
+    public Picture getReference(int n) throws Exception {
+	for(int i = 0; i < refs.length; i++) {
+	    if(refs[i] != null &&
+	       refs[i].num == n) {
+		return refs[i];
+	    }
+	}
+	throw new Exception("Reference picture not found");
     }
     
+    
+    private void dumpRefs() {
+
+    }
+
+
     public VideoFormat getVideoFormat() {
 	return format;
     }

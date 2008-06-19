@@ -47,23 +47,24 @@ public class Unpack {
 	if (n > l) {
 	    fill();
 	} 
-	v = (r >> (32 - n));
+	v = (r >>> (32 - n));
 	l -= n;
 	r <<= n;
 	return v;
     }
 
+    
     public int decodeUint() {
 	int v = 1;
 	while(bits(1) == 0) {
 	    v = (v << 1) | bits(1);
 	}
-	return v - 1;
+	return v-1;
     }
-
+    
     public int decodeSint() {
 	int v = decodeUint();
-	return (bits(1) == 1 ? -v : v);
+	return (v == 0 || bits(1) == 0) ? v : -v;
     }
 
     public int bitsLeft() {
@@ -91,9 +92,23 @@ public class Unpack {
 	if(s.substring(1).compareTo(o) != 0) {
 	    throw new Error("Something wrong with Unpack");
 	}
+	r = new byte[4];
+	r[0] = (byte)0x96;
+	r[1] = (byte)0x11;
+	r[2] = (byte)0xA5;
+	r[3] = (byte)0x7F;
+	u = new Unpack(r);
+	for(int i = 0; i < 6; i++) {
+	    if(i != u.decodeUint()) {
+		throw new Error("Error in decodeUint()");
+	    }
+	}
     }
 
     public String toString() {
-	return "Register:" + java.lang.Integer.toHexString(r) + "\nLeft: " + l + "\nIndex: " + i;
+	StringBuilder b = new StringBuilder();
+	b.append(String.format("Register: %X\n", r));
+	b.append(String.format("Bits left: %d\tIndex: %d", l,i));
+	return b.toString();
     }
 }
