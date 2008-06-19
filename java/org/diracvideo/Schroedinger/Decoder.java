@@ -90,21 +90,9 @@ public class Decoder {
 		return refs[i];
 	    }
 	}
-	dumpRefs(n);
 	throw new Exception("Reference picture not found");
     }
     
-    
-    private void dumpRefs(int n) {
-	StringBuilder sb = new StringBuilder();
-	sb.append(String.format("Trying to find picture nr. %d\n",n));
-	for(int i = 0; i < refs.length; i++) {
-	    sb.append(String.format("refs[%d].num: %d\n", i, refs[i].num));
-	}
-	System.out.println(sb);
-    }
-
-
     public VideoFormat getVideoFormat() {
 	return format;
     }
