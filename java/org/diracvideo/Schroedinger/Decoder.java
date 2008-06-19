@@ -47,6 +47,7 @@ public class Decoder {
 	int n = u.decodeLit32();
 	Picture p = new Picture(c,n,new Buffer(d,17), this);
 	p.parse();
+	System.out.println(p);
     }
 
     public byte[] pull() {
@@ -74,7 +75,7 @@ public class Decoder {
 		refs[i] = p;
 		return;
 	    } 
-	    if(min < refs[i].num) {
+	    if(min > refs[i].num) {
 		min = refs[i].num;
 		loc = i;
 	    }
@@ -89,12 +90,18 @@ public class Decoder {
 		return refs[i];
 	    }
 	}
+	dumpRefs(n);
 	throw new Exception("Reference picture not found");
     }
     
     
-    private void dumpRefs() {
-
+    private void dumpRefs(int n) {
+	StringBuilder sb = new StringBuilder();
+	sb.append(String.format("Trying to find picture nr. %d\n",n));
+	for(int i = 0; i < refs.length; i++) {
+	    sb.append(String.format("refs[%d].num: %d\n", i, refs[i].num));
+	}
+	System.out.println(sb);
     }
 
 

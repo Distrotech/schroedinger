@@ -11,7 +11,7 @@ public class Picture {
     private Parameters params;
     private int code;
     private Picture[] refs = {null,null};
-    private Decoder.Status status = Decoder.Status.OK;
+    public Decoder.Status status = Decoder.Status.OK;
     public Exception error = null;
     public final int num;
 
