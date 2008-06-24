@@ -75,8 +75,9 @@ public class Unpack {
 	return bits(1) == 1;
     }
 
-    public Buffer remainder() {
-	return new Buffer(d, i - l/8);
+    public Buffer remainder(int length) {
+	int start = i - l/8;
+	return new Buffer(d, start, start + length);
     }
 
     public static void test() {

@@ -10,10 +10,11 @@ public final class DecoderTest {
 	try {
 	    in = tryOpen(a);
 	    byte[] packet;
-	    byte[] output;
+	    Picture output;
 	    while(in.available() > 0) {
 		packet = readPacket(in);
 		dec.push(packet);
+		dec.run();
 		output = dec.pull();
 	    }
 	    in.close();

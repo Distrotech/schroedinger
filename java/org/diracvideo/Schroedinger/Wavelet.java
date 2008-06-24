@@ -1,6 +1,6 @@
 package org.diracvideo.Schroedinger;
 
-public class WaveletTransform {
+public class Wavelet {
     public static void inverse(short d[], int w) {
 	/* data is assumed to be preinterleaved */
 	for(int s = 8; s >= 1; s >>= 1) {
@@ -57,8 +57,14 @@ public class WaveletTransform {
 	synthesize(d,2,0,d.length);
 	synthesize(d,1,0,d.length);
 	for(int i = 0; i < d.length; i++) {
-	    assert(c[i] != d[i]);
+	    if(c[i] != d[i]) {
+		throw new Error("Someting wrong with Wavelet");
+	    }
 	}
+    }
+
+    public static Wavelet get(int i, int d) {
+	return new Wavelet();
     }
     
 }
