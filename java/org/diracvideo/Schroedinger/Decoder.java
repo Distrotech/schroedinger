@@ -18,7 +18,14 @@ public class Decoder {
 	in = new Queue(4);
 	out = new Queue(4);
     }
-    
+
+    /** Push:
+     * @d: array containing data from the stream
+     *
+     * Pushes an array of stream data onto the decoder.
+     * Currently each packet should be pushed seperately.
+     * Pushing incomplete packets could result in parse errors */
+
     public void push(byte d[]) throws Exception {
 	Unpack u = new Unpack(d);
 	int v = u.decodeLit32();
@@ -66,7 +73,12 @@ public class Decoder {
     public void run() {
 	
     }
-    
+
+    /** getVideoFormat:
+     *
+     * Returns the in-use videoformat object. An application 
+     * can use it to determine the size of the window for the
+     * video and other such useful properties */
     public VideoFormat getVideoFormat() {
 	return format;
     }

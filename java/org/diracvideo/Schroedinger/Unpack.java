@@ -59,6 +59,14 @@ public class Unpack {
 	}
     }
 
+    /** bits:
+     * @n: number of bits to be decoded
+     *
+     * Decodes a number of bits from the input buffer.
+     * Does not (generally) work when there are 32 bits left 
+     * in the shift register (i.e. the shift register is full.
+     * Therefore, use decodeLit32() for a literal 32 bit integer. */
+
     public int bits(int n) {
 	if (n > l) {
 	    int t = l;
@@ -68,7 +76,13 @@ public class Unpack {
 	} 
 	return shiftOut(n);
     }
-
+    
+    /** skip:
+     * @n: number of bits to be skipped
+     * 
+     * This function is known not to work 100% correctly when given
+     * a non-multiple-of-8 number of bits when it is not aligned.
+     * Unfortunately, I have no idea how to fix it. */
     public void skip(int n) { 
 	if(n <= l) {
 	    shiftOut(n);
@@ -84,6 +98,10 @@ public class Unpack {
 	/*	/b\ werk videoplayer, werk!!!   */
     }
     
+
+    /** decodeUint:
+     *
+     * Decodes an exp-golomb encoded integer from the buffer. */
     public int decodeUint() {
 	int v = 1;
 	while(bits(1) == 0) {
@@ -101,9 +119,13 @@ public class Unpack {
 	return (s - i) * 8 + l;
     }
 
+    /** bitsRead:
+     *
+     * Returns the read number of bits.
+     * It assumes, which is not generally true,
+     * that i was zero at initialization (that is,
+     * we've read bits from the beginning of the buffer. */
     public int bitsRead() {
-	/* assuming, not generally true,
-	   that i was zero at initialization */
 	return i*8 - l;
     }
     
@@ -111,6 +133,13 @@ public class Unpack {
 	return bits(1) == 1;
     }
 
+    /** getSubBuffer:
+     * @bytes: length of sub buffer in bytes
+     * 
+     * Aligns current structure, returns a buffer starting at
+     * the current byte to be read, and advances the index to
+     * after the end of the taken subbuffer. Thus, destructive.
+     */
     public Buffer getSubBuffer(int bytes) {
 	align();
 	int start = i - l/8;

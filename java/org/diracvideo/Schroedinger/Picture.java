@@ -1,5 +1,5 @@
 package org.diracvideo.Schroedinger;
-
+import java.awt.Image;
 /* pictures in the dirac stream specification can basically parse themselves
    we are going to take advantage of that */
 
@@ -13,6 +13,7 @@ public class Picture {
     private Picture[] refs = {null,null};
     private Buffer[] coeffs;
     private boolean zero_residual = false;
+    private Image img;
     public Decoder.Status status = Decoder.Status.OK;
     public Exception error = null;
     public final int num;
@@ -48,6 +49,20 @@ public class Picture {
 
 
     }    
+
+    /** Picture:
+     * @c: picture parse code
+     * @n: picture number
+     * @b: payload buffer
+     * @d: decoder of the picture 
+     *
+     * The b buffer should only point to the payload data section of 
+     * the picture (not the header). The only methods that would ever need 
+     * to be called are parse(), decode(), and getImage(). However,
+     * one should check wether the error variable is set before and after
+     * calling a method. One should not call them in any other order than that
+     * just specified. Each can be called without arguments and should not be called 
+     * twice. */
 
     public Picture(int c, int n, Buffer b, Decoder d) {
 	num = n;
@@ -156,6 +171,10 @@ public class Picture {
 
     public void decode() {
 
+    }
+
+    public Image getImage() {
+	return null;
     }
     
     public String toString() {

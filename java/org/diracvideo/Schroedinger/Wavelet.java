@@ -1,5 +1,14 @@
 package org.diracvideo.Schroedinger;
 
+/** Wavelet:
+ *
+ * The class for doing wavelet transformations.
+ * Should be refactored to provide actual objects
+ * (functors) with two methods: transform(short[],int)
+ * and inverse(short[],int)
+ * We will not use 2-dimensional arrays as it is slow
+ * and we need no such handholding. */
+
 public class Wavelet {
     public static void inverse(short d[], int w) {
 	/* data is assumed to be preinterleaved */
