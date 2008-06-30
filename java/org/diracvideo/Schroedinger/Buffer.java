@@ -1,6 +1,6 @@
 package org.diracvideo.Schroedinger;
 
-public final class Buffer {
+final class Buffer {
     public final int b,e;
     public final byte[] d;
 
