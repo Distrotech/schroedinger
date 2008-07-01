@@ -2,14 +2,14 @@ package org.diracvideo.Schroedinger;
 
 
 
+
 public class Decoder {
     private VideoFormat format;
     private int next_frame_number;
     private int major_version, minor_version, profile, level;
-    private Status status = Status.OK;
+    public Status status = Status.OK;
     private Exception e;
     public Queue refs, in, out;
-
     public enum Status {OK, WAIT, DONE, ERROR}
 
     public Decoder() {
@@ -66,7 +66,7 @@ public class Decoder {
 	    out.remove(next_frame_number++);
 	    return p;
 	} catch(Exception e) {
-	    return null;
+	    return new Picture(next_frame_number,0,null,this);
 	}
     }
     

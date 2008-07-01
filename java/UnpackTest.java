@@ -6,7 +6,7 @@ public class UnpackTest {
     public static void main (String a[]) {
 	bitsTest();
 	decodeTest();
-	for(int i = 0; i < 50000; i++) {
+	for(int i = 0; i < 5000; i++) {
 	    bitsReadTest();
 	    skipTest();
 	}
@@ -15,9 +15,32 @@ public class UnpackTest {
     private static void skipTest() {
 	/* There used to be an extensive test here. 
 	   It failed, continued to fail, and then failed even more.
-	   I have absolutely no clue why. Especially as it all 
-	   *seems* to work so smoothly. 
+	   Apparantly an Unpack object can be inconsistent
+	   after skipping. I have absolutely no clue why.
+	   Especially as it all /seems/ to work so smoothly. 
 	   Anyone that is interested can try to fix it. */
+	Unpack u,o;
+	String s = String.format("Hello World! \n%s\n%s\n%s",
+				 "How are you today? I'm fine,",
+				 "thank you for asking. It is",
+				 "such lovely weather today");
+	u = new Unpack(s.getBytes());
+	Random r = new Random();
+	while(u.bitsLeft() > 160) {
+	    u.bits(r.nextInt(31));
+	}
+	int i = r.nextInt(u.bitsLeft());
+	o = u.clone();
+	if(u.equals(o)) {
+	    while(u.bitsLeft() > 8) {
+		i = r.nextInt(Math.min(u.bitsLeft(), 31));
+		if(u.bits(i) != o.bits(i)) {
+		    throw new Error("Skip Error (Inconsistency)");
+		}
+	    }
+	} else {
+	    throw new Error("Skip Error (Unequality)");
+	}
     }
     
     private static void decodeTest() {
@@ -31,14 +54,15 @@ public class UnpackTest {
     }
     
     private static void bitsTest() {
-	String s = "BBCD is the code for Dirac bitstreams";
+	String s = "BBCD is the code for Dirac bitstreams\n" +
+	    "This string should be just a little bit longer\n" ;
 	Unpack u = new Unpack(s.getBytes());
 	byte[] r = new byte[s.length()], o = new byte[s.length()];
 	for(int i = 0; u.bitsLeft() > 8; i++) {
 	    r[i] = (byte)u.bits(8);
-	    o[i] = (byte)s.charAt(7*i);
-	    u.skip(25);
-	    u.skip(23);
+	    o[i] = (byte)s.charAt(9*i);
+	    u.skip(37);
+	    u.skip(27);
 	}
 	if(new String(o).compareTo(new String(r)) != 0) {
 	    throw new Error("Bits error");

@@ -1,7 +1,56 @@
 package org.diracvideo.Schroedinger;
-import java.awt.Image;
+import java.awt.*;
+import java.awt.image.*;
 /* pictures in the dirac stream specification can basically parse themselves
    we are going to take advantage of that */
+
+class SubBand {
+    int q,l;
+    Buffer b;
+    public SubBand (Buffer buf, int quant, int len) {
+	q = quant;
+	b = buf;
+	l = len;
+    }
+}
+
+class Parameters {
+    /* all that matters for now is wavelet depth */
+    public int iwt_chroma_size[] = {0,0},
+	iwt_luma_size[] = {0,0};
+    public int transform_depth = 4, wavelet_index;
+    public int codeblock_mode_index = 0;
+    public boolean is_noarith, is_ref, is_lowdelay;
+    public int[] horiz_codeblocks = new int[7],
+	vert_codeblocks = new int[7];
+    public int num_refs;
+    public static int[] subband_position =
+    {   0, 1, 2, 3,
+	5, 6, 7,
+	9, 10, 11,
+	13, 14, 15,
+	17, 18, 19,
+	21, 22, 23,
+	25, 26, 27 };
+	
+    public Parameters(int c) {
+	is_noarith = (c & 0x48) == 0x8;
+	num_refs = (c & 0x3);
+	is_ref = (c & 0x0c) == 0x0c;
+	is_lowdelay = ((c & 0x88) == 0x88);
+    }
+
+    public void calculateIwtSizes(VideoFormat f) {
+	int size[] = {0,0};
+	f.getPictureLumaSize(size);
+	iwt_luma_size[0] = Util.roundUpPow2(size[0], transform_depth);
+	iwt_luma_size[1] = Util.roundUpPow2(size[1], transform_depth);
+	f.getPictureChromaSize(size);
+	iwt_chroma_size[0] = Util.roundUpPow2(size[0], transform_depth);
+	iwt_chroma_size[1] = Util.roundUpPow2(size[1], transform_depth);
+    }
+}    
+
 
 public class Picture {
     private Buffer buf;
@@ -11,44 +60,13 @@ public class Picture {
     private Parameters params;
     private int code;
     private Picture[] refs = {null,null};
-    private Buffer[] coeffs;
     private boolean zero_residual = false;
-    private Image img;
+    private SubBand[][] coeffs;
+    private BufferedImage img;
     public Decoder.Status status = Decoder.Status.OK;
     public Exception error = null;
     public final int num;
 
-
-
-    private static class Parameters {
-	/* all that matters for now is wavelet depth */
-	public int iwt_chroma_size[] = {0,0},
-	    iwt_luma_size[] = {0,0};
-	public int transform_depth = 4, wavelet_index;
-	public int codeblock_mode_index = 0;
-	public boolean is_noarith, is_ref, is_lowdelay;
-	public int[] horiz_codeblocks = new int[7],
-	    vert_codeblocks = new int[7];
-	public int num_refs;
-	public Parameters(int c) {
-	    is_noarith = (c & 0x48) == 0x8;
-	    num_refs = (c & 0x3);
-	    is_ref = (c & 0x0c) == 0x0c;
-	    is_lowdelay = ((c & 0x88) == 0x88);
-	}
-
-	public void calculateIwtSizes(VideoFormat f) {
-	    int size[] = {0,0};
-	    f.getPictureLumaSize(size);
-	    iwt_luma_size[0] = Util.roundUpPow2(size[0], transform_depth);
-	    iwt_luma_size[1] = Util.roundUpPow2(size[1], transform_depth);
-	    f.getPictureChromaSize(size);
-	    iwt_chroma_size[0] = Util.roundUpPow2(size[0], transform_depth);
-	    iwt_chroma_size[1] = Util.roundUpPow2(size[1], transform_depth);
-	}
-
-
-    }    
 
     /** Picture:
      * @c: picture parse code
@@ -61,8 +79,8 @@ public class Picture {
      * to be called are parse(), decode(), and getImage(). However,
      * one should check wether the error variable is set before and after
      * calling a method. One should not call them in any other order than that
-     * just specified. Each can be called without arguments and should not be called 
-     * twice. */
+     * just specified. Each can be called without arguments and should not be 
+     * called twice. */
 
     public Picture(int c, int n, Buffer b, Decoder d) {
 	num = n;
@@ -71,7 +89,7 @@ public class Picture {
 	dec = d;
 	format = d.getVideoFormat();
 	params = new Parameters(c);
-	coeffs = new Buffer[13];
+	coeffs = new SubBand[3][19];
     }
 
     public void parse() {
@@ -156,10 +174,12 @@ public class Picture {
 		u.align();
 		int l = u.decodeUint();
 		if(l == 0) {
+		    coeffs[c][i] = new SubBand(null,0,0);
 		    break;
 		} else {
 		    int q = u.decodeUint();
-		    u.getSubBuffer(l);
+		    Buffer b = u.getSubBuffer(l);
+		    coeffs[c][i] = new SubBand(b,q,l);
 		}
 	    }
 	}
@@ -174,7 +194,11 @@ public class Picture {
     }
 
     public Image getImage() {
-	return null;
+	img = new BufferedImage(format.width, format.height, 
+				BufferedImage.TYPE_INT_RGB);
+	Graphics2D gr = img.createGraphics();
+	gr.drawString(toString(), 20,20);
+	return img;
     }
     
     public String toString() {

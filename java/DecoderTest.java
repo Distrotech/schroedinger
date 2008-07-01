@@ -1,23 +1,43 @@
 import org.diracvideo.Schroedinger.*;
 import java.io.*;
+import java.awt.*;
+import javax.swing.*;
 
+class DiracAcceptor implements FileFilter {
+    public boolean accept(File f) {
+	String fn = f.getName();
+	if(fn.length() == fn.indexOf(".drc") + 4 &&
+	   f.isFile() && f.canRead()) {
+	    return true;
+	}
+	return false;
+    }
+}
 
 public final class DecoderTest {
     public static void main(String a[]) {
 	Decoder dec = new Decoder();
 	int ev = 0;
 	FileInputStream in = null;
+	JFrame win;
+	Graphics gr;
 	try {
 	    in = tryOpen(a);
 	    byte[] packet;
 	    Picture output;
+	    packet = readPacket(in);
+	    dec.push(packet);
+	    win = createWindow(dec.getVideoFormat());
 	    while(in.available() > 0) {
 		packet = readPacket(in);
 		dec.push(packet);
-		dec.run();
-		output = dec.pull();
+		drawImage(dec.pull().getImage(),win);
+		if(dec.status == Decoder.Status.DONE) {
+		    break;
+		}
 	    }
 	    in.close();
+	    win.setVisible(false); 
 	} catch(IOException e) {
 	    e.printStackTrace();
 	    ev = 1;
@@ -26,7 +46,7 @@ public final class DecoderTest {
 	    ev = 1;
 	} finally {
 	    System.exit(ev);
-	}
+	} 
     }
 
     private static byte[] readPacket(FileInputStream in) throws IOException {
@@ -38,6 +58,7 @@ public final class DecoderTest {
 	} 
 	if(u.bits(8) == 0x10) {
 	    exitGracefully(in);
+	    return header;
 	}
 	int size = u.decodeLit32();
 	byte[] packet = new byte[size];
@@ -54,27 +75,14 @@ public final class DecoderTest {
     }
 
     private static void exitGracefully(FileInputStream in) {
-	System.err.println("End of sequence reached, exiting");
+       	System.err.println("End of sequence reached, exiting");
 	try {
 	    in.close();
 	} catch(IOException e) {
 	    e.printStackTrace();
-	    System.exit(1);
 	}
-	System.exit(0);
     }
 
-    private static class DiracAcceptor implements FileFilter {
-	public boolean accept(File f) {
-	    String fn = f.getName();
-	    if(fn.length() == fn.indexOf(".drc") + 4 &&
-	       f.isFile() && f.canRead()) {
-		return true;
-	    }
-	    return false;
-	}
-    }
-    
     private static FileInputStream tryOpen(String a[]) throws IOException {
 	for(int i = 0; i < a.length; i++) {
 	    File f = new File(a[i]);
@@ -94,4 +102,19 @@ public final class DecoderTest {
 	System.exit(0);
 	return null;
     }
+
+    private static JFrame createWindow(VideoFormat f) {
+	JFrame fr = new JFrame("Hello, World");
+	fr.setSize(f.width, f.height);
+	fr.setVisible(true);
+	return fr;
+    }
+
+
+    private static void drawImage(Image img, JFrame win) {
+	Graphics gr = win.getGraphics();
+	gr.drawImage(img,0,0,null);
+	win.getContentPane().paint(gr);
+    }
+
 }

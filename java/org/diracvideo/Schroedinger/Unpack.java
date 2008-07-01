@@ -21,8 +21,7 @@ public class Unpack {
     }
 	    
     private final void shiftIn() {
-	int b = (s - i > 4 ? 3  : s - i - 1) * 8;
-	for(; l <= b && i < s; l += 8) {
+	for(; l <= 24 && i < s; l += 8) {
 	    r |= (d[i++]&0xff) << (24-l);
 	}
     }
@@ -84,8 +83,8 @@ public class Unpack {
      * a non-multiple-of-8 number of bits when it is not aligned.
      * Unfortunately, I have no idea how to fix it. */
     public void skip(int n) { 
-	if(n <= l) {
-	    shiftOut(n);
+	if(n < 32) {
+	    bits(n);
 	} else {
 	    n -= l;
 	    l = r = 0;
