@@ -4,4 +4,6 @@ x#2    Fix the Video Format difference that doesn't exist bug
 x#3    Fix the `negative array size' (Ie, Unpack error) bug
 x#4    Implement picture header parsing
 x#5    Fix reference picture managment (was Unpack bug)
-#6     Implement picture parsing
+x#6    Implement picture parsing
+#7     Implement subband decoding (and preferably interleaving)
+#99    Fix the Unpack.skip() error
