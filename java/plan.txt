@@ -5,5 +5,7 @@ x#3    Fix the `negative array size' (Ie, Unpack error) bug
 x#4    Implement picture header parsing
 x#5    Fix reference picture managment (was Unpack bug)
 x#6    Implement picture parsing
-#7     Implement subband decoding (and preferably interleaving)
+#7     Figure out how to structure decoding (I'd like not to create
+       a million `helper' classes).
+#8     Implement subband decoding (and preferably interleaving)
 #99    Fix the Unpack.skip() error

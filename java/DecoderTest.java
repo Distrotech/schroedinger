@@ -1,7 +1,31 @@
 import org.diracvideo.Schroedinger.*;
 import java.io.*;
 import java.awt.*;
-import javax.swing.*;
+import java.awt.event.*;
+import java.awt.image.*;
+
+class CloseListener extends WindowAdapter {
+    public void windowClosing(WindowEvent e) {
+ 	System.exit(0);
+    }
+}
+
+class PictureDrawer extends Canvas {
+    private Decoder dec;
+
+    public PictureDrawer(Decoder d) {
+	dec = d;
+    }
+    
+    public void paint(Graphics gr) {
+	if(dec.hasPicture()) {
+	    Picture pic = dec.pull();
+	    Image img = pic.getImage();
+	    gr.drawImage(img,0,0,null);
+	} 
+    }
+}
+
 
 class DiracAcceptor implements FileFilter {
     public boolean accept(File f) {
@@ -19,34 +43,32 @@ public final class DecoderTest {
 	Decoder dec = new Decoder();
 	int ev = 0;
 	FileInputStream in = null;
-	JFrame win;
-	Graphics gr;
+	Frame win;
 	try {
 	    in = tryOpen(a);
 	    byte[] packet;
 	    Picture output;
 	    packet = readPacket(in);
 	    dec.push(packet);
-	    win = createWindow(dec.getVideoFormat());
+	    win = createWindow(dec);
 	    while(in.available() > 0) {
 		packet = readPacket(in);
 		dec.push(packet);
-		drawImage(dec.pull().getImage(),win);
+		win.repaint();
 		if(dec.status == Decoder.Status.DONE) {
 		    break;
 		}
 	    }
 	    in.close();
-	    win.setVisible(false); 
 	} catch(IOException e) {
 	    e.printStackTrace();
 	    ev = 1;
 	}  catch(Exception e) {
 	    e.printStackTrace();
 	    ev = 1;
-	} finally {
+	}  finally { 
 	    System.exit(ev);
-	} 
+	}
     }
 
     private static byte[] readPacket(FileInputStream in) throws IOException {
@@ -103,18 +125,17 @@ public final class DecoderTest {
 	return null;
     }
 
-    private static JFrame createWindow(VideoFormat f) {
-	JFrame fr = new JFrame("Hello, World");
+    private static Frame createWindow(Decoder dec) {
+	VideoFormat f = dec.getVideoFormat();
+	Frame fr = new Frame("DecoderTest");
+	Canvas cn = new PictureDrawer(dec);
+	WindowListener wl = new CloseListener();
+	fr.add(cn);
+	fr.addWindowListener(wl);
 	fr.setSize(f.width, f.height);
 	fr.setVisible(true);
 	return fr;
     }
 
-
-    private static void drawImage(Image img, JFrame win) {
-	Graphics gr = win.getGraphics();
-	gr.drawImage(img,0,0,null);
-	win.getContentPane().paint(gr);
-    }
 
 }

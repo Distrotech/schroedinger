@@ -5,12 +5,12 @@ import java.awt.image.*;
    we are going to take advantage of that */
 
 class SubBand {
-    int q,l;
-    Buffer b;
-    public SubBand (Buffer buf, int quant, int len) {
-	q = quant;
-	b = buf;
-	l = len;
+    int quant,length, width, height, h_shift, v_shift;
+    Buffer buf;
+    public SubBand (Buffer b, int q, int l) {
+	quant = q;
+	buf = b;
+	length = l;
     }
 }
 

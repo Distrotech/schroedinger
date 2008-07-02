@@ -8,7 +8,7 @@ public class Decoder {
     private int next_frame_number;
     private int major_version, minor_version, profile, level;
     public Status status = Status.OK;
-    private Exception e;
+    public Exception e;
     public Queue refs, in, out;
     public enum Status {OK, WAIT, DONE, ERROR}
 
@@ -60,14 +60,18 @@ public class Decoder {
 	System.err.println(p);
     }
 
-    public Picture pull() {
+    public synchronized Picture pull() {
 	try {
 	    Picture p = out.get(next_frame_number);
 	    out.remove(next_frame_number++);
 	    return p;
 	} catch(Exception e) {
-	    return new Picture(next_frame_number,0,null,this);
+	    return new Picture(next_frame_number++,0,null,this);
 	}
+    }
+
+    public boolean hasPicture() {
+	return true;
     }
     
     public void run() {
