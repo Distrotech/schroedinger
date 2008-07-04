@@ -7,5 +7,13 @@ x#5    Fix reference picture managment (was Unpack bug)
 x#6    Implement picture parsing
 #7     Figure out how to structure decoding (I'd like not to create
        a million `helper' classes).
-#8     Implement subband decoding (and preferably interleaving)
+#8     Implement subband decoding (first component only)
 #99    Fix the Unpack.skip() error
+
+The plan for subband decoding:
+Basically, every subband should decode into a separate array. Suppose
+the transform depth is n, picture transform size is w*h, then each
+array at subband b should have the size (w*h)/2^(n-b). There should be 
+4*n+1 of such arrays; 3 per subband for each component, and 1 for
+temporary storage.
+

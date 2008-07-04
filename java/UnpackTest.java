@@ -31,6 +31,11 @@ public class UnpackTest {
 	}
 	int i = r.nextInt(u.bitsLeft());
 	o = u.clone();
+	/*	o.skip(i);
+	for(; i > 32; i -= 32) {
+	    u.bits(32);
+	}
+	u.bits(i); */
 	if(u.equals(o)) {
 	    while(u.bitsLeft() > 8) {
 		i = r.nextInt(Math.min(u.bitsLeft(), 31));
@@ -47,7 +52,9 @@ public class UnpackTest {
 	byte[] r = { (byte)0x96, (byte)0x11, (byte)0xA5, (byte)0x7F};
 	Unpack u = new Unpack(r);
 	for(int i = 0; i < 6; i++) {
-	    if(i != u.decodeUint()) {
+	    int v = u.decodeUint();
+	    System.err.println(v);
+	    if(i != v) {
 		throw new Error("Error in decodeUint()");
 	    }
 	}

@@ -60,6 +60,7 @@ public final class DecoderTest {
 		}
 	    }
 	    in.close();
+	    win.setVisible(false);
 	} catch(IOException e) {
 	    e.printStackTrace();
 	    ev = 1;

@@ -5,8 +5,9 @@ import java.awt.image.*;
    we are going to take advantage of that */
 
 class SubBand {
-    int quant,length, width, height, h_shift, v_shift;
+    int quant,length;
     Buffer buf;
+    short [] data;
     public SubBand (Buffer b, int q, int l) {
 	quant = q;
 	buf = b;

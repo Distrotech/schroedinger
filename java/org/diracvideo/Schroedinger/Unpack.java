@@ -2,36 +2,58 @@ package org.diracvideo.Schroedinger;
 import java.lang.Math;
 
 public class Unpack {
-    private byte d[];
-    private int i = 0, r, l = 0, s;
+    private byte data[]; /* data array */
+    private int i = 0;   /* index to next byte in array to be shifted
+                            into shift register */
+    private int r;       /* shift register */
+    private int l = 0;   /* number of bits in shift register */
+    private int s;       /* number of bytes in array */
+    private int guard_bit; /* guard bit */
     
     public Unpack(byte d[]) {
 	this(d,0,d.length);
     }
 
     public Unpack(byte d[], int b, int e) {
-	this.d = d;
+	this.data = d;
 	this.i = b;
 	this.s = e;
 	shiftIn();
     }
     
     public Unpack(Buffer b) {
-	this(b.d, b.b, b.e);	
+	this(b.d, b.b, b.e);
     }
 	    
     private final void shiftIn() {
 	for(; l <= 24 && i < s; l += 8) {
-	    r |= (d[i++]&0xff) << (24-l);
+	    r |= (data[i++]&0xff) << (24-l);
+	}
+	/* shift in guard bits.  FIXME guard bit might be 0. */
+	if (i == s) {
+	    for(; l <= 24; l += 8) {
+	        r |= 0xff << (24-l);
+	    }
 	}
     }
 
     private final int shiftOut(int n) {
-	int v;
-	v = (r >>> (32 - n));
-	l -= n;
-	r <<= n;
-	return v;
+        if (n > l) {
+	    throw new Error("shifting out too many bits");
+	}
+        if (n == 32) {
+	    int v;
+	    v = r;
+	    l = 0;
+	    r = 0;
+	    return v;
+	} else {
+	    int v;
+	    v = (r >> (32 - n)) & ((1<<n) - 1);
+	    l -= n;
+	    r <<= n;
+	    return v;
+	}
     }
     
     public void align() {
@@ -67,9 +89,13 @@ public class Unpack {
      * Therefore, use decodeLit32() for a literal 32 bit integer. */
 
     public int bits(int n) {
+        if (n < 0) throw new Error("n < 0");
+        if (n > 32) throw new Error("n > 32");
+
+	if (n == 0) return 0;
 	if (n > l) {
 	    int t = l;
-	    int v = shiftOut(t) << t;
+	    int v = shiftOut(t) << (n - t);
 	    shiftIn();
 	    return v | shiftOut(n - t);
 	} 
@@ -83,6 +109,7 @@ public class Unpack {
      * a non-multiple-of-8 number of bits when it is not aligned.
      * Unfortunately, I have no idea how to fix it. */
     public void skip(int n) { 
+        if (n == 0) return;
 	if(n < 32) {
 	    bits(n);
 	} else {
@@ -142,7 +169,7 @@ public class Unpack {
     public Buffer getSubBuffer(int bytes) {
 	align();
 	int start = i - l/8;
-	Buffer buf = new Buffer(d, start, start + bytes);
+	Buffer buf = new Buffer(data, start, start + bytes);
 	skip(bytes*8 + (l & 7));
 	return buf;
     }
@@ -151,7 +178,7 @@ public class Unpack {
 	boolean same = true;
 	same = (same && u.bitsRead() == bitsRead());
 	same = (same && u.bitsLeft() == bitsLeft());
-	same = (same && u.d == d);
+	same = (same && u.data == data);
 	same = (same && check() && u.check());
 	return same;
     }
@@ -162,14 +189,14 @@ public class Unpack {
 	    return r == 0;
 	}
 	for(int j = -4; j < 0; j++) {
-	    t = (t << 8) | (d[i+j]&0xff);
+	    t = (t << 8) | (data[i+j]&0xff);
 	}
 	t <<= (32 - l);
 	return t == r;
     }
 
     public Unpack clone() {
-	Unpack n = new Unpack(d);
+	Unpack n = new Unpack(data);
 	n.i = this.i;
 	n.s = this.s;
 	n.l = this.l;
