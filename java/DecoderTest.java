@@ -10,11 +10,27 @@ class CloseListener extends WindowAdapter {
     }
 }
 
-class PictureDrawer extends Canvas {
+class PictureDrawer extends Canvas implements Runnable {
     private Decoder dec;
-
+    private int wait;
+    
     public PictureDrawer(Decoder d) {
 	dec = d;
+	VideoFormat fr = dec.getVideoFormat();
+	wait = (1000 * fr.frame_rate_denominator) / fr.frame_rate_numerator;
+    }
+
+
+    public void run() {
+	Graphics gr = getGraphics();
+	while(dec.status != Decoder.Status.DONE) {
+	    paint(gr);
+	    try {
+		Thread.sleep(wait);
+	    } catch(InterruptedException e) {
+		e.printStackTrace();
+	    }
+	}
     }
     
     public void paint(Graphics gr) {
@@ -22,7 +38,7 @@ class PictureDrawer extends Canvas {
 	    Picture pic = dec.pull();
 	    Image img = pic.getImage();
 	    gr.drawImage(img,0,0,null);
-	} 
+	}
     }
 }
 
@@ -41,30 +57,34 @@ class DiracAcceptor implements FileFilter {
 public final class DecoderTest {
     public static void main(String a[]) {
 	Decoder dec = new Decoder();
-	int ev = 0;
+	int ev = 0, tm;
 	FileInputStream in = null;
 	Frame win;
 	try {
 	    in = tryOpen(a);
 	    byte[] packet;
-	    Picture output;
 	    packet = readPacket(in);
 	    dec.push(packet);
-	    win = createWindow(dec);
+	    Thread[] trs = new Thread[1];
+	    win = createWindow(dec,trs);
 	    while(in.available() > 0) {
 		packet = readPacket(in);
 		dec.push(packet);
-		win.repaint();
+		Thread.sleep(10);
 		if(dec.status == Decoder.Status.DONE) {
 		    break;
 		}
 	    }
 	    in.close();
 	    win.setVisible(false);
+	    win.dispose();
+	    trs[0].join();
 	} catch(IOException e) {
 	    e.printStackTrace();
 	    ev = 1;
-	}  catch(Exception e) {
+	} catch(InterruptedException e) {
+	    System.err.println(e);
+	} catch(Exception e) {
 	    e.printStackTrace();
 	    ev = 1;
 	}  finally { 
@@ -80,7 +100,6 @@ public final class DecoderTest {
 	    throw new IOException("Cannot parse dirac stream");
 	} 
 	if(u.bits(8) == 0x10) {
-	    exitGracefully(in);
 	    return header;
 	}
 	int size = u.decodeLit32();
@@ -90,21 +109,6 @@ public final class DecoderTest {
 	return packet;
     }
 
-    private static void dumpBytes(byte[] d) {
-	for(int i = 0; i < d.length; i++) {
-	    System.err.format("%02X ", d[i]);
-	}
-	System.err.println("");
-    }
-
-    private static void exitGracefully(FileInputStream in) {
-       	System.err.println("End of sequence reached, exiting");
-	try {
-	    in.close();
-	} catch(IOException e) {
-	    e.printStackTrace();
-	}
-    }
 
     private static FileInputStream tryOpen(String a[]) throws IOException {
 	for(int i = 0; i < a.length; i++) {
@@ -126,15 +130,17 @@ public final class DecoderTest {
 	return null;
     }
 
-    private static Frame createWindow(Decoder dec) {
+    private static Frame createWindow(Decoder dec, Thread[] trs) {
 	VideoFormat f = dec.getVideoFormat();
 	Frame fr = new Frame("DecoderTest");
-	Canvas cn = new PictureDrawer(dec);
+	PictureDrawer cn = new PictureDrawer(dec);
 	WindowListener wl = new CloseListener();
 	fr.add(cn);
 	fr.addWindowListener(wl);
 	fr.setSize(f.width, f.height);
 	fr.setVisible(true);
+	trs[0] = new Thread(cn);
+	trs[0].start();
 	return fr;
     }
 

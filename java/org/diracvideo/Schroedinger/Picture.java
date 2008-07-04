@@ -5,23 +5,39 @@ import java.awt.image.*;
    we are going to take advantage of that */
 
 class SubBand {
-    int quant,length;
+    int quant,length, depth, width;
     Buffer buf;
     short [] data;
-    public SubBand (Buffer b, int q, int l) {
+    boolean luma;
+    public SubBand (Buffer b, int q, int l, boolean lm) {
 	quant = q;
 	buf = b;
 	length = l;
+	luma = lm;
+	depth = 1;
+    }
+    
+    public void decodeCoefficients(Parameters par) {
+	Dimension dim = par.getIwtSize(depth,luma);
+	data = new short[dim.width * dim.height];
+	if(par.no_ac) {
+	    Unpack u = new Unpack(buf);
+	    for(int i = 0; i < data.length; i++) {
+		data[i] = (short)u.decodeSint();
+	    }	  
+	} else {
+	    throw new RuntimeException("Stream type unsupported");
+	}
+
     }
 }
 
 class Parameters {
     /* all that matters for now is wavelet depth */
-    public int iwt_chroma_size[] = {0,0},
-	iwt_luma_size[] = {0,0};
+    private Dimension iwt_luma, iwt_chroma;
     public int transform_depth = 4, wavelet_index;
     public int codeblock_mode_index = 0;
-    public boolean is_noarith, is_ref, is_lowdelay;
+    public boolean no_ac, is_ref, is_lowdelay;
     public int[] horiz_codeblocks = new int[7],
 	vert_codeblocks = new int[7];
     public int num_refs;
@@ -35,7 +51,7 @@ class Parameters {
 	25, 26, 27 };
 	
     public Parameters(int c) {
-	is_noarith = (c & 0x48) == 0x8;
+	no_ac = !((c & 0x48) == 0x8);
 	num_refs = (c & 0x3);
 	is_ref = (c & 0x0c) == 0x0c;
 	is_lowdelay = ((c & 0x88) == 0x88);
@@ -44,11 +60,20 @@ class Parameters {
     public void calculateIwtSizes(VideoFormat f) {
 	int size[] = {0,0};
 	f.getPictureLumaSize(size);
-	iwt_luma_size[0] = Util.roundUpPow2(size[0], transform_depth);
-	iwt_luma_size[1] = Util.roundUpPow2(size[1], transform_depth);
+	iwt_luma = new Dimension( Util.roundUpPow2(size[0], transform_depth),
+				  Util.roundUpPow2(size[1], transform_depth));
 	f.getPictureChromaSize(size);
-	iwt_chroma_size[0] = Util.roundUpPow2(size[0], transform_depth);
-	iwt_chroma_size[1] = Util.roundUpPow2(size[1], transform_depth);
+	iwt_chroma = new Dimension( Util.roundUpPow2(size[0], transform_depth),
+				  Util.roundUpPow2(size[1], transform_depth));
+    }
+
+    public Dimension getIwtSize(int depth, boolean luma) {
+	if(iwt_luma == null || iwt_chroma == null) {
+	    return null;
+	}
+	Dimension dim = (luma ? iwt_luma : iwt_chroma);
+	return new Dimension(dim.width >> (4 - depth), 
+			     dim.height >> (4 - depth));
     }
 }    
 
@@ -175,12 +200,12 @@ public class Picture {
 		u.align();
 		int l = u.decodeUint();
 		if(l == 0) {
-		    coeffs[c][i] = new SubBand(null,0,0);
+		    coeffs[c][i] = new SubBand(null,0,0, (c == 0));
 		    break;
 		} else {
 		    int q = u.decodeUint();
 		    Buffer b = u.getSubBuffer(l);
-		    coeffs[c][i] = new SubBand(b,q,l);
+		    coeffs[c][i] = new SubBand(b,q,l,(c == 0));
 		}
 	    }
 	}
@@ -191,14 +216,18 @@ public class Picture {
     }
 
     public void decode() {
-
+	params.calculateIwtSizes(format);
+	for(int i = 0; i < coeffs[0].length; i++) {
+	    if(coeffs[0][i] != null)
+		coeffs[0][i].decodeCoefficients(params);
+	}
     }
 
     public Image getImage() {
 	img = new BufferedImage(format.width, format.height, 
 				BufferedImage.TYPE_INT_RGB);
 	Graphics2D gr = img.createGraphics();
-	gr.drawString(toString(), 20,20);
+	gr.drawString(String.format("Picture nr. %d\n", num), 20,20);
 	return img;
     }
     

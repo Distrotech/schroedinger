@@ -56,8 +56,8 @@ public class Decoder {
 	int n = u.decodeLit32();
 	Picture p = new Picture(c,n,new Buffer(d,17), this);
 	p.parse();
-	in.add(p);
-	System.err.println(p);
+	p.decode();
+	out.add(p);
     }
 
     public synchronized Picture pull() {
@@ -66,7 +66,7 @@ public class Decoder {
 	    out.remove(next_frame_number++);
 	    return p;
 	} catch(Exception e) {
-	    return new Picture(next_frame_number++,0,null,this);
+	    return new Picture(0x48,next_frame_number++,null,this);
 	}
     }
 
