@@ -55,6 +55,7 @@ class DiracAcceptor implements FileFilter {
 }
 
 public final class DecoderTest {
+    private static Thread other_thread;
     public static void main(String a[]) {
 	Decoder dec = new Decoder();
 	int ev = 0, tm;
@@ -65,8 +66,7 @@ public final class DecoderTest {
 	    byte[] packet;
 	    packet = readPacket(in);
 	    dec.push(packet);
-	    Thread[] trs = new Thread[1];
-	    win = createWindow(dec,trs);
+	    win = createWindow(dec);
 	    while(in.available() > 0) {
 		packet = readPacket(in);
 		dec.push(packet);
@@ -78,7 +78,7 @@ public final class DecoderTest {
 	    in.close();
 	    win.setVisible(false);
 	    win.dispose();
-	    trs[0].join();
+	    other_thread.join();
 	} catch(IOException e) {
 	    e.printStackTrace();
 	    ev = 1;
@@ -130,7 +130,7 @@ public final class DecoderTest {
 	return null;
     }
 
-    private static Frame createWindow(Decoder dec, Thread[] trs) {
+    private static Frame createWindow(Decoder dec) {
 	VideoFormat f = dec.getVideoFormat();
 	Frame fr = new Frame("DecoderTest");
 	PictureDrawer cn = new PictureDrawer(dec);
@@ -139,8 +139,8 @@ public final class DecoderTest {
 	fr.addWindowListener(wl);
 	fr.setSize(f.width, f.height);
 	fr.setVisible(true);
-	trs[0] = new Thread(cn);
-	trs[0].start();
+	other_thread = new Thread(cn);
+	other_thread.start();
 	return fr;
     }
 

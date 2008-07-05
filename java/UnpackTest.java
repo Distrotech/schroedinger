@@ -31,11 +31,13 @@ public class UnpackTest {
 	}
 	int i = r.nextInt(u.bitsLeft());
 	o = u.clone();
-	/*	o.skip(i);
-	for(; i > 32; i -= 32) {
-	    u.bits(32);
+	/*
+	o.skip(i);
+	for(; i > 31; i -= 31) {
+	    u.bits(31);
 	}
-	u.bits(i); */
+	u.bits(i); 
+	*/
 	if(u.equals(o)) {
 	    while(u.bitsLeft() > 8) {
 		i = r.nextInt(Math.min(u.bitsLeft(), 31));

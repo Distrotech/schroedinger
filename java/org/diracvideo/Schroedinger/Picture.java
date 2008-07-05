@@ -7,48 +7,33 @@ import java.awt.image.*;
 class SubBand {
     int quant,length, depth, width;
     Buffer buf;
-    short [] data;
     boolean luma;
-    public SubBand (Buffer b, int q, int l, boolean lm) {
+    public SubBand (Buffer b, int q, int l) {
 	quant = q;
 	buf = b;
 	length = l;
-	luma = lm;
-	depth = 1;
     }
     
-    public void decodeCoefficients(Parameters par) {
-	Dimension dim = par.getIwtSize(depth,luma);
-	data = new short[dim.width * dim.height];
-	if(par.no_ac) {
-	    Unpack u = new Unpack(buf);
-	    for(int i = 0; i < data.length; i++) {
-		data[i] = (short)u.decodeSint();
-	    }	  
-	} else {
-	    throw new RuntimeException("Stream type unsupported");
+    public void decodeCoefficients(short[] out, int s, int b, int e, int w) {
+	/* basically the plan is to decode the coefficients
+	   into the frame array right where they should be */
+	Unpack u = new Unpack(buf);
+	for(int i = b; i < e; i += w) {
+	    for(int j = i; j - i < w; j += s) {
+		out[j] = (short)u.decodeSint();
+	    }
 	}
-
     }
 }
 
 class Parameters {
     /* all that matters for now is wavelet depth */
-    private Dimension iwt_luma, iwt_chroma;
     public int transform_depth = 4, wavelet_index;
     public int codeblock_mode_index = 0;
     public boolean no_ac, is_ref, is_lowdelay;
     public int[] horiz_codeblocks = new int[7],
 	vert_codeblocks = new int[7];
     public int num_refs;
-    public static int[] subband_position =
-    {   0, 1, 2, 3,
-	5, 6, 7,
-	9, 10, 11,
-	13, 14, 15,
-	17, 18, 19,
-	21, 22, 23,
-	25, 26, 27 };
 	
     public Parameters(int c) {
 	no_ac = !((c & 0x48) == 0x8);
@@ -57,23 +42,15 @@ class Parameters {
 	is_lowdelay = ((c & 0x88) == 0x88);
     }
 
-    public void calculateIwtSizes(VideoFormat f) {
+    public Dimension getIwtSize(VideoFormat format, boolean luma) {
 	int size[] = {0,0};
-	f.getPictureLumaSize(size);
-	iwt_luma = new Dimension( Util.roundUpPow2(size[0], transform_depth),
-				  Util.roundUpPow2(size[1], transform_depth));
-	f.getPictureChromaSize(size);
-	iwt_chroma = new Dimension( Util.roundUpPow2(size[0], transform_depth),
-				  Util.roundUpPow2(size[1], transform_depth));
-    }
-
-    public Dimension getIwtSize(int depth, boolean luma) {
-	if(iwt_luma == null || iwt_chroma == null) {
-	    return null;
+	if(luma) {
+	    format.getPictureLumaSize(size);
+	} else {
+	    format.getPictureChromaSize(size);
 	}
-	Dimension dim = (luma ? iwt_luma : iwt_chroma);
-	return new Dimension(dim.width >> (4 - depth), 
-			     dim.height >> (4 - depth));
+	return new Dimension( Util.roundUpPow2(size[0], transform_depth),
+			      Util.roundUpPow2(size[1], transform_depth));
     }
 }    
 
@@ -83,11 +60,12 @@ public class Picture {
     private Wavelet wav;
     private Decoder dec;
     private VideoFormat format;
-    private Parameters params;
+    private Parameters par;
     private int code;
     private Picture[] refs = {null,null};
     private boolean zero_residual = false;
     private SubBand[][] coeffs;
+    private short[] frame;
     private BufferedImage img;
     public Decoder.Status status = Decoder.Status.OK;
     public Exception error = null;
@@ -114,7 +92,7 @@ public class Picture {
 	buf = b;
 	dec = d;
 	format = d.getVideoFormat();
-	params = new Parameters(c);
+	par = new Parameters(c);
 	coeffs = new SubBand[3][19];
     }
 
@@ -122,21 +100,20 @@ public class Picture {
 	try {
 	    Unpack u = new Unpack(buf);
 	    parseHeader(u);
-	    if(params.num_refs > 0) {
+	    if(par.num_refs > 0) {
 		u.align();
 		parsePredictionParameters(u);
 		u.align();
 		parseBlockData(u);
 	    }
 	    u.align();
-	    if(params.num_refs > 0) {
+	    if(par.num_refs > 0) {
 		zero_residual = u.decodeBool();
 	    }
 	    if(!zero_residual) {
 		parseTransformParameters(u);
-		params.calculateIwtSizes(format);
 		u.align();
-		if(params.is_lowdelay) {
+		if(par.is_lowdelay) {
 		    parseLowDelayTransformData(u);
 		} else {
 		    parseTransformData(u);
@@ -146,17 +123,18 @@ public class Picture {
 	    error = e;
 	    status = Decoder.Status.ERROR;
 	}
+	buf = null;
     }
 
     private void parseHeader(Unpack u) throws Exception {
 	u.align();
-	if(params.num_refs > 0) {
+	if(par.num_refs > 0) {
 	    refs[0] = dec.refs.get(num + u.decodeSint());
 	}
-	if(params.num_refs > 1) {
+	if(par.num_refs > 1) {
 	    refs[1] = dec.refs.get(num + u.decodeSint());
 	}
-	if(params.is_ref) {
+	if(par.is_ref) {
 	    int r = u.decodeSint();
 	    if(r != 0) {
 		dec.refs.remove(r + num);
@@ -174,19 +152,19 @@ public class Picture {
     }
 
     private void parseTransformParameters(Unpack u) throws Exception {
-	params.wavelet_index = u.decodeUint();
-	params.transform_depth = u.decodeUint();
-	if(!params.is_lowdelay) {
+	par.wavelet_index = u.decodeUint();
+	par.transform_depth = u.decodeUint();
+	if(!par.is_lowdelay) {
 	    if(u.decodeBool()) {
-		for(int i = 0; i < params.transform_depth + 1; i++) {
-		    params.horiz_codeblocks[i] = u.decodeUint();
-		    params.vert_codeblocks[i] = u.decodeUint();
+		for(int i = 0; i < par.transform_depth + 1; i++) {
+		    par.horiz_codeblocks[i] = u.decodeUint();
+		    par.vert_codeblocks[i] = u.decodeUint();
 		}
-		params.codeblock_mode_index = u.decodeUint();
+		par.codeblock_mode_index = u.decodeUint();
 	    } else {
-		for(int i = 0; i < params.transform_depth + 1; i++) {
-		    params.horiz_codeblocks[i] = 1;
-		    params.vert_codeblocks[i] = 1;
+		for(int i = 0; i < par.transform_depth + 1; i++) {
+		    par.horiz_codeblocks[i] = 1;
+		    par.vert_codeblocks[i] = 1;
 		}
 	    }
 	} else {
@@ -196,16 +174,13 @@ public class Picture {
 
     private void parseTransformData(Unpack u) throws Exception {
 	for(int c = 0; c < 3; c++) {
-	    for(int i = 0; i < 1+3*params.transform_depth; i++) {
+	    for(int i = 0; i < 1+3*par.transform_depth; i++) {
 		u.align();
 		int l = u.decodeUint();
-		if(l == 0) {
-		    coeffs[c][i] = new SubBand(null,0,0, (c == 0));
-		    break;
-		} else {
+		if( l != 0) {
 		    int q = u.decodeUint();
 		    Buffer b = u.getSubBuffer(l);
-		    coeffs[c][i] = new SubBand(b,q,l,(c == 0));
+		    coeffs[c][i] = new SubBand(b,q,l);
 		}
 	    }
 	}
@@ -216,18 +191,40 @@ public class Picture {
     }
 
     public void decode() {
-	params.calculateIwtSizes(format);
-	for(int i = 0; i < coeffs[0].length; i++) {
-	    if(coeffs[0][i] != null)
-		coeffs[0][i].decodeCoefficients(params);
-	}
+	decodeWaveletTransform();
+	createImage();
+    }
+
+    private void decodeWaveletTransform() {
+	Dimension dim = par.getIwtSize(format, true);
+	int size = dim.width * dim.height;
+	int stride = (1 << par.transform_depth);
+	frame = new short[size];
+	coeffs[0][0].decodeCoefficients(frame, stride,0, size, dim.width);
+	/* this part should be in a loop */
+	coeffs[0][1].decodeCoefficients(frame, stride,
+					stride >> 1, size, dim.width);
+	coeffs[0][2].decodeCoefficients(frame, stride, (stride * dim.width) >> 1,
+					size, dim.width);
+	coeffs[0][3].decodeCoefficients(frame, stride,
+					(stride * dim.width + stride) >> 1,
+					size, dim.width);
+	Wavelet.inverse(frame, dim.width, par.transform_depth); 
+    }
+
+    private void createImage() {
+	img = new BufferedImage(format.width, format.height,
+				BufferedImage.TYPE_INT_RGB);
+	Graphics2D gr = img.createGraphics();
+	gr.drawString(String.format("Picture nr. %d", num), 20, 20);
+	gr.drawString(String.format("Dimensions: %d x %d",
+				    format.width, format.height), 20, 40);
     }
 
     public Image getImage() {
-	img = new BufferedImage(format.width, format.height, 
-				BufferedImage.TYPE_INT_RGB);
-	Graphics2D gr = img.createGraphics();
-	gr.drawString(String.format("Picture nr. %d\n", num), 20,20);
+	if(img == null) {
+	    createImage();
+	}
 	return img;
     }
     
@@ -236,14 +233,14 @@ public class Picture {
 	b.append(String.format("Picture number: %d with code %02X",
 			       num, code));
 	if(status == Decoder.Status.OK) {
-	    if(params.num_refs > 0) {
+	    if(par.num_refs > 0) {
 		b.append(String.format("\nHas %d reference(s)",
-				       params.num_refs));
+				       par.num_refs));
 	    }
-	    if(params.is_ref) {
+	    if(par.is_ref) {
 		b.append("\nIs a reference");
 	    }
-	    for(int i = 0; i < params.num_refs; i++) {
+	    for(int i = 0; i < par.num_refs; i++) {
 		b.append(String.format("\n\treference[%d]: %d", 
 				       i, refs[i].num));
 	    }

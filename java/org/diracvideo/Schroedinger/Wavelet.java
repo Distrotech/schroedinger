@@ -4,30 +4,40 @@ package org.diracvideo.Schroedinger;
  *
  * The class for doing wavelet transformations.
  * Should be refactored to provide actual objects
- * (functors) with two methods: transform(short[],int)
- * and inverse(short[],int)
+ * (functors) with two methods: transform(short[],int, int)
+ * and inverse(short[],int, int)
  * We will not use 2-dimensional arrays as it is slow
  * and we need no such handholding. */
 
 public class Wavelet {
-    public static void inverse(short d[], int w) {
+    /** inverse:
+     * @data   a short[] array containing the frame
+     * @width  width of the frame
+     * @depth  transform depth
+     *
+     * Inverse is the only method users should ever call, except possibly 
+     * for interleave, which interleaves four subbands so that it is ready
+     * to be used for inverse().
+     * 
+     */
+    public static void inverse(short data[], int w, int depth) {
 	/* data is assumed to be preinterleaved */
-	for(int s = 8; s >= 1; s >>= 1) {
+	for(int s = (1 << (depth - 1)); s > 0; s >>= 1) {
 	    for(int x = 0; x < w; x++) {
-		synthesize(d,s*w,x,d.length); /* a column */
+		synthesize(data,s*w,x,data.length); /* a column */
 	    }
-	    for(int y = 0; y < d.length; y += w) {
-		synthesize(d,s,y,w); /* a row */
+	    for(int y = 0; y < data.length; y += w) {
+		synthesize(data,s,y,w); /* a row */
 	    }
 	}
-	for(int i = 0; i < d.length; i++) {
-	    d[i] = (short)((d[i]+1)>>1);
+	for(int i = 0; i < data.length; i++) {
+	    data[i] = (short)((data[i]+1)>>1);
 	}
     }
 
     private static void synthesize(short d[], int s, int b, int e) {
 	for(int i = b; i < e; i += 2*s) {
-	    if(i == 0) {
+	    if(i - s < 0) {
 		d[0] -= (2*d[s] + 2) >> 2;
 	    } else if (i + s >= e) {
 		d[i] -= (2*d[i-s] + 2) >> 2;
@@ -38,6 +48,8 @@ public class Wavelet {
 	for(int i = b + s; i < e; i += 2*s) {
 	    if(i + s >= e) {
 		d[i] += (2*d[i-s] + 1) >> 1;
+	    } else if(i - s < 0) { 
+		d[i] += (2*d[i+s] + 1) >> 1;
 	    } else {
 		d[i] += (d[i-s] + d[i+s] + 1) >> 1;
 	    }
