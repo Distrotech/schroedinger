@@ -70,10 +70,8 @@ public final class DecoderTest {
 	    while(in.available() > 0) {
 		packet = readPacket(in);
 		dec.push(packet);
-		Thread.sleep(10);
-		if(dec.status == Decoder.Status.DONE) {
+		if(dec.status == Decoder.Status.DONE)
 		    break;
-		}
 	    }
 	    in.close();
 	    win.setVisible(false);

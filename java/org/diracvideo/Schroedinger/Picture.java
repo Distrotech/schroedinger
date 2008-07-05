@@ -34,7 +34,7 @@ class Parameters {
     public int[] horiz_codeblocks = new int[7],
 	vert_codeblocks = new int[7];
     public int num_refs;
-	
+
     public Parameters(int c) {
 	no_ac = !((c & 0x48) == 0x8);
 	num_refs = (c & 0x3);
@@ -202,23 +202,27 @@ public class Picture {
 	frame = new short[size];
 	coeffs[0][0].decodeCoefficients(frame, stride,0, size, dim.width);
 	/* this part should be in a loop */
-	coeffs[0][1].decodeCoefficients(frame, stride,
-					stride >> 1, size, dim.width);
-	coeffs[0][2].decodeCoefficients(frame, stride, (stride * dim.width) >> 1,
-					size, dim.width);
-	coeffs[0][3].decodeCoefficients(frame, stride,
-					(stride * dim.width + stride) >> 1,
-					size, dim.width);
+	for(int i = 1; i < par.transform_depth; i++) {
+	    coeffs[0][3*i+1].decodeCoefficients(frame, stride,
+					    stride >> 1, size, dim.width);
+	    coeffs[0][3*i+2].decodeCoefficients(frame, stride, 
+						(stride * dim.width) >> 1,
+						size, dim.width);
+	    coeffs[0][3*i+3].decodeCoefficients(frame, stride,
+						(stride * dim.width + stride) >> 1,
+						size, dim.width);
+	    stride >>= 1;
+	}
 	Wavelet.inverse(frame, dim.width, par.transform_depth); 
     }
 
     private void createImage() {
-	img = new BufferedImage(format.width, format.height,
+	img = new BufferedImage(format.width, format.height, 
 				BufferedImage.TYPE_INT_RGB);
-	Graphics2D gr = img.createGraphics();
-	gr.drawString(String.format("Picture nr. %d", num), 20, 20);
-	gr.drawString(String.format("Dimensions: %d x %d",
-				    format.width, format.height), 20, 40);
+	Graphics gr = img.createGraphics();
+	gr.drawString(String.format("Picture nr %d", num),20,20);
+	gr.drawString(String.format("Dimensions: %d x %d", format.width,
+				    format.height), 20,40);
     }
 
     public Image getImage() {
