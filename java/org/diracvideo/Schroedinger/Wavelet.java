@@ -34,11 +34,18 @@ public class Wavelet {
 	    data[i] = (short)((data[i]+1)>>1);
 	}
     }
-
-    private static void synthesize(short d[], int s, int b, int e) {
+    /** synthesize:
+     *
+     * @d   short[] data array
+     * @s   stride
+     * @b   begin
+     * @e   end
+     *
+     *  This method is public for testing purposes only. */
+    public static void synthesize(short d[], int s, int b, int e) {
 	for(int i = b; i < e; i += 2*s) {
 	    if(i - s < 0) {
-		d[0] -= (2*d[s] + 2) >> 2;
+		d[0] -= (2*d[i+s] + 2) >> 2;
 	    } else if (i + s >= e) {
 		d[i] -= (2*d[i-s] + 2) >> 2;
 	    } else {
@@ -47,9 +54,9 @@ public class Wavelet {
 	}
 	for(int i = b + s; i < e; i += 2*s) {
 	    if(i + s >= e) {
-		d[i] += (2*d[i-s] + 1) >> 1;
+		d[i] += d[i-s];
 	    } else if(i - s < 0) { 
-		d[i] += (2*d[i+s] + 1) >> 1;
+		d[i] += d[i+s];
 	    } else {
 		d[i] += (d[i-s] + d[i+s] + 1) >> 1;
 	    }
@@ -71,21 +78,4 @@ public class Wavelet {
 	return o;
     }
 
-    public static void test() {
-	short d[] = {0,0,0,0,0,0,0,0,8,1};
-	short c[] = {0,1,2,3,4,5,6,7,8,9};
-	synthesize(d,4,0,d.length);
-	synthesize(d,2,0,d.length);
-	synthesize(d,1,0,d.length);
-	for(int i = 0; i < d.length; i++) {
-	    if(c[i] != d[i]) {
-		throw new Error("Someting wrong with Wavelet");
-	    }
-	}
-    }
-
-    public static Wavelet get(int i, int d) {
-	return new Wavelet();
-    }
-    
 }

@@ -18,3 +18,7 @@ array at subband b should have the size (w*h)/2^(n-b). There should be
 4*n+1 of such arrays; 3 per subband for each component, and 1 for
 temporary storage.
 
+That, or, subbands should decode into a large short[] array which can
+be transformed into the final output picture. (This is what has
+actually been implemented).
+     

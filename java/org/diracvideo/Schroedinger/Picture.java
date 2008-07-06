@@ -14,11 +14,11 @@ class SubBand {
 	length = l;
     }
     
-    public void decodeCoefficients(short[] out, int s, int b, int e, int w) {
+    public void decodeCoeffs(short[] out, int s, int b, int e, int w) {
 	/* basically the plan is to decode the coefficients
 	   into the frame array right where they should be */
 	Unpack u = new Unpack(buf);
-	for(int i = b; i < e; i += w) {
+	for(int i = b; i < e; i += w*s) {
 	    for(int j = i; j - i < w; j += s) {
 		out[j] = (short)u.decodeSint();
 	    }
@@ -200,17 +200,16 @@ public class Picture {
 	int size = dim.width * dim.height;
 	int stride = (1 << par.transform_depth);
 	frame = new short[size];
-	coeffs[0][0].decodeCoefficients(frame, stride,0, size, dim.width);
-	/* this part should be in a loop */
+	coeffs[0][0].decodeCoeffs(frame, stride,0, size, dim.width);
 	for(int i = 1; i < par.transform_depth; i++) {
-	    coeffs[0][3*i+1].decodeCoefficients(frame, stride,
-					    stride >> 1, size, dim.width);
-	    coeffs[0][3*i+2].decodeCoefficients(frame, stride, 
-						(stride * dim.width) >> 1,
-						size, dim.width);
-	    coeffs[0][3*i+3].decodeCoefficients(frame, stride,
-						(stride * dim.width + stride) >> 1,
-						size, dim.width);
+	    coeffs[0][3*i+1].decodeCoeffs(frame, stride,
+					  stride >> 1, size, dim.width);
+	    coeffs[0][3*i+2].decodeCoeffs(frame, stride, 
+					  (stride * dim.width) >> 1,
+					  size, dim.width);
+	    coeffs[0][3*i+3].decodeCoeffs(frame, stride,
+					  (stride * dim.width + stride) >> 1,
+					  size, dim.width);
 	    stride >>= 1;
 	}
 	Wavelet.inverse(frame, dim.width, par.transform_depth); 
