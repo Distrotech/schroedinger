@@ -40,6 +40,8 @@ typedef enum {
   SCHRO_ENCODER_FRAME_STATE_POSTANALYSE = (1<<5),
   SCHRO_ENCODER_FRAME_STATE_DONE = (1<<6),
   SCHRO_ENCODER_FRAME_STATE_FREE = (1<<9)
+  SCHRO_ENCODER_FRAME_STATE_FULLPEL_ME = (1<<12), /* Added by Andrea */
+  SCHRO_ENCODER_FRAME_STATE_SUBPEL_ME = (1<<13) /* Added by Andrea, includes mode decision */
 } SchroEncoderFrameStateEnum;
 #endif
 
@@ -83,6 +85,7 @@ struct _SchroEncoderFrame {
 
   /* Bits telling the engine stages which stuff needs to happen */
   unsigned int need_downsampling;
+  unsigned int need_upsampling; /* Added by Andrea */ 
   unsigned int need_filtering;
   unsigned int need_average_luma;
 
@@ -92,6 +95,7 @@ struct _SchroEncoderFrame {
   unsigned int have_histograms;
   unsigned int have_scene_change_score;
   unsigned int have_downsampling;
+  unsigned int have_upsampling; /* Added by Andrea */
   unsigned int have_average_luma;
 
   /* other stuff */
@@ -103,7 +107,8 @@ struct _SchroEncoderFrame {
   SchroFrame *original_frame;
   SchroFrame *filtered_frame;
   SchroFrame *downsampled_frames[5];
-  SchroUpsampledFrame *reconstructed_frame;
+  SchroUpsampledFrame *reconstructed_frame,
+                      *upsampled_frame; /* Added by Andrea */
 
   SchroBuffer *sequence_header_buffer;
   SchroList *inserted_buffers;
@@ -425,6 +430,9 @@ void schro_encoder_encode_subband_noarith (SchroEncoderFrame *frame, int compone
 
 void schro_encoder_analyse_picture (SchroEncoderFrame *frame);
 void schro_encoder_predict_picture (SchroEncoderFrame *frame);
+/* Added by Andrea */
+void schro_encoder_fullpel_predict_picture (SchroEncoderFrame* frame);
+
 void schro_encoder_encode_picture (SchroEncoderFrame *frame);
 void schro_encoder_reconstruct_picture (SchroEncoderFrame *frame);
 void schro_encoder_postanalyse_picture (SchroEncoderFrame *frame);

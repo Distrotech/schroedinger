@@ -515,6 +515,8 @@ schro_encoder_handle_gop_tworef (SchroEncoder *encoder, int i)
 
   SCHRO_DEBUG("gop length %d", gop_length);
 
+  /* looks like we only deal with closed GOP structures; is it true ?
+   * FIXME */
   if (gop_length == 1) {
     schro_engine_code_intra (frame, encoder->magic_bailout_weight);
   } else {

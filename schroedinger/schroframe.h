@@ -108,13 +108,19 @@ SchroFrame *schro_frame_ref (SchroFrame *frame);
 SchroFrame *schro_frame_dup (SchroFrame *frame);
 SchroFrame *schro_frame_clone (SchroMemoryDomain *domain, SchroFrame *frame);
 
+/* converts frames from u8 to s16 and viceversa, u8 to u8 (?), s16 to s16 (?)
+ * and yuyv to u8 and viceversa */
 void schro_frame_convert (SchroFrame *dest, SchroFrame *src);
+/* adds together u8 and s16 and s16 and s16 */
 void schro_frame_add (SchroFrame *dest, SchroFrame *src);
+/* subtracts two s16 or s16 and u8 */
 void schro_frame_subtract (SchroFrame *dest, SchroFrame *src);
 void schro_frame_shift_left (SchroFrame *frame, int shift);
 void schro_frame_shift_right (SchroFrame *frame, int shift);
-
+ /* dest must be non-NULL, we must create it before passing it to this funct
+  * I think it only works on U8 frames */
 void schro_frame_downsample (SchroFrame *dest, SchroFrame *src);
+/* It assumes dest is non-NULL and both frames must be U8 (enforced) */
 void schro_frame_upsample_horiz (SchroFrame *dest, SchroFrame *src);
 void schro_frame_upsample_vert (SchroFrame *dest, SchroFrame *src);
 double schro_frame_calculate_average_luma (SchroFrame *frame);
@@ -123,14 +129,17 @@ SchroFrame * schro_frame_convert_to_444 (SchroFrame *frame);
 void schro_frame_md5 (SchroFrame *frame, uint32_t *state);
 
 #ifdef SCHRO_ENABLE_UNSTABLE_API
-
+/* probably used in conjunction with ME/MC - extends bottom and right */
 void schro_frame_edge_extend (SchroFrame *frame, int width, int height);
 void schro_frame_zero_extend (SchroFrame *frame, int width, int height);
+/* set first byte of first 10 lines to value ?? */
 void schro_frame_mark (SchroFrame *frame, int value);
 
 void schro_frame_data_get_codeblock (SchroFrameData *dest, SchroFrameData *src,
         int x, int y, int horiz_codeblocks, int vert_codeblocks);
 
+/* it allocates the structure and sets frame to frame[0] of
+ * SchroUpsampledFrame */
 SchroUpsampledFrame * schro_upsampled_frame_new (SchroFrame *frame);
 void schro_upsampled_frame_free (SchroUpsampledFrame *df);
 void schro_upsampled_frame_upsample (SchroUpsampledFrame *df);
@@ -147,6 +156,7 @@ void schro_upsampled_frame_get_block_precN (SchroUpsampledFrame *upframe, int k,
 void schro_upsampled_frame_get_block_fast_precN (SchroUpsampledFrame *upframe, int k,
     int x, int y, int prec, SchroFrameData *fd);
 
+/* it creates a smaller component from the original one, starting from x,y */
 void schro_frame_get_subdata (SchroFrame *frame, SchroFrameData *fd,
         int comp, int x, int y);
 

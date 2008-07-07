@@ -905,6 +905,9 @@ run_stage (SchroEncoderFrame *frame, SchroEncoderFrameStateEnum state)
     case SCHRO_ENCODER_FRAME_STATE_POSTANALYSE:
       func = schro_encoder_postanalyse_picture;
       break;
+    case SCHRO_ENCODER_FRAME_STATE_FULLPEL_ME:
+      func = schro_encoder_fullpel_predict_picture;
+      break;
     default:
       SCHRO_ASSERT(0);
   }
@@ -944,7 +947,9 @@ schro_encoder_async_schedule (SchroEncoder *encoder, SchroExecDomain exec_domain
   unsigned int todo;
 
   SCHRO_INFO("iterate %d", encoder->completed_eos);
-
+  /* first analyse all frames in the queue - that also means
+   * doing down- and up-sampling of the frames in readiness
+   * for later processing */
   for(i=0;i<encoder->frame_queue->n;i++) {
     frame = encoder->frame_queue->elements[i].data;
     SCHRO_DEBUG("analyse i=%d picture=%d state=%d busy=%d", i, frame->frame_number, frame->state, frame->busy);
@@ -958,8 +963,14 @@ schro_encoder_async_schedule (SchroEncoder *encoder, SchroExecDomain exec_domain
       run_stage (frame, SCHRO_ENCODER_FRAME_STATE_ANALYSE);
       return TRUE;
     }
-  }
 
+    /* Added by Andrea */
+    if (todo & SCHRO_ENCODER_FRAME_STATE_FULLPEL_ME) {
+      run_stage (frame, SCHRO_ENCODER_FRAME_STATE_FULLPEL_ME);
+      return true;
+    }
+  }
+  /* now we do shot change detection on all frames in the queue */
   for(i=0;i<encoder->frame_queue->n;i++) {
     frame = encoder->frame_queue->elements[i].data;
     if (frame->frame_number == encoder->gop_picture) {
@@ -1066,6 +1077,11 @@ schro_encoder_analyse_picture (SchroEncoderFrame *frame)
     schro_encoder_frame_downsample (frame);
     frame->have_downsampling = TRUE;
   }
+  /* Added by Andrea */
+  if (frame->need_upsampling) {
+    schro_encoder_frame_upsample (frame);
+    frame->have_upsampling = TRUE;
+  }
 
   if (frame->need_average_luma) {
     if (frame->have_downsampling) {
@@ -1094,6 +1110,23 @@ schro_encoder_predict_picture (SchroEncoderFrame *frame)
   schro_encoder_render_picture (frame);
 }
 
+void
+schro_encoder_fullpel_predict_picture (SchroEncoderFrame* frame)
+{
+  SCHRO_ASSERT (frame && frame->reconstructed_frame);
+  SCHRO_INFO ("fullpel predict picture %d", frame->frame_number);
+
+  frame->tmpbuf = schro_malloc(sizeof(int16_t) *
+      (frame->encoder->video_format.width + 16));
+
+  /* should create upsampled versions here */
+
+  if (frame->params.num_refs > 0) {
+    schro_encoder_motion_predict (frame);
+  }
+
+  schro_encoder_render_picture (frame);
+}
 void
 schro_encoder_render_picture (SchroEncoderFrame *frame)
 {
@@ -2477,6 +2510,10 @@ schro_encoder_frame_unref (SchroEncoderFrame *frame)
     }
     if (frame->reconstructed_frame) {
       schro_upsampled_frame_free (frame->reconstructed_frame);
+    }
+    /* Added by Andrea */
+    if (frame->upsampled_frame) {
+      schro_upsampled_frame_free (frame->upsampled_frame);
     }
     for(i=0;i<5;i++){
       if (frame->downsampled_frames[i]) {

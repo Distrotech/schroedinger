@@ -32,6 +32,20 @@ schro_encoder_frame_downsample (SchroEncoderFrame *frame)
       frame->downsampled_frames[3]);
 }
 
+ void                                                                                    
+ schro_encoder_frame_upsample (SchroEncoderFrame* frame)                                 
+ {                                                                                       
+   SCHRO_ASSERT (frame);                                                                 
+   SCHRO_DEBUG ("upsampling frame %d", frame->frame_number);                             
+                                                                                            
+   if (frame->upsampled_frame) {                                                         
+     /* we already have the upsampled frame - why ?? */                                  
+     return;                                                                             
+   }                                                                                     
+   frame->upsampled_frame = schro_upsampled_frame_new (frame);                           
+   schro_upsampled_frame_upsample (frame->upsampled_frame);                              
+ }
+
 static double
 schro_frame_component_squared_error (SchroFrameData *a,
     SchroFrameData *b)
