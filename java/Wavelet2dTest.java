@@ -3,6 +3,7 @@ import org.diracvideo.Schroedinger.*;
 public class Wavelet2dTest {
     public static void main(String a[]) {
 	synthesizeTest();
+	TwoDimensionTest();
     }
 
     private static void synthesizeTest() {
@@ -16,6 +17,10 @@ public class Wavelet2dTest {
 		throw new Error("Wavelet Error: synthesize");
 	    }
 	}
+    }
+
+    private static void TwoDimensionTest() {
+	
     }
 
 

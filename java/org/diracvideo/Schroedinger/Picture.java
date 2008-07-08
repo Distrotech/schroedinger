@@ -21,11 +21,11 @@ class SubBand {
 	if(buf != null) {
 	    Unpack u = new Unpack(buf);
 	    for(int i = b; i < e; i += w*s) {
-		for(int j = i; j - i < w; j += s) {
+		for(int j = i; j < w + i; j += s) {
 		    out[j] = u.decodeSint(qf,qo);
 		}
-	    }
-	}
+	    } 
+	} 
     }
 
     private int quantFactor(int qi) {
@@ -281,7 +281,7 @@ public class Picture {
 	for(int i = 0; i < format.height; i++) {
 	    for(int j = 0; j < format.width; j++) {
 		pixels[j + i*format.width] =
-		    (0xffffff *frame[0][j + i*dim.width]) >> 8;
+		    (0x1010100 *frame[0][j + i*dim.width]) >> 8;
 	    }
 	}
     }

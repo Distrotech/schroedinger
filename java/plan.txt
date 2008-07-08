@@ -7,8 +7,9 @@ x#5    Fix reference picture managment (was Unpack bug)
 x#6    Implement picture parsing
 x#7    Figure out how to structure decoding (I'd like not to create
        a million `helper' classes).
-#8     Implement subband decoding (first component only)
-#9     Implement short[]-to-image conversion
+b#8    Implement subband decoding (first component only)
+b#9    Implement short[]-to-image conversion
+#10    Start arithmetic decoder
 #99    Fix the Unpack.skip() error
 
 The plan for subband decoding:
