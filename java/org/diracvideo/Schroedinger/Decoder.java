@@ -9,14 +9,13 @@ public class Decoder {
     private int major_version, minor_version, profile, level;
     public Status status = Status.OK;
     public Exception e;
-    public Queue refs, in, out;
+    public Queue refs, out;
     public enum Status {OK, WAIT, DONE, ERROR}
 
     public Decoder() {
 	next_frame_number = 0;
 	refs = new Queue(4);
-	in = new Queue(4);
-	out = new Queue(4);
+	out = new Queue(100);
     }
 
     /** Push:
@@ -56,8 +55,12 @@ public class Decoder {
 	int n = u.decodeLit32();
 	Picture p = new Picture(c,n,new Buffer(d,17), this);
 	p.parse();
-	p.decode();
-	out.add(p);
+	if(p.error != null) {
+	    p.error.printStackTrace();
+	} else {
+	    p.decode();
+	    out.add(p);
+	}
     }
 
     public synchronized Picture pull() {
@@ -71,7 +74,7 @@ public class Decoder {
     }
 
     public boolean hasPicture() {
-	return true;
+	return out.has(next_frame_number);
     }
     
     public void run() {

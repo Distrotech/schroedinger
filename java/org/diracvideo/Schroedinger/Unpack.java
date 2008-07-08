@@ -141,6 +141,16 @@ public class Unpack {
 	return (v == 0 || bits(1) == 0) ? v : -v;
     }
 
+    public short decodeSint(int qf, int qo) {
+	int m = decodeUint();
+	if(m == 0) {
+	    return 0;
+	} else {
+	    m = (short)((m * qf + qo + 2)/4);
+	    return (short)((bits(1) == 0) ? m : -m);
+	}
+    }
+
     public int bitsLeft() {
 	return (s - i) * 8 + l;
     }

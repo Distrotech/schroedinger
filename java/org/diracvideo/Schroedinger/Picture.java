@@ -5,22 +5,56 @@ import java.awt.image.*;
    we are going to take advantage of that */
 
 class SubBand {
-    int quant,length, depth, width;
+    int qf, qo;
     Buffer buf;
-    boolean luma;
-    public SubBand (Buffer b, int q, int l) {
-	quant = q;
+    Parameters par;
+    public SubBand (Buffer b, int q, Parameters p) {
+	par = p;
+	qf = quantFactor(q);
+	qo = quantOffset(q);
 	buf = b;
-	length = l;
     }
     
     public void decodeCoeffs(short[] out, int s, int b, int e, int w) {
 	/* basically the plan is to decode the coefficients
 	   into the frame array right where they should be */
-	Unpack u = new Unpack(buf);
-	for(int i = b; i < e; i += w*s) {
-	    for(int j = i; j - i < w; j += s) {
-		out[j] = (short)u.decodeSint();
+	if(buf != null) {
+	    Unpack u = new Unpack(buf);
+	    for(int i = b; i < e; i += w*s) {
+		for(int j = i; j - i < w; j += s) {
+		    out[j] = u.decodeSint(qf,qo);
+		}
+	    }
+	}
+    }
+
+    private int quantFactor(int qi) {
+	int base = (1 << (qi >>> 2));
+	switch(qi & 0x3) {
+	case 0:
+	    return base << 2;
+	case 1:
+	    return (503829 * base + 52958)/105917;
+	case 2:
+	    return (665857 * base + 58854)/117708;
+	case 3:
+	default:
+	    return (440253 * base + 32722)/65444;
+	}
+    }
+
+    private int quantOffset(int qi) {
+	if(qi == 0) {
+	    return 0;
+	} else {
+	    if(par.num_refs == 0) {
+		if(qi == 1) {
+		    return 2;
+		} else {
+		    return (qf + 1) / 2;
+		}
+	    } else {
+		return (qf * 3 + 4) / 8;
 	    }
 	}
     }
@@ -52,6 +86,15 @@ class Parameters {
 	return new Dimension( Util.roundUpPow2(size[0], transform_depth),
 			      Util.roundUpPow2(size[1], transform_depth));
     }
+
+    public String toString() {
+	StringBuilder sb = new StringBuilder();
+	sb.append("\nParameters:\n");
+	sb.append(String.format("Transform depth: %d\n", transform_depth));
+	sb.append(String.format("Using ac: %c\n", (no_ac ? 'n' : 'y')));
+	sb.append(String.format("Is ref: %c\n", (is_ref ? 'y' : 'n')));
+	return sb.toString();
+    }
 }    
 
 
@@ -65,7 +108,7 @@ public class Picture {
     private Picture[] refs = {null,null};
     private boolean zero_residual = false;
     private SubBand[][] coeffs;
-    private short[] frame;
+    private short[][] frame;
     private BufferedImage img;
     public Decoder.Status status = Decoder.Status.OK;
     public Exception error = null;
@@ -180,7 +223,9 @@ public class Picture {
 		if( l != 0) {
 		    int q = u.decodeUint();
 		    Buffer b = u.getSubBuffer(l);
-		    coeffs[c][i] = new SubBand(b,q,l);
+		    coeffs[c][i] = new SubBand(b,q,par);
+		} else {
+		    coeffs[c][i] = new SubBand(null,0,par);
 		}
 	    }
 	}
@@ -195,33 +240,59 @@ public class Picture {
 	createImage();
     }
 
+    
     private void decodeWaveletTransform() {
-	Dimension dim = par.getIwtSize(format, true);
+	initializeTransformFrames();
+	decodeComponent(0);
+	decodeComponent(1);
+	decodeComponent(2);
+    }
+
+    private void decodeComponent(int c) {
+	Dimension dim = par.getIwtSize(format, c == 0);
 	int size = dim.width * dim.height;
 	int stride = (1 << par.transform_depth);
-	frame = new short[size];
-	coeffs[0][0].decodeCoeffs(frame, stride,0, size, dim.width);
+	coeffs[c][0].decodeCoeffs(frame[c], stride,0, size, dim.width);
 	for(int i = 1; i < par.transform_depth; i++) {
-	    coeffs[0][3*i+1].decodeCoeffs(frame, stride,
+	    coeffs[c][3*i+1].decodeCoeffs(frame[c], stride,
 					  stride >> 1, size, dim.width);
-	    coeffs[0][3*i+2].decodeCoeffs(frame, stride, 
+	    coeffs[c][3*i+2].decodeCoeffs(frame[c], stride, 
 					  (stride * dim.width) >> 1,
 					  size, dim.width);
-	    coeffs[0][3*i+3].decodeCoeffs(frame, stride,
+	    coeffs[c][3*i+3].decodeCoeffs(frame[c], stride,
 					  (stride * dim.width + stride) >> 1,
 					  size, dim.width);
 	    stride >>= 1;
 	}
-	Wavelet.inverse(frame, dim.width, par.transform_depth); 
+	Wavelet.inverse(frame[c], dim.width, par.transform_depth); 
     }
 
+    private void initializeTransformFrames() {
+	Dimension lum = par.getIwtSize(format, true);
+	Dimension chrom = par.getIwtSize(format, true);
+	frame = new short[3][];
+	frame[0] = new short[lum.width * lum.height];
+	frame[1] = new short[chrom.width * chrom.height];
+	frame[2] = new short[chrom.width * chrom.height];
+    }
+
+    private void decodeYuv(int pixels[]) {
+	Dimension dim = par.getIwtSize(format, true);
+	for(int i = 0; i < format.height; i++) {
+	    for(int j = 0; j < format.width; j++) {
+		pixels[j + i*format.width] =
+		    (0xffffff *frame[0][j + i*dim.width]) >> 8;
+	    }
+	}
+    }
+    
     private void createImage() {
-	img = new BufferedImage(format.width, format.height, 
+	img = new BufferedImage(format.width + 1, format.height + 1, 
 				BufferedImage.TYPE_INT_RGB);
-	Graphics gr = img.createGraphics();
-	gr.drawString(String.format("Picture nr %d", num),20,20);
-	gr.drawString(String.format("Dimensions: %d x %d", format.width,
-				    format.height), 20,40);
+	WritableRaster ras = img.getRaster();
+	int pixels[] = new int[format.width * format.height];
+	decodeYuv(pixels);
+	img.setRGB(0,0, format.width, format.height,pixels, 0,1);
     }
 
     public Image getImage() {
@@ -235,6 +306,7 @@ public class Picture {
 	StringBuilder b = new StringBuilder();	   
 	b.append(String.format("Picture number: %d with code %02X",
 			       num, code));
+	b.append(par.toString());
 	if(status == Decoder.Status.OK) {
 	    if(par.num_refs > 0) {
 		b.append(String.format("\nHas %d reference(s)",
@@ -250,6 +322,7 @@ public class Picture {
 	} else {
 	    b.append(String.format("Picture ERROR: %s", error.toString()));
 	}
+
 	return b.toString();
     }
 

@@ -35,6 +35,16 @@ class Queue {
 	pics[loc] = p;
     }
 
+    public boolean has(int n) {
+	for(int i = 0; i < pics.length; i++) {
+	    if(pics[i] != null &&
+	       pics[i].num == n) {
+		return true;
+	    }
+	}
+	return false;
+    }
+    
     public synchronized Picture get(int n) throws Exception {
 	for(int i = 0; i < pics.length; i++) {
 	    if(pics[i] != null &&
