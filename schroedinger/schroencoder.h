@@ -32,16 +32,16 @@ typedef enum {
   SCHRO_ENCODER_FRAME_STATE_ANALYSE = (1<<1),
   SCHRO_ENCODER_FRAME_STATE_HAVE_GOP = (1<<7),
   SCHRO_ENCODER_FRAME_STATE_HAVE_PARAMS = (1<<8),
-  SCHRO_ENCODER_FRAME_STATE_PREDICT = (1<<2),
+  /* SCHRO_ENCODER_FRAME_STATE_PREDICT = (1<<2), */ /* removed by Andrea */
   SCHRO_ENCODER_FRAME_STATE_HAVE_REFS = (1<<10),
   SCHRO_ENCODER_FRAME_STATE_HAVE_QUANTS = (1<<11),
   SCHRO_ENCODER_FRAME_STATE_ENCODING = (1<<3),
   SCHRO_ENCODER_FRAME_STATE_RECONSTRUCT = (1<<4),
   SCHRO_ENCODER_FRAME_STATE_POSTANALYSE = (1<<5),
   SCHRO_ENCODER_FRAME_STATE_DONE = (1<<6),
-  SCHRO_ENCODER_FRAME_STATE_FREE = (1<<9)
-  SCHRO_ENCODER_FRAME_STATE_FULLPEL_ME = (1<<12), /* Added by Andrea */
-  SCHRO_ENCODER_FRAME_STATE_SUBPEL_ME = (1<<13) /* Added by Andrea, includes mode decision */
+  SCHRO_ENCODER_FRAME_STATE_FREE = (1<<9),
+  SCHRO_ENCODER_FRAME_STATE_FULLPEL_ME = (1<<2), /* Added by Andrea */
+  SCHRO_ENCODER_FRAME_STATE_SUBPEL_ME = (1<<12) /* Added by Andrea, includes mode decision */
 } SchroEncoderFrameStateEnum;
 #endif
 
@@ -161,6 +161,9 @@ struct _SchroEncoderFrame {
 
   SchroEncoderFrame *ref_frame[2];
 
+  /* Added by Andrea - I need to store SchroMotionEst
+   * in here to allow me to split ME from mode decision */
+  SchroMotionEst* motion_est;
   SchroMotion *motion;
   SchroList *motion_field_list;
 

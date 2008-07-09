@@ -92,6 +92,36 @@ schro_motionest_free (SchroMotionEst *me)
   schro_free (me);
 }
 
+/* Added by Andrea */
+void
+schro_encoder_motion_predict_only (SchroEncoderFrame* frame)
+{
+  SchroParams8 params = &frame->params;
+  SchroMotionEst* me = 0;
+  int n=0;
+  int ref=0;
+
+  SCHRO_ASSERT (frame);
+  SCHRO_ASSERT(params->x_num_blocks != 0);
+  SCHRO_ASSERT(params->y_num_blocks != 0);
+  SCHRO_ASSERT(params->num_refs > 0);
+
+  me = schro_motionest_new (frame);
+
+  frame->motion = schro_motion_new (params, NULL, NULL);
+  me->motion = frame->motion;
+
+  frame->motion_field_list = schro_list_new_full ((SchroListFreeFunc)schro_motion_field_free, NULL);
+  n = 0;
+
+  for(ref=0;ref<params->num_refs;ref++){
+    schro_motionest_rough_scan_nohint (me, 3, ref, 12);
+    schro_motionest_rough_scan_hint (me, 2, ref, 2);
+    schro_motionest_rough_scan_hint (me, 1, ref, 2);
+  }
+
+  frame->motion_est = me;
+}
 
 void
 schro_encoder_motion_predict (SchroEncoderFrame *frame)

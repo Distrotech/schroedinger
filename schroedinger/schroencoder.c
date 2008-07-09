@@ -893,9 +893,11 @@ run_stage (SchroEncoderFrame *frame, SchroEncoderFrameStateEnum state)
     case SCHRO_ENCODER_FRAME_STATE_ANALYSE:
       func = schro_encoder_analyse_picture;
       break;
+      /* Removed by Andrea
     case SCHRO_ENCODER_FRAME_STATE_PREDICT:
       func = schro_encoder_predict_picture;
       break;
+      */
     case SCHRO_ENCODER_FRAME_STATE_ENCODING:
       func = schro_encoder_encode_picture;
       break;
@@ -947,9 +949,10 @@ schro_encoder_async_schedule (SchroEncoder *encoder, SchroExecDomain exec_domain
   unsigned int todo;
 
   SCHRO_INFO("iterate %d", encoder->completed_eos);
-  /* first analyse all frames in the queue - that also means
-   * doing down- and up-sampling of the frames in readiness
-   * for later processing */
+  /* first analyse all frames in the queue -
+   * it seems to me that the size of the queue should be made bigger
+   * than the number of cores for this code to work. Not a problem
+   * today (8 cores) but in a few years... */
   for(i=0;i<encoder->frame_queue->n;i++) {
     frame = encoder->frame_queue->elements[i].data;
     SCHRO_DEBUG("analyse i=%d picture=%d state=%d busy=%d", i, frame->frame_number, frame->state, frame->busy);
@@ -963,19 +966,25 @@ schro_encoder_async_schedule (SchroEncoder *encoder, SchroExecDomain exec_domain
       run_stage (frame, SCHRO_ENCODER_FRAME_STATE_ANALYSE);
       return TRUE;
     }
-
-    /* Added by Andrea */
-    if (todo & SCHRO_ENCODER_FRAME_STATE_FULLPEL_ME) {
-      run_stage (frame, SCHRO_ENCODER_FRAME_STATE_FULLPEL_ME);
-      return true;
-    }
   }
   /* now we do shot change detection on all frames in the queue */
   for(i=0;i<encoder->frame_queue->n;i++) {
     frame = encoder->frame_queue->elements[i].data;
+    /* we don't need to check if the frame is busy because it is done
+     * in handle_gop (at least in the version I'm interested in) */
     if (frame->frame_number == encoder->gop_picture) {
       encoder->handle_gop (encoder, i);
       break;
+    }
+  }
+  /* Added by Andrea - now we do fullpel ME */
+  for (i=0; encoder->frame_queue->n > i;++i) {
+    frame = encoder->frame_queue->elements[i].data;
+    if (frame->busy) continue;
+    todo = frame->needed_state & (~frame->state);
+    if (todo & SCHRO_ENCODER_FRAME_STATE_FULLPEL_ME) {
+      run_stage (frame, SCHRO_ENCODER_FRAME_STATE_FULLPEL_ME);
+      return true;
     }
   }
 
@@ -998,12 +1007,15 @@ schro_encoder_async_schedule (SchroEncoder *encoder, SchroExecDomain exec_domain
           frame->state |= SCHRO_ENCODER_FRAME_STATE_HAVE_PARAMS;
         }
       }
+      /* removed by Andrea - we want to split motion prediction in fullpel and
+       * subpel. We also want to separate MC from ME
       if (todo & SCHRO_ENCODER_FRAME_STATE_PREDICT &&
           frame->state & SCHRO_ENCODER_FRAME_STATE_HAVE_PARAMS) {
         if (!check_refs(frame)) continue;
         run_stage (frame, SCHRO_ENCODER_FRAME_STATE_PREDICT);
         return TRUE;
       }
+      */
     }
   }
 
@@ -1110,6 +1122,7 @@ schro_encoder_predict_picture (SchroEncoderFrame *frame)
   schro_encoder_render_picture (frame);
 }
 
+/* Added by Andrea - should perform fullpel ME without "rendering" */
 void
 schro_encoder_fullpel_predict_picture (SchroEncoderFrame* frame)
 {
@@ -1119,14 +1132,11 @@ schro_encoder_fullpel_predict_picture (SchroEncoderFrame* frame)
   frame->tmpbuf = schro_malloc(sizeof(int16_t) *
       (frame->encoder->video_format.width + 16));
 
-  /* should create upsampled versions here */
-
   if (frame->params.num_refs > 0) {
-    schro_encoder_motion_predict (frame);
+    schro_encoder_motion_predict_only (frame);
   }
-
-  schro_encoder_render_picture (frame);
 }
+
 void
 schro_encoder_render_picture (SchroEncoderFrame *frame)
 {
