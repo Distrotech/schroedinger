@@ -51,14 +51,17 @@ public class Decoder {
 	    return;
 	} else if (0x20 == c || 0x30 == c) {
 	    return;
+	} /* If we come here, the buffer should be a picture.
+	     Thus we should throw an error if there is no
+	     video format */
+	if(format == null) {
+	    throw new Exception("No Video Format");
 	}
 	int n = u.decodeLit32();
 	Picture p = new Picture(c,n,new Buffer(d,17), this);
 	p.parse();
-	if(p.error != null) {
-	    p.error.printStackTrace();
-	} else {
-	    p.decode();
+	p.decode();
+	if(p.error == null) {
 	    out.add(p);
 	}
     }

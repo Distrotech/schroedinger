@@ -64,8 +64,10 @@ public final class DecoderTest {
 	try {
 	    in = tryOpen(a);
 	    byte[] packet;
-	    packet = readPacket(in);
-	    dec.push(packet);
+	    while(dec.getVideoFormat() == null) {
+		packet = readPacket(in);
+		dec.push(packet);
+	    }
 	    win = createWindow(dec);
 	    while(in.available() > 0) {
 		packet = readPacket(in);

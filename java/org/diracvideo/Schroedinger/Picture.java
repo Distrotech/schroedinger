@@ -5,30 +5,71 @@ import java.awt.image.*;
    we are going to take advantage of that */
 
 class SubBand {
-    int qf, qo;
+    int qi, level, stride, offset, orient; 
     Buffer buf;
+    Dimension frame, block;
     Parameters par;
     public SubBand (Buffer b, int q, Parameters p) {
 	par = p;
-	qf = quantFactor(q);
-	qo = quantOffset(q);
+	qi = q;
 	buf = b;
     }
     
-    public void decodeCoeffs(short[] out, int s, int b, int e, int w) {
+    public void calculateSizes(int i, boolean luma) {
+	level = (i-1)/3;
+	frame = luma ? par.iwtLumaSize : par.iwtChromaSize;
+	orient = (i - 1) % 3 + 1;
+	if(orient != 0) {
+	    block = new Dimension(frame.width / par.horiz_codeblocks[level+1],
+				  frame.height / par.vert_codeblocks[level+1]);
+	} else {
+	    block = new Dimension(frame.width / par.horiz_codeblocks[0],
+				  frame.height / par.vert_codeblocks[0]);
+	}
+	stride = (1 << (par.transformDepth - level));
+	offset = (orient == 0 ? 0 : 
+		  (orient == 1 ? stride >> 1 :
+		   (orient == 2 ? (frame.width * stride) >> 1 :
+		    (stride + frame.width * stride) >> 1)));
+    }
+    
+    public void decodeCoeffs(short[] out) {
 	/* basically the plan is to decode the coefficients
 	   into the frame array right where they should be */
-	if(buf != null) {
-	    Unpack u = new Unpack(buf);
-	    for(int i = b; i < e; i += w*s) {
-		for(int j = i; j < w + i; j += s) {
-		    out[j] = u.decodeSint(qf,qo);
-		}
-	    } 
-	} 
+	if(buf == null)
+	    return;
+	Unpack u = new Unpack(buf);
+	int qf, qo, numX, numY;
+	numX = (orient == 0) ? par.horiz_codeblocks[0] :
+	    par.horiz_codeblocks[level+1];
+	numY = (orient == 0) ? par.vert_codeblocks[0] :
+	    par.vert_codeblocks[level+1];
+	if(numX * numY == 1) {
+	    decodeCodeBlock(out,u,0,0);
+	    return;
+	}
+	for(int y = 0; y < numY; y++) {
+	    for(int x = 0; x < numX; x++) {
+		if(u.decodeBool())
+		    continue;
+		if(par.codeblock_mode_index != 0) 
+		    qi += u.decodeSint();
+		decodeCodeBlock(out, u, x,y);
+	    }
+	}
     }
 
-    private int quantFactor(int qi) {
+
+    private void decodeCodeBlock(short[] out, Unpack u,
+				 int blockX, int blockY) {
+	int qo = quantOffset(qi);
+	int qf = quantFactor(qi);
+	int blockOffset = (blockY*block.height*frame.width + blockX*block.width);
+	int blockEnd = blockOffset + block.height*frame.width + block.width;
+	//FIXME blockEnd goes out of bounds, unsure why
+    }
+
+    private int quantFactor(int qi) {	    
 	int base = (1 << (qi >>> 2));
 	switch(qi & 0x3) {
 	case 0:
@@ -51,10 +92,10 @@ class SubBand {
 		if(qi == 1) {
 		    return 2;
 		} else {
-		    return (qf + 1) / 2;
+		    return (quantFactor(qi) + 1) / 2;
 		}
 	    } else {
-		return (qf * 3 + 4) / 8;
+		return (quantFactor(qi) * 3 + 4) / 8;
 	    }
 	}
     }
@@ -62,12 +103,13 @@ class SubBand {
 
 class Parameters {
     /* all that matters for now is wavelet depth */
-    public int transform_depth = 4, wavelet_index;
+    public int transformDepth = 4, wavelet_index;
     public int codeblock_mode_index = 0;
     public boolean no_ac, is_ref, is_lowdelay;
     public int[] horiz_codeblocks = new int[7],
 	vert_codeblocks = new int[7];
     public int num_refs;
+    public Dimension iwtLumaSize, iwtChromaSize;
 
     public Parameters(int c) {
 	no_ac = !((c & 0x48) == 0x8);
@@ -76,21 +118,20 @@ class Parameters {
 	is_lowdelay = ((c & 0x88) == 0x88);
     }
 
-    public Dimension getIwtSize(VideoFormat format, boolean luma) {
+    public void calculateIwtSizes(VideoFormat format) {
 	int size[] = {0,0};
-	if(luma) {
-	    format.getPictureLumaSize(size);
-	} else {
-	    format.getPictureChromaSize(size);
-	}
-	return new Dimension( Util.roundUpPow2(size[0], transform_depth),
-			      Util.roundUpPow2(size[1], transform_depth));
+	format.getPictureLumaSize(size);
+	iwtLumaSize = new Dimension(Util.roundUpPow2(size[0], transformDepth),
+				    Util.roundUpPow2(size[1], transformDepth));
+	format.getPictureChromaSize(size);
+	iwtChromaSize = new Dimension(Util.roundUpPow2(size[0], transformDepth),
+				      Util.roundUpPow2(size[1], transformDepth));
     }
 
     public String toString() {
 	StringBuilder sb = new StringBuilder();
 	sb.append("\nParameters:\n");
-	sb.append(String.format("Transform depth: %d\n", transform_depth));
+	sb.append(String.format("Transform depth: %d\n", transformDepth));
 	sb.append(String.format("Using ac: %c\n", (no_ac ? 'n' : 'y')));
 	sb.append(String.format("Is ref: %c\n", (is_ref ? 'y' : 'n')));
 	return sb.toString();
@@ -159,6 +200,7 @@ public class Picture {
 		if(par.is_lowdelay) {
 		    parseLowDelayTransformData(u);
 		} else {
+		    par.calculateIwtSizes(format);
 		    parseTransformData(u);
 		}
 	    }
@@ -196,16 +238,16 @@ public class Picture {
 
     private void parseTransformParameters(Unpack u) throws Exception {
 	par.wavelet_index = u.decodeUint();
-	par.transform_depth = u.decodeUint();
+	par.transformDepth = u.decodeUint();
 	if(!par.is_lowdelay) {
 	    if(u.decodeBool()) {
-		for(int i = 0; i < par.transform_depth + 1; i++) {
+		for(int i = 0; i < par.transformDepth + 1; i++) {
 		    par.horiz_codeblocks[i] = u.decodeUint();
 		    par.vert_codeblocks[i] = u.decodeUint();
 		}
 		par.codeblock_mode_index = u.decodeUint();
 	    } else {
-		for(int i = 0; i < par.transform_depth + 1; i++) {
+		for(int i = 0; i < par.transformDepth + 1; i++) {
 		    par.horiz_codeblocks[i] = 1;
 		    par.vert_codeblocks[i] = 1;
 		}
@@ -217,19 +259,21 @@ public class Picture {
 
     private void parseTransformData(Unpack u) throws Exception {
 	for(int c = 0; c < 3; c++) {
-	    for(int i = 0; i < 1+3*par.transform_depth; i++) {
+	    for(int i = 0; i < 1+3*par.transformDepth; i++) {
 		u.align();
 		int l = u.decodeUint();
 		if( l != 0) {
 		    int q = u.decodeUint();
 		    Buffer b = u.getSubBuffer(l);
 		    coeffs[c][i] = new SubBand(b,q,par);
+		    coeffs[c][i].calculateSizes(i, c == 0);
 		} else {
 		    coeffs[c][i] = new SubBand(null,0,par);
 		}
 	    }
 	}
     }
+
 
     private void parseLowDelayTransformData(Unpack u) {
 	System.err.println("parseLowDelayTransformData()");
@@ -249,27 +293,20 @@ public class Picture {
     }
 
     private void decodeComponent(int c) {
-	Dimension dim = par.getIwtSize(format, c == 0);
+	Dimension dim = (c == 0) ? par.iwtLumaSize : par.iwtChromaSize;
 	int size = dim.width * dim.height;
-	int stride = (1 << par.transform_depth);
-	coeffs[c][0].decodeCoeffs(frame[c], stride,0, size, dim.width);
-	for(int i = 1; i < par.transform_depth; i++) {
-	    coeffs[c][3*i+1].decodeCoeffs(frame[c], stride,
-					  stride >> 1, size, dim.width);
-	    coeffs[c][3*i+2].decodeCoeffs(frame[c], stride, 
-					  (stride * dim.width) >> 1,
-					  size, dim.width);
-	    coeffs[c][3*i+3].decodeCoeffs(frame[c], stride,
-					  (stride * dim.width + stride) >> 1,
-					  size, dim.width);
-	    stride >>= 1;
-	}
-	Wavelet.inverse(frame[c], dim.width, par.transform_depth); 
+	coeffs[c][0].decodeCoeffs(frame[c]);
+	for(int i = 1; i < par.transformDepth; i++) {
+	    coeffs[c][3*i+1].decodeCoeffs(frame[c]);
+	    coeffs[c][3*i+2].decodeCoeffs(frame[c]);
+	    coeffs[c][3*i+3].decodeCoeffs(frame[c]);
+	} 
+	Wavelet.inverse(frame[c], dim.width, par.transformDepth);  
     }
 
     private void initializeTransformFrames() {
-	Dimension lum = par.getIwtSize(format, true);
-	Dimension chrom = par.getIwtSize(format, true);
+	Dimension lum = par.iwtLumaSize;
+	Dimension chrom = par.iwtChromaSize;
 	frame = new short[3][];
 	frame[0] = new short[lum.width * lum.height];
 	frame[1] = new short[chrom.width * chrom.height];
@@ -277,22 +314,21 @@ public class Picture {
     }
 
     private void decodeYuv(int pixels[]) {
-	Dimension dim = par.getIwtSize(format, true);
-	for(int i = 0; i < format.height; i++) {
-	    for(int j = 0; j < format.width; j++) {
-		pixels[j + i*format.width] =
-		    (0x1010100 *frame[0][j + i*dim.width]) >> 8;
-	    }
-	}
+        Dimension dim = par.iwtLumaSize;
+        for(int i = 0; i < format.height-10; i++) {
+            for(int j = 0; j < format.width; j++) {
+                int v = (frame[0][j + i*format.width]);
+                pixels[j + i*format.width] = (v * 0x010101);
+            }
+        }
     }
     
     private void createImage() {
-	img = new BufferedImage(format.width + 1, format.height + 1, 
+	img = new BufferedImage(format.width , format.height , 
 				BufferedImage.TYPE_INT_RGB);
-	WritableRaster ras = img.getRaster();
 	int pixels[] = new int[format.width * format.height];
 	decodeYuv(pixels);
-	img.setRGB(0,0, format.width, format.height,pixels, 0,1);
+	img.setRGB(0,0, format.width, format.height, pixels, 0, format.width);
     }
 
     public Image getImage() {

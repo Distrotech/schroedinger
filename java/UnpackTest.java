@@ -55,7 +55,7 @@ public class UnpackTest {
 	Unpack u = new Unpack(r);
 	for(int i = 0; i < 6; i++) {
 	    int v = u.decodeUint();
-	    System.err.println(v);
+	    //	    System.err.println(v);
 	    if(i != v) {
 		throw new Error("Error in decodeUint()");
 	    }

@@ -3,7 +3,8 @@ import org.diracvideo.Schroedinger.*;
 public class Wavelet2dTest {
     public static void main(String a[]) {
 	synthesizeTest();
-	TwoDimensionTest();
+	interLeaveTest();
+	twoDimensionTest();
     }
 
     private static void synthesizeTest() {
@@ -19,9 +20,46 @@ public class Wavelet2dTest {
 	}
     }
 
-    private static void TwoDimensionTest() {
-	
+    private static void interLeaveTest() {
+	short ll[] = new short[36];
+	short lh[] = new short[36];	
+	short hl[] = new short[36];
+	short hh[] = new short[36];
+	fill(ll,1);
+	fill(lh,2);
+	fill(hl,3);
+	fill(hh,4);
+	short frame[] = Wavelet.interleave(ll,lh,hl,hh,6);
+//	System.err.println(printable(frame,12));
     }
 
+    private static void twoDimensionTest() {
+	short ll[] = new short[36];
+	short other[] = new short[36];
+	fill(ll,1);
+	short frame[] = Wavelet.interleave(ll, other, other, other, 6);
+	Wavelet.inverse(frame, 12, 1);
+	for(int i = 0; i < frame.length; i++) {
+	    if(frame[i] != 1) {
+		throw new Error("Wavelet error: inverse");
+	    }
+	}
+    }
+
+    private static void fill(short arr[], int v) {
+	short s = (short)v;
+	for(int i = 0; i < arr.length; i++) {
+	    arr[i] = s;
+	}
+    }
+    
+    private static String printable(short arr[], int w) {
+	StringBuilder sb = new StringBuilder();
+	for(int i = 0; i < arr.length; i++) {
+	    sb.append(String.format("%c%d", (((i % w) == 0) ? '\n' : ' '),
+				    arr[i]));
+	}
+	return sb.toString();
+    }
 
 }

@@ -27,11 +27,11 @@ public class Wavelet {
 		synthesize(data,s*w,x,data.length); /* a column */
 	    }
 	    for(int y = 0; y < data.length; y += w) {
-		synthesize(data,s,y,w); /* a row */
+		synthesize(data,s,y,y + w); /* a row */
 	    }
 	}
-	for(int i = 0; i < data.length; i++) {
-	    data[i] = (short)((data[i]+1)>>1);
+       	for(int i = 0; i < data.length; i++) {
+	  data[i] = (short)((data[i]+1)>>1);
 	}
     }
     /** synthesize:
@@ -64,15 +64,17 @@ public class Wavelet {
     }
 
     public static short[] interleave(short ll[], short hl[], 
-				     short lh[], short hh[], int w) {
+				     short lh[], short hh[], int width) {
 	short o[] = new short[ll.length*4];
-	for(int i = 0; i < ll.length; i++) {
-	    for(int j = 0; j < ll.length; j++) {
-		int pos =(w*j + i);
-		o[2*pos] = ll[pos];
-		o[2*pos + 1] = hl[pos];
-		o[2*pos + w] = lh[pos];
-		o[2*pos + w + 1] = hh[pos];
+	int height = ll.length / width;
+	for(int y = 0; y < height; y++) {
+	    for(int x = 0; x < width; x++) {
+		int pos = (x + y*width);
+		int outpos = 2*x + 4*y*width;
+		o[outpos] = ll[pos];
+		o[outpos+1] = hl[pos];
+		o[outpos+2*width] = lh[pos];
+		o[outpos+2*width+1] = hh[pos];
 	    }
 	}
 	return o;
