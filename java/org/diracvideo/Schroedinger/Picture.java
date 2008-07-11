@@ -47,7 +47,7 @@ class SubBand {
 	if(numX * numY == 1) {
 	    decodeCodeBlock(out,u,0,0);
 	    return;
-	}
+	} 
 	for(int y = 0; y < numY; y++) {
 	    for(int x = 0; x < numX; x++) {
 		if(u.decodeBool())
@@ -64,9 +64,33 @@ class SubBand {
 				 int blockX, int blockY) {
 	int qo = quantOffset(qi);
 	int qf = quantFactor(qi);
-	int blockOffset = (blockY*block.height*frame.width + blockX*block.width);
-	int blockEnd = blockOffset + block.height*frame.width + block.width;
-	//FIXME blockEnd goes out of bounds, unsure why
+	int blockOffset = blockY*block.height*frame.width + blockX*block.width;
+	int blockEnd = blockOffset + (block.height-1)*frame.width + block.width;
+	assert blockEnd <= out.length : "blockEnd out of bounds";
+	for(int i = blockOffset + offset; i < blockEnd; i += frame.width*stride)
+	    for(int j = i; j < i + block.width; j += stride) {
+		out[j] = u.decodeSint(qf,qo);
+	    }
+    }
+    
+    public void intraDCPredict(short out[]) {
+	int predict = 0;
+	for(int i = 0; i < out.length; i += frame.width * stride) {
+	    for(int j = i; j < i + frame.width; j += stride) {
+		if(j > i && i > 0) {
+		    predict = Util.mean(out[j - stride], 
+					out[j - frame.width*stride],
+					out[j - frame.width*stride - stride]);
+		} else if(j > i && i == 0) {
+		    predict = out[j-stride];
+		} else if(j == i && i > 0) {
+		    predict = out[j-stride*frame.width];
+		} else {
+		    predict = 0;
+		}
+		out[j] += predict;
+	    }
+	}
     }
 
     private int quantFactor(int qi) {	    
@@ -296,6 +320,7 @@ public class Picture {
 	Dimension dim = (c == 0) ? par.iwtLumaSize : par.iwtChromaSize;
 	int size = dim.width * dim.height;
 	coeffs[c][0].decodeCoeffs(frame[c]);
+	coeffs[c][0].intraDCPredict(frame[c]);
 	for(int i = 1; i < par.transformDepth; i++) {
 	    coeffs[c][3*i+1].decodeCoeffs(frame[c]);
 	    coeffs[c][3*i+2].decodeCoeffs(frame[c]);

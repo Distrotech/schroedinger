@@ -13,5 +13,11 @@ final class Util {
 	return (i < l ? l : i > h ? h : i);
     }
 
+    public final static int mean(int ... numbers) {
+	int s = 0;
+	for(int i = 0; i < numbers.length; i++)
+	    s += numbers[i];
+	return s/numbers.length;
+    }
 }
 
