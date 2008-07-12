@@ -42,6 +42,7 @@ typedef pthread_mutex_t SchroMutex;
 #define REQUIRED_TEXTURE_UNITS 9
 
 struct _SchroOpenGL {
+  int is_initialized;
   int is_usable;
   int is_visible;
   int lock_count;
@@ -65,7 +66,9 @@ schro_opengl_x_error_handler (Display *display, XErrorEvent *event)
   char errormsg[512];
 
   XGetErrorText (display, event->error_code, errormsg, sizeof (errormsg));
+
   SCHRO_ERROR ("Xlib error: %s", errormsg);
+  SCHRO_ASSERT (0);
 
   return 0;
 }
@@ -82,7 +85,7 @@ schro_opengl_open_display (SchroOpenGL *opengl, const char *display_name)
     return FALSE;
   }
 
-  XSynchronize (opengl->display, False);
+  XSynchronize (opengl->display, True); // True for debug, False for speed
   XSetErrorHandler (schro_opengl_x_error_handler);
 
   opengl->root = DefaultRootWindow (opengl->display);
@@ -281,7 +284,9 @@ SchroOpenGL *
 schro_opengl_new (void)
 {
   SchroOpenGL *opengl = schro_malloc0 (sizeof (SchroOpenGL));
+  const char *display_name;
 
+  opengl->is_initialized = FALSE;
   opengl->is_usable = TRUE;
   opengl->is_visible = FALSE;
   opengl->lock_count = 0;
@@ -299,7 +304,9 @@ schro_opengl_new (void)
 
   schro_mutex_init_recursive (opengl->mutex);
 
-  if (!schro_opengl_open_display (opengl, NULL)) {
+  display_name = getenv ("SCHRO_OPENGL_DISPLAY");
+
+  if (!schro_opengl_open_display (opengl, display_name)) {
     opengl->is_usable = FALSE;
     return opengl;
   }
@@ -339,6 +346,8 @@ schro_opengl_new (void)
   glEnable (GL_TEXTURE_RECTANGLE_ARB);
 
   schro_opengl_unlock (opengl);
+
+  opengl->is_initialized = TRUE;
 
   //schro_opengl_set_visible (opengl, TRUE);
 
@@ -427,33 +436,35 @@ schro_opengl_unlock (SchroOpenGL *opengl)
   --opengl->lock_count;
 
   if (opengl->lock_count == 0) {
+    if (opengl->is_initialized) {
 #if SCHRO_OPENGL_UNBIND_TEXTURES
-    for (i = 0; i < REQUIRED_TEXTURE_UNITS; ++i) {
-      glActiveTextureARB (GL_TEXTURE0_ARB + i);
-      glGetIntegerv (GL_TEXTURE_BINDING_RECTANGLE_ARB, &texture);
+      for (i = 0; i < REQUIRED_TEXTURE_UNITS; ++i) {
+        glActiveTextureARB (GL_TEXTURE0_ARB + i);
+        glGetIntegerv (GL_TEXTURE_BINDING_RECTANGLE_ARB, &texture);
 
-      SCHRO_ASSERT (!glIsTexture (texture));
-      SCHRO_ASSERT (texture == 0);
-    }
+        SCHRO_ASSERT (!glIsTexture (texture));
+        SCHRO_ASSERT (texture == 0);
+      }
 
-    glActiveTextureARB (GL_TEXTURE0_ARB);
+      glActiveTextureARB (GL_TEXTURE0_ARB);
 #endif
 
-    glGetIntegerv (GL_FRAMEBUFFER_BINDING_EXT, &framebuffer);
-
-    SCHRO_ASSERT (!glIsFramebufferEXT (framebuffer));
-    SCHRO_ASSERT (framebuffer == 0);
-
-    if (GLEW_EXT_framebuffer_blit) {
-      glGetIntegerv (GL_READ_FRAMEBUFFER_BINDING_EXT, &framebuffer);
+      glGetIntegerv (GL_FRAMEBUFFER_BINDING_EXT, &framebuffer);
 
       SCHRO_ASSERT (!glIsFramebufferEXT (framebuffer));
       SCHRO_ASSERT (framebuffer == 0);
 
-      glGetIntegerv (GL_DRAW_FRAMEBUFFER_BINDING_EXT, &framebuffer);
+      if (GLEW_EXT_framebuffer_blit) {
+        glGetIntegerv (GL_READ_FRAMEBUFFER_BINDING_EXT, &framebuffer);
 
-      SCHRO_ASSERT (!glIsFramebufferEXT (framebuffer));
-      SCHRO_ASSERT (framebuffer == 0);
+        SCHRO_ASSERT (!glIsFramebufferEXT (framebuffer));
+        SCHRO_ASSERT (framebuffer == 0);
+
+        glGetIntegerv (GL_DRAW_FRAMEBUFFER_BINDING_EXT, &framebuffer);
+
+        SCHRO_ASSERT (!glIsFramebufferEXT (framebuffer));
+        SCHRO_ASSERT (framebuffer == 0);
+      }
     }
 
     XLockDisplay (opengl->display);

@@ -44,13 +44,30 @@ struct _SchroOpenGLCanvas {
   SchroOpenGLTransfer pull;
 };
 
-#define SCHRO_OPENGL_CANVAS_POOL_SIZE 50
+/*
+struct _SchroOpenGLCanvas {
+  SchroOpenGL *opengl;
+  SchroFrameFormat frame_format;
+  int width;
+  int height;
+  GLuint texture;
+  GLenum internal_format;
+  GLenum pixel_format;
+  GLenum type;
+  int channels;
+  GLuint framebuffer;
+};*/
+
+#define SCHRO_OPENGL_CANVAS_POOL_SIZE 10
 
 // FIXME: add a mechanism to drop long time unused canvases from the pool
 struct _SchroOpenGLCanvasPool {
   SchroOpenGL *opengl;
   SchroOpenGLCanvas *canvases[SCHRO_OPENGL_CANVAS_POOL_SIZE];
   int size;
+
+  int total;
+  int peak;
 };
 
 // FIXME: reduce storage flags to fixed point, float and integer

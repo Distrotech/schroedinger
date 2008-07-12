@@ -10,10 +10,10 @@
 unsigned int _schro_opengl_canvas_flags
     = 0
     //| SCHRO_OPENGL_CANVAS_STORE_BGRA /* FIXME: currently broken with packed formats in convert */
-    | SCHRO_OPENGL_CANVAS_STORE_U8_AS_UI8
+//    | SCHRO_OPENGL_CANVAS_STORE_U8_AS_UI8
     //| SCHRO_OPENGL_CANVAS_STORE_U8_AS_F16
     //| SCHRO_OPENGL_CANVAS_STORE_U8_AS_F32
-    | SCHRO_OPENGL_CANVAS_STORE_S16_AS_UI16
+//    | SCHRO_OPENGL_CANVAS_STORE_S16_AS_UI16
     //| SCHRO_OPENGL_CANVAS_STORE_S16_AS_I16 /* FIXME: doesn't yield a useable mapping in shader */
     //| SCHRO_OPENGL_CANVAS_STORE_S16_AS_U16
     //| SCHRO_OPENGL_CANVAS_STORE_S16_AS_F16 /* FIXME: currently broken in shader */
@@ -657,6 +657,8 @@ SchroOpenGLCanvasPool *schro_opengl_canvas_pool_new (SchroOpenGL *opengl)
 
   canvas_pool->opengl = opengl;
   canvas_pool->size = 0;
+  canvas_pool->total = 0;
+  canvas_pool->peak = 0;
 
   return canvas_pool;
 }
@@ -675,6 +677,8 @@ void schro_opengl_canvas_pool_free (SchroOpenGLCanvasPool* canvas_pool)
   }
 
   schro_opengl_unlock (canvas_pool->opengl);
+
+  SCHRO_ERROR ("peak %i", canvas_pool->peak);
 
   schro_free (canvas_pool);
 }
@@ -752,6 +756,9 @@ schro_opengl_canvas_pool_pull_or_new (SchroOpenGLCanvasPool* canvas_pool,
 
   if (!canvas) {
     canvas = schro_opengl_canvas_new (opengl, format, width, height);
+
+    ++canvas_pool->total;
+    canvas_pool->peak = MAX (canvas_pool->peak, canvas_pool->total);
   }
 
   schro_opengl_unlock (canvas_pool->opengl);
@@ -769,6 +776,7 @@ schro_opengl_canvas_pool_push_or_free (SchroOpenGLCanvasPool* canvas_pool,
     schro_opengl_canvas_pool_push (canvas_pool, canvas);
   } else {
     schro_opengl_canvas_free (canvas);
+    --canvas_pool->total;
   }
 
   schro_opengl_unlock (canvas_pool->opengl);

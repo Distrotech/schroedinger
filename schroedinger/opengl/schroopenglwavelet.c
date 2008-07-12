@@ -82,7 +82,7 @@ schro_opengl_wavelet_vertical_deinterleave (SchroFrameData *frame_data)
 
   glUseProgramObjectARB (shader_vertical_deinterleave_h->program);
   glUniform1iARB (shader_vertical_deinterleave_h->textures[0], 0);
-  glUniform2fARB (shader_vertical_deinterleave_h->offset, 0, height / 2);
+  glUniform2fARB (shader_vertical_deinterleave_h->offsets[0], 0, height / 2);
 
   schro_opengl_render_quad (0, height / 2, width, height / 2);
 
@@ -301,7 +301,7 @@ schro_opengl_wavelet_inverse_transform (SchroFrameData *frame_data,
 
   glUseProgramObjectARB (shader_filter_lp->program);
   glUniform1iARB (shader_filter_lp->textures[0], 0);
-  glUniform2fARB (shader_filter_lp->offset, 0, subband_height);
+  glUniform2fARB (shader_filter_lp->offsets[0], 0, subband_height);
 
   #define RENDER_QUAD_VERTICAL_Lp(_y, _quad_height) \
       schro_opengl_wavelet_render_quad (shader_filter_lp, 0, _y, width, \
@@ -339,7 +339,7 @@ schro_opengl_wavelet_inverse_transform (SchroFrameData *frame_data,
 
   glUseProgramObjectARB (shader_filter_hp->program);
   glUniform1iARB (shader_filter_hp->textures[0], 0);
-  glUniform2fARB (shader_filter_hp->offset, 0, subband_height);
+  glUniform2fARB (shader_filter_hp->offsets[0], 0, subband_height);
 
   #define RENDER_QUAD_VERTICAL_Hp(_y_offset, _quad_height) \
       schro_opengl_wavelet_render_quad (shader_filter_hp, 0, \
@@ -377,7 +377,7 @@ schro_opengl_wavelet_inverse_transform (SchroFrameData *frame_data,
 
   glUseProgramObjectARB (shader_vertical_interleave->program);
   glUniform1iARB (shader_vertical_interleave->textures[0], 0);
-  glUniform2fARB (shader_vertical_interleave->offset, 0, subband_height);
+  glUniform2fARB (shader_vertical_interleave->offsets[0], 0, subband_height);
 
   schro_opengl_render_quad (0, 0, width, height);
 
@@ -391,7 +391,7 @@ schro_opengl_wavelet_inverse_transform (SchroFrameData *frame_data,
 
   glUseProgramObjectARB (shader_filter_lp->program);
   glUniform1iARB (shader_filter_lp->textures[0], 0);
-  glUniform2fARB (shader_filter_lp->offset, subband_width, 0);
+  glUniform2fARB (shader_filter_lp->offsets[0], subband_width, 0);
 
   #define RENDER_QUAD_HORIZONTAL_Lp(_x, _quad_width) \
       schro_opengl_wavelet_render_quad (shader_filter_lp, _x, 0, _quad_width, \
@@ -429,7 +429,7 @@ schro_opengl_wavelet_inverse_transform (SchroFrameData *frame_data,
 
   glUseProgramObjectARB (shader_filter_hp->program);
   glUniform1iARB (shader_filter_hp->textures[0], 0);
-  glUniform2fARB (shader_filter_hp->offset, subband_width, 0);
+  glUniform2fARB (shader_filter_hp->offsets[0], subband_width, 0);
 
   #define RENDER_QUAD_HORIZONTAL_Hp(_x_offset, _quad_width) \
       schro_opengl_wavelet_render_quad (shader_filter_hp, \
@@ -467,7 +467,7 @@ schro_opengl_wavelet_inverse_transform (SchroFrameData *frame_data,
 
   glUseProgramObjectARB (shader_horizontal_interleave->program);
   glUniform1iARB (shader_horizontal_interleave->textures[0], 0);
-  glUniform2fARB (shader_horizontal_interleave->offset, width / 2, 0);
+  glUniform2fARB (shader_horizontal_interleave->offsets[0], width / 2, 0);
 
   schro_opengl_render_quad (0, 0, width, height);
 

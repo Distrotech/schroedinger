@@ -10,11 +10,11 @@
 #include <string.h>
 
 static char*
-schro_opengl_shader_add_linenumbers (const char* code)
+schro_opengl_shader_add_linenumbers (const char* string)
 {
-  const char *src = code;
+  const char *src = string;
   char *dest;
-  char *linenumbered_code;
+  char *linenumbered;
   char number[16];
   int lines = 1;
   int size;
@@ -29,10 +29,10 @@ schro_opengl_shader_add_linenumbers (const char* code)
 
   snprintf (number, sizeof (number) - 1, "%3i: ", lines);
 
-  size = strlen (code) + 1 + lines * strlen (number);
-  linenumbered_code = schro_malloc0 (size);
-  src = code;
-  dest = linenumbered_code;
+  size = strlen (string) + 1 + lines * strlen (number);
+  linenumbered = schro_malloc0 (size);
+  src = string;
+  dest = linenumbered;
 
   strcpy (dest, "  1: ");
 
@@ -53,7 +53,58 @@ schro_opengl_shader_add_linenumbers (const char* code)
     ++src;
   }
 
-  return linenumbered_code;
+  return linenumbered;
+}
+
+static void
+schro_opengl_shader_trim_right (char* string)
+{
+  int length = strlen (string);
+  char* temp;
+
+  if (length < 1) {
+    return;
+  }
+
+  temp = string + length - 1;
+
+  while (string <= temp && (*temp == ' ' || *temp == '\n')) {
+    *temp-- = '\0';
+  }
+}
+
+static void
+schro_opengl_shader_strip_false_positives (char* infolog)
+{
+  int length;
+  char* temp1;
+  char* temp2;
+
+  temp1 = strstr (infolog, "Fragment info\n-------------\n");
+
+  if (temp1) {
+    length = strlen ("Fragment info\n-------------\n");
+
+    memmove (temp1, temp1 + length, strlen (temp1) - length + 1);
+  }
+
+  temp1 = strstr (infolog, "warning C7050: \"$temp");
+
+  while (temp1) {
+    temp2 = temp1;
+
+    while (temp1 != infolog && temp1[-1] != '\n') {
+      --temp1;
+    }
+
+    while (temp2[1] != '\0' && temp2[-1] != '\n') {
+      ++temp2;
+    }
+
+    memmove (temp1, temp2, strlen (temp2) + 1);
+
+    temp1 = strstr (infolog, "warning C7050: \"$temp");
+  }
 }
 
 static int
@@ -80,8 +131,13 @@ schro_opengl_shader_check_status (GLhandleARB handle, GLenum status,
   if (length > 0) {
     linenumbered_code = schro_opengl_shader_add_linenumbers (code);
 
-    SCHRO_ERROR ("\nshadername:\n%s\nshadercode:\n%s\ninfolog:\n%s", name,
-        linenumbered_code, infolog);
+    schro_opengl_shader_strip_false_positives (infolog);
+    schro_opengl_shader_trim_right (infolog);
+
+    if (strlen (infolog) > 0) {
+      SCHRO_ERROR ("\nshadername:\n%s\nshadercode:\n%s\ninfolog:\n%s", name,
+          linenumbered_code, infolog);
+    }
 
     schro_free (linenumbered_code);
   }
@@ -150,9 +206,16 @@ schro_opengl_shader_new (const char* code, const char* name)
   UNIFORM_LOCATION_SAMPLER (texture1, textures[0]);
   UNIFORM_LOCATION_SAMPLER (texture2, textures[1]);
   UNIFORM_LOCATION_SAMPLER (texture3, textures[2]);
-  UNIFORM_LOCATION (vec2, offset, offset);
+  UNIFORM_LOCATION_SAMPLER (texture4, textures[3]);
+  UNIFORM_LOCATION_SAMPLER (texture5, textures[4]);
+  UNIFORM_LOCATION_SAMPLER (texture6, textures[5]);
+  UNIFORM_LOCATION (vec2, offset1, offsets[0]);
+  UNIFORM_LOCATION (vec2, offset2, offsets[1]);
+  UNIFORM_LOCATION (vec2, offset3, offsets[2]);
+  UNIFORM_LOCATION (vec2, offset4, offsets[3]);
   UNIFORM_LOCATION (vec2, origin, origin);
   UNIFORM_LOCATION (vec2, size, size);
+  UNIFORM_LOCATION (vec2, remaining, remaining);
   UNIFORM_LOCATION (vec2, four_decrease, four_decrease);
   UNIFORM_LOCATION (vec2, three_decrease, three_decrease);
   UNIFORM_LOCATION (vec2, two_decrease, two_decrease);
@@ -200,6 +263,8 @@ struct ShaderCode {
 
 #define SHADER_FLAG_USE_U8  (1 << 0)
 #define SHADER_FLAG_USE_S16 (1 << 1)
+
+// FIXME: need a much more elegant way to specify the shader code
 
 #define SHADER_HEADER \
     "#version 110\n" \
@@ -308,6 +373,24 @@ struct ShaderCode {
     "}\n"
 
 #endif
+
+#define SHADER_REF_WEIGHTING_S16 \
+    SHADER_DIVIDE_S16 \
+    "uniform float weight;\n" /* ref1_weight + ref2_weight */ \
+    "uniform float addend;\n" /* 1 << (ref_weight_precision - 1) */ \
+    "uniform float divisor;\n" /* 1 << ref_weight_precision */ \
+    "float ref_weighting_s16 (float value) {\n" \
+    "  return divide_s16 (value * weight + addend, divisor);\n" \
+    "}\n"
+
+#define SHADER_REF_WEIGHTING_S16_INTEGER \
+    SHADER_DIVIDE_S16_INTEGER \
+    "uniform float weight;\n" /* ref1_weight + ref2_weight */ /* FIXME: bind as int */ \
+    "uniform float addend;\n" /* 1 << (ref_weight_precision - 1) */ /* FIXME: bind as int */ \
+    "uniform float divisor;\n" /* 1 << ref_weight_precision */ /* FIXME: bind as int */ \
+    "int ref_weighting_s16 (int value) {\n" \
+    "  return divide_s16 (value * int (weight) + int (addend), int (divisor));\n" \
+    "}\n"
 
 #define SHADER_RSHIFT(_a, _b) \
     "float rshift (float value) {\n" \
@@ -846,15 +929,15 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
       SHADER_DIVIDE_S16
       /* distance between two corresponding texels from subbands L and H in
          texels = vec2 (width / 2.0, 0.0) or vec2 (0.0, height / 2.0) */
-      "uniform vec2 offset;\n"
+      "uniform vec2 offset1;\n"
       "uniform vec2 one_decrease;\n"
       "float filter (float h1m, float h0) {\n"
       "  return divide_s16 (h1m + h0 + 2.0, 4.0);\n"
       "}\n"
       "void main (void) {\n"
-      "  float l0 = read_s16 ();\n"                       /* A[2 ∗ n] */
-      "  float h1m = read_s16 (offset - one_decrease);\n" /* A[2 ∗ n - 1] */
-      "  float h0 = read_s16 (offset);\n"                 /* A[2 ∗ n + 1] */
+      "  float l0 = read_s16 ();\n"                        /* A[2 ∗ n] */
+      "  float h1m = read_s16 (offset1 - one_decrease);\n" /* A[2 ∗ n - 1] */
+      "  float h0 = read_s16 (offset1);\n"                 /* A[2 ∗ n + 1] */
       "  write_s16 (l0 - filter (h1m, h0));\n"
       "}\n",
       SHADER_HEADER_INTEGER
@@ -863,15 +946,15 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
       SHADER_DIVIDE_S16_INTEGER
       /* distance between two corresponding texels from subbands L and H in
          texels = vec2 (width / 2.0, 0.0) or vec2 (0.0, height / 2.0) */
-      "uniform vec2 offset;\n"
+      "uniform vec2 offset1;\n"
       "uniform vec2 one_decrease;\n"
       "int filter (int h1m, int h0) {\n"
       "  return divide_s16 (h1m + h0 + 2, 4);\n"
       "}\n"
       "void main (void) {\n"
-      "  int l0 = read_s16 ();\n"                       /* A[2 ∗ n] */
-      "  int h1m = read_s16 (offset - one_decrease);\n" /* A[2 ∗ n - 1] */
-      "  int h0 = read_s16 (offset);\n"                 /* A[2 ∗ n + 1] */
+      "  int l0 = read_s16 ();\n"                        /* A[2 ∗ n] */
+      "  int h1m = read_s16 (offset1 - one_decrease);\n" /* A[2 ∗ n - 1] */
+      "  int h0 = read_s16 (offset1);\n"                 /* A[2 ∗ n + 1] */
       "  write_s16 (l0 - filter (h1m, h0));\n"
       "}\n" },
   { SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_DESLAURIERS_DUBUC_9_7_Hp,
@@ -882,7 +965,7 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
       SHADER_DIVIDE_S16
       /* distance between two corresponding texels from subbands L' and H in
          texels = vec2 (width / 2.0, 0.0) or vec2 (0.0, height / 2.0) */
-      "uniform vec2 offset;\n"
+      "uniform vec2 offset1;\n"
       "uniform vec2 one_decrease;\n"
       "uniform vec2 one_increase;\n"
       "uniform vec2 two_increase;\n"
@@ -890,11 +973,11 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
       "  return divide_s16 (-l1m + 9.0 * (l0 + l1p) - l2p + 8.0, 16.0);\n"
       "}\n"
       "void main (void) {\n"
-      "  float l1m = read_s16 (-offset - one_decrease);\n" /* A[2 ∗ n - 2] */
-      "  float l0 = read_s16 (-offset);\n"                 /* A[2 ∗ n] */
-      "  float l1p = read_s16 (-offset + one_increase);\n" /* A[2 ∗ n + 2] */
-      "  float l2p = read_s16 (-offset + two_increase);\n" /* A[2 ∗ n + 4] */
-      "  float h0 = read_s16 ();\n"                        /* A[2 ∗ n + 1] */
+      "  float l1m = read_s16 (-offset1 - one_decrease);\n" /* A[2 ∗ n - 2] */
+      "  float l0 = read_s16 (-offset1);\n"                 /* A[2 ∗ n] */
+      "  float l1p = read_s16 (-offset1 + one_increase);\n" /* A[2 ∗ n + 2] */
+      "  float l2p = read_s16 (-offset1 + two_increase);\n" /* A[2 ∗ n + 4] */
+      "  float h0 = read_s16 ();\n"                         /* A[2 ∗ n + 1] */
       "  write_s16 (h0 + filter (l1m, l0, l1p, l2p));\n"
       "}\n",
       SHADER_HEADER_INTEGER
@@ -903,7 +986,7 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
       SHADER_DIVIDE_S16_INTEGER
       /* distance between two corresponding texels from subbands L' and H in
          texels = vec2 (width / 2.0, 0.0) or vec2 (0.0, height / 2.0) */
-      "uniform vec2 offset;\n"
+      "uniform vec2 offset1;\n"
       "uniform vec2 one_decrease;\n"
       "uniform vec2 one_increase;\n"
       "uniform vec2 two_increase;\n"
@@ -911,11 +994,11 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
       "  return divide_s16 (-l1m + 9 * (l0 + l1p) - l2p + 8, 16);\n"
       "}\n"
       "void main (void) {\n"
-      "  int l1m = read_s16 (-offset - one_decrease);\n" /* A[2 ∗ n - 2] */
-      "  int l0 = read_s16 (-offset);\n"                 /* A[2 ∗ n] */
-      "  int l1p = read_s16 (-offset + one_increase);\n" /* A[2 ∗ n + 2] */
-      "  int l2p = read_s16 (-offset + two_increase);\n" /* A[2 ∗ n + 4] */
-      "  int h0 = read_s16 ();\n"                        /* A[2 ∗ n + 1] */
+      "  int l1m = read_s16 (-offset1 - one_decrease);\n" /* A[2 ∗ n - 2] */
+      "  int l0 = read_s16 (-offset1);\n"                 /* A[2 ∗ n] */
+      "  int l1p = read_s16 (-offset1 + one_increase);\n" /* A[2 ∗ n + 2] */
+      "  int l2p = read_s16 (-offset1 + two_increase);\n" /* A[2 ∗ n + 4] */
+      "  int h0 = read_s16 ();\n"                         /* A[2 ∗ n + 1] */
       "  write_s16 (h0 + filter (l1m, l0, l1p, l2p));\n"
       "}\n" },
   { SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_LE_GALL_5_3_Lp,
@@ -926,15 +1009,15 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
       SHADER_DIVIDE_S16
       /* distance between two corresponding texels from subbands L and H in
          texels = vec2 (width / 2.0, 0.0) or vec2 (0.0, height / 2.0) */
-      "uniform vec2 offset;\n"
+      "uniform vec2 offset1;\n"
       "uniform vec2 one_decrease;\n"
       "float filter (float h1m, float h0) {\n"
       "  return divide_s16 (h1m + h0 + 2.0, 4.0);\n"
       "}\n"
       "void main (void) {\n"
-      "  float l0 = read_s16 ();\n"                       /* A[2 ∗ n] */
-      "  float h1m = read_s16 (offset - one_decrease);\n" /* A[2 ∗ n - 1] */
-      "  float h0 = read_s16 (offset);\n"                 /* A[2 ∗ n + 1] */
+      "  float l0 = read_s16 ();\n"                        /* A[2 ∗ n] */
+      "  float h1m = read_s16 (offset1 - one_decrease);\n" /* A[2 ∗ n - 1] */
+      "  float h0 = read_s16 (offset1);\n"                 /* A[2 ∗ n + 1] */
       "  write_s16 (l0 - filter (h1m, h0));\n"
       "}\n",
       SHADER_HEADER_INTEGER
@@ -943,15 +1026,15 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
       SHADER_DIVIDE_S16_INTEGER
       /* distance between two corresponding texels from subbands L and H in
          texels = vec2 (width / 2.0, 0.0) or vec2 (0.0, height / 2.0) */
-      "uniform vec2 offset;\n"
+      "uniform vec2 offset1;\n"
       "uniform vec2 one_decrease;\n"
       "int filter (int h1m, int h0) {\n"
       "  return divide_s16 (h1m + h0 + 2, 4);\n"
       "}\n"
       "void main (void) {\n"
-      "  int l0 = read_s16 ();\n"                       /* A[2 ∗ n] */
-      "  int h1m = read_s16 (offset - one_decrease);\n" /* A[2 ∗ n - 1] */
-      "  int h0 = read_s16 (offset);\n"                 /* A[2 ∗ n + 1] */
+      "  int l0 = read_s16 ();\n"                        /* A[2 ∗ n] */
+      "  int h1m = read_s16 (offset1 - one_decrease);\n" /* A[2 ∗ n - 1] */
+      "  int h0 = read_s16 (offset1);\n"                 /* A[2 ∗ n + 1] */
       "  write_s16 (l0 - filter (h1m, h0));\n"
       "}\n" },
   { SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_LE_GALL_5_3_Hp,
@@ -962,15 +1045,15 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
       SHADER_DIVIDE_S16
       /* distance between two corresponding texels from subbands L' and H in
          texels = vec2 (width / 2.0, 0.0) or vec2 (0.0, height / 2.0) */
-      "uniform vec2 offset;\n"
+      "uniform vec2 offset1;\n"
       "uniform vec2 one_increase;\n"
       "float filter (float l0, float l1p) {\n"
       "  return divide_s16 (l0 + l1p + 1.0, 2.0);\n"
       "}\n"
       "void main (void) {\n"
-      "  float l0 = read_s16 (-offset);\n"                 /* A[2 ∗ n] */
-      "  float l1p = read_s16 (-offset + one_increase);\n" /* A[2 ∗ n + 2] */
-      "  float h0 = read_s16 ();\n"                        /* A[2 ∗ n + 1] */
+      "  float l0 = read_s16 (-offset1);\n"                 /* A[2 ∗ n] */
+      "  float l1p = read_s16 (-offset1 + one_increase);\n" /* A[2 ∗ n + 2] */
+      "  float h0 = read_s16 ();\n"                         /* A[2 ∗ n + 1] */
       "  write_s16 (h0 + filter (l0, l1p));\n"
       "}\n",
       SHADER_HEADER_INTEGER
@@ -979,15 +1062,15 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
       SHADER_DIVIDE_S16_INTEGER
       /* distance between two corresponding texels from subbands L' and H in
          texels = vec2 (width / 2.0, 0.0) or vec2 (0.0, height / 2.0) */
-      "uniform vec2 offset;\n"
+      "uniform vec2 offset1;\n"
       "uniform vec2 one_increase;\n"
       "int filter (int l0, int l1p) {\n"
       "  return divide_s16 (l0 + l1p + 1, 2);\n"
       "}\n"
       "void main (void) {\n"
-      "  int l0 = read_s16 (-offset);\n"                 /* A[2 ∗ n] */
-      "  int l1p = read_s16 (-offset + one_increase);\n" /* A[2 ∗ n + 2] */
-      "  int h0 = read_s16 ();\n"                        /* A[2 ∗ n + 1] */
+      "  int l0 = read_s16 (-offset1);\n"                 /* A[2 ∗ n] */
+      "  int l1p = read_s16 (-offset1 + one_increase);\n" /* A[2 ∗ n + 2] */
+      "  int h0 = read_s16 ();\n"                         /* A[2 ∗ n + 1] */
       "  write_s16 (h0 + filter (l0, l1p));\n"
       "}\n" },
   /* FIXME: more than 1 level leads to errors */
@@ -999,7 +1082,7 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
       SHADER_DIVIDE_S16
       /* distance between two corresponding texels from subbands L and H in
          texels = vec2 (width / 2.0, 0.0) or vec2 (0.0, height / 2.0) */
-      "uniform vec2 offset;\n"
+      "uniform vec2 offset1;\n"
       "uniform vec2 two_decrease;\n"
       "uniform vec2 one_decrease;\n"
       "uniform vec2 one_increase;\n"
@@ -1007,11 +1090,11 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
       "  return divide_s16 (-h2m + 9.0 * (h1m + h0) - h1p + 16.0, 32.0);\n"
       "}\n"
       "void main (void) {\n"
-      "  float l0 = read_s16 ();\n"                       /* A[2 ∗ n] */
-      "  float h2m = read_s16 (offset - two_decrease);\n" /* A[2 ∗ n - 3] */
-      "  float h1m = read_s16 (offset - one_decrease);\n" /* A[2 ∗ n - 1] */
-      "  float h0 = read_s16 (offset);\n"                 /* A[2 ∗ n + 1] */
-      "  float h1p = read_s16 (offset + one_increase);\n" /* A[2 ∗ n + 3] */
+      "  float l0 = read_s16 ();\n"                        /* A[2 ∗ n] */
+      "  float h2m = read_s16 (offset1 - two_decrease);\n" /* A[2 ∗ n - 3] */
+      "  float h1m = read_s16 (offset1 - one_decrease);\n" /* A[2 ∗ n - 1] */
+      "  float h0 = read_s16 (offset1);\n"                 /* A[2 ∗ n + 1] */
+      "  float h1p = read_s16 (offset1 + one_increase);\n" /* A[2 ∗ n + 3] */
       "  write_s16 (l0 - filter (h2m, h1m, h0, h1p));\n"
       "}\n",
       SHADER_HEADER_INTEGER
@@ -1020,7 +1103,7 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
       SHADER_DIVIDE_S16_INTEGER
       /* distance between two corresponding texels from subbands L and H in
          texels = vec2 (width / 2.0, 0.0) or vec2 (0.0, height / 2.0) */
-      "uniform vec2 offset;\n"
+      "uniform vec2 offset1;\n"
       "uniform vec2 two_decrease;\n"
       "uniform vec2 one_decrease;\n"
       "uniform vec2 one_increase;\n"
@@ -1028,11 +1111,11 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
       "  return divide_s16 (-h2m + 9 * (h1m + h0) - h1p + 16, 32);\n"
       "}\n"
       "void main (void) {\n"
-      "  int l0 = read_s16 ();\n"                       /* A[2 ∗ n] */
-      "  int h2m = read_s16 (offset - two_decrease);\n" /* A[2 ∗ n - 3] */
-      "  int h1m = read_s16 (offset - one_decrease);\n" /* A[2 ∗ n - 1] */
-      "  int h0 = read_s16 (offset);\n"                 /* A[2 ∗ n + 1] */
-      "  int h1p = read_s16 (offset + one_increase);\n" /* A[2 ∗ n + 3] */
+      "  int l0 = read_s16 ();\n"                        /* A[2 ∗ n] */
+      "  int h2m = read_s16 (offset1 - two_decrease);\n" /* A[2 ∗ n - 3] */
+      "  int h1m = read_s16 (offset1 - one_decrease);\n" /* A[2 ∗ n - 1] */
+      "  int h0 = read_s16 (offset1);\n"                 /* A[2 ∗ n + 1] */
+      "  int h1p = read_s16 (offset1 + one_increase);\n" /* A[2 ∗ n + 3] */
       "  write_s16 (l0 - filter (h2m, h1m, h0, h1p));\n"
       "}\n" },
   /* FIXME: more than 1 level leads to errors */
@@ -1044,7 +1127,7 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
       SHADER_DIVIDE_S16
       /* distance between two corresponding texels from subbands L' and H in
          texels = vec2 (width / 2.0, 0.0) or vec2 (0.0, height / 2.0) */
-      "uniform vec2 offset;\n"
+      "uniform vec2 offset1;\n"
       "uniform vec2 one_decrease;\n"
       "uniform vec2 one_increase;\n"
       "uniform vec2 two_increase;\n"
@@ -1052,11 +1135,11 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
       "  return divide_s16 (-l1m + 9.0 * (l0 + l1p) - l2p + 8.0,16.0);\n"
       "}\n"
       "void main (void) {\n"
-      "  float l1m = read_s16 (-offset - one_decrease);\n" /* A[2 ∗ n - 2] */
-      "  float l0 = read_s16 (-offset);\n"                 /* A[2 ∗ n] */
-      "  float l1p = read_s16 (-offset + one_increase);\n" /* A[2 ∗ n + 2] */
-      "  float l2p = read_s16 (-offset + two_increase);\n" /* A[2 ∗ n + 4] */
-      "  float h0 = read_s16 ();\n"                        /* A[2 ∗ n + 1] */
+      "  float l1m = read_s16 (-offset1 - one_decrease);\n" /* A[2 ∗ n - 2] */
+      "  float l0 = read_s16 (-offset1);\n"                 /* A[2 ∗ n] */
+      "  float l1p = read_s16 (-offset1 + one_increase);\n" /* A[2 ∗ n + 2] */
+      "  float l2p = read_s16 (-offset1 + two_increase);\n" /* A[2 ∗ n + 4] */
+      "  float h0 = read_s16 ();\n"                         /* A[2 ∗ n + 1] */
       "  write_s16 (h0 + filter (l1m, l0, l1p, l2p));\n"
       "}\n",
       SHADER_HEADER_INTEGER
@@ -1065,7 +1148,7 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
       SHADER_DIVIDE_S16_INTEGER
       /* distance between two corresponding texels from subbands L' and H in
          texels = vec2 (width / 2.0, 0.0) or vec2 (0.0, height / 2.0) */
-      "uniform vec2 offset;\n"
+      "uniform vec2 offset1;\n"
       "uniform vec2 one_decrease;\n"
       "uniform vec2 one_increase;\n"
       "uniform vec2 two_increase;\n"
@@ -1073,11 +1156,11 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
       "  return divide_s16 (-l1m + 9 * (l0 + l1p) - l2p + 8, 16);\n"
       "}\n"
       "void main (void) {\n"
-      "  int l1m = read_s16 (-offset - one_decrease);\n" /* A[2 ∗ n - 2] */
-      "  int l0 = read_s16 (-offset);\n"                 /* A[2 ∗ n] */
-      "  int l1p = read_s16 (-offset + one_increase);\n" /* A[2 ∗ n + 2] */
-      "  int l2p = read_s16 (-offset + two_increase);\n" /* A[2 ∗ n + 4] */
-      "  int h0 = read_s16 ();\n"                        /* A[2 ∗ n + 1] */
+      "  int l1m = read_s16 (-offset1 - one_decrease);\n" /* A[2 ∗ n - 2] */
+      "  int l0 = read_s16 (-offset1);\n"                 /* A[2 ∗ n] */
+      "  int l1p = read_s16 (-offset1 + one_increase);\n" /* A[2 ∗ n + 2] */
+      "  int l2p = read_s16 (-offset1 + two_increase);\n" /* A[2 ∗ n + 4] */
+      "  int h0 = read_s16 ();\n"                         /* A[2 ∗ n + 1] */
       "  write_s16 (h0 + filter (l1m, l0, l1p, l2p));\n"
       "}\n" },
   { SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_HAAR_Lp,
@@ -1088,13 +1171,13 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
       SHADER_DIVIDE_S16
       /* distance between two corresponding texels from subbands L and H in
          texels = vec2 (width / 2.0, 0.0) or vec2 (0.0, height / 2.0) */
-      "uniform vec2 offset;\n"
+      "uniform vec2 offset1;\n"
       "float filter (float h0) {\n"
       "  return divide_s16 (h0 + 1.0, 2.0);\n"
       "}\n"
       "void main (void) {\n"
-      "  float l0 = read_s16 ();\n"       /* A[2 ∗ n] */
-      "  float h0 = read_s16 (offset);\n" /* A[2 ∗ n + 1] */
+      "  float l0 = read_s16 ();\n"        /* A[2 ∗ n] */
+      "  float h0 = read_s16 (offset1);\n" /* A[2 ∗ n + 1] */
       "  write_s16 (l0 - filter (h0));\n"
       "}\n",
       SHADER_HEADER_INTEGER
@@ -1103,13 +1186,13 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
       SHADER_DIVIDE_S16_INTEGER
       /* distance between two corresponding texels from subbands L and H in
          texels = vec2 (width / 2.0, 0.0) or vec2 (0.0, height / 2.0) */
-      "uniform vec2 offset;\n"
+      "uniform vec2 offset1;\n"
       "int filter (int h0) {\n"
       "  return divide_s16 (h0 + 1, 2);\n"
       "}\n"
       "void main (void) {\n"
-      "  int l0 = read_s16 ();\n"       /* A[2 ∗ n] */
-      "  int h0 = read_s16 (offset);\n" /* A[2 ∗ n + 1] */
+      "  int l0 = read_s16 ();\n"        /* A[2 ∗ n] */
+      "  int h0 = read_s16 (offset1);\n" /* A[2 ∗ n + 1] */
       "  write_s16 (l0 - filter (h0));\n"
       "}\n" },
   { SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_HAAR_Hp,
@@ -1119,10 +1202,10 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
       SHADER_WRITE_S16
       /* distance between two corresponding texels from subbands L' and H in
          texels = vec2 (width / 2.0, 0.0) or vec2 (0.0, height / 2.0) */
-      "uniform vec2 offset;\n"
+      "uniform vec2 offset1;\n"
       "void main (void) {\n"
-      "  float l0 = read_s16 (-offset);\n" /* A[2 ∗ n] */
-      "  float h0 = read_s16 ();\n"        /* A[2 ∗ n + 1] */
+      "  float l0 = read_s16 (-offset1);\n" /* A[2 ∗ n] */
+      "  float h0 = read_s16 ();\n"         /* A[2 ∗ n + 1] */
       "  write_s16 (h0 + l0);\n"
       "}\n",
       SHADER_HEADER_INTEGER
@@ -1130,10 +1213,10 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
       SHADER_WRITE_S16_INTEGER
       /* distance between two corresponding texels from subbands L' and H in
          texels = vec2 (width / 2.0, 0.0) or vec2 (0.0, height / 2.0) */
-      "uniform vec2 offset;\n"
+      "uniform vec2 offset1;\n"
       "void main (void) {\n"
-      "  int l0 = read_s16 (-offset);\n" /* A[2 ∗ n] */
-      "  int h0 = read_s16 ();\n"        /* A[2 ∗ n + 1] */
+      "  int l0 = read_s16 (-offset1);\n" /* A[2 ∗ n] */
+      "  int h0 = read_s16 ();\n"         /* A[2 ∗ n + 1] */
       "  write_s16 (h0 + l0);\n"
       "}\n" },
   { SCHRO_OPENGL_SHADER_IIWT_S16_VERTICAL_DEINTERLEAVE_L,
@@ -1166,11 +1249,11 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
       SHADER_HEADER
       "uniform sampler2DRect texture1;\n"
       /* height of subband XL */
-      "uniform vec2 offset;\n" /* = vec2 (0.0, height / 2.0) */
+      "uniform vec2 offset1;\n" /* = vec2 (0.0, height / 2.0) */
       "void main (void) {\n"
       "  float x = gl_TexCoord[0].x;\n"
       /* round y coordinate down from texel center n.5 to texel edge n.0 */
-      "  float y = floor (gl_TexCoord[0].y) - offset.y;\n"
+      "  float y = floor (gl_TexCoord[0].y) - offset1.y;\n"
       /* scale y coordinate to the destination coordinate and shift it from
          texel edge n.0 to texel center n.5 */
       "  vec2 coordinate = vec2 (x, y * 2.0 + 1.5);\n"
@@ -1180,11 +1263,11 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
       SHADER_WRITE_U16_INTEGER
       "uniform isampler2DRect texture1;\n"
       /* height of subband XL */
-      "uniform vec2 offset;\n" /* = vec2 (0.0, height / 2.0) */
+      "uniform vec2 offset1;\n" /* = vec2 (0.0, height / 2.0) */
       "void main (void) {\n"
       "  float x = gl_TexCoord[0].x;\n"
       /* round y coordinate down from texel center n.5 to texel edge n.0 */
-      "  float y = floor (gl_TexCoord[0].y) - offset.y;\n"
+      "  float y = floor (gl_TexCoord[0].y) - offset1.y;\n"
       /* scale y coordinate to the destination coordinate and shift it from
          texel edge n.0 to texel center n.5 */
       "  vec2 coordinate = vec2 (x, y * 2.0 + 1.5);\n"
@@ -1196,7 +1279,7 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
       "uniform sampler2DRect texture1;\n"
       /* vertical distance between two corresponding texels from subband XL
          and XH in texels */
-      "uniform vec2 offset;\n" /* = vec2 (0.0, height / 2.0) */
+      "uniform vec2 offset1;\n" /* = vec2 (0.0, height / 2.0) */
       "void main (void) {\n"
       "  float x = gl_TexCoord[0].x;\n"
       /* round y coordinate down from texel center n.5 to texel edge n.0 */
@@ -1204,7 +1287,7 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
       "  if (mod (y, 2.0) < 0.5) {\n"
       "    y = floor (y / 2.0);\n"
       "  } else {\n"
-      "    y = floor (y / 2.0) + offset.y;\n"
+      "    y = floor (y / 2.0) + offset1.y;\n"
       "  }\n"
       /* shift y coordinate from texel edge n.0 to texel center n.5 */
       "  vec2 coordinate = vec2 (x, y + 0.5);\n"
@@ -1215,7 +1298,7 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
       "uniform isampler2DRect texture1;\n"
       /* vertical distance between two corresponding texels from subband XL
          and XH in texels */
-      "uniform vec2 offset;\n" /* = vec2 (0.0, height / 2.0) */
+      "uniform vec2 offset1;\n" /* = vec2 (0.0, height / 2.0) */
       "void main (void) {\n"
       "  float x = gl_TexCoord[0].x;\n"
       /* round y coordinate down from texel center n.5 to texel edge n.0 */
@@ -1223,7 +1306,7 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
       "  if (mod (y, 2.0) < 0.5) {\n"
       "    y = floor (y / 2.0);\n"
       "  } else {\n"
-      "    y = floor (y / 2.0) + offset.y;\n"
+      "    y = floor (y / 2.0) + offset1.y;\n"
       "  }\n"
       /* shift y coordinate from texel edge n.0 to texel center n.5 */
       "  vec2 coordinate = vec2 (x, y + 0.5);\n"
@@ -1235,7 +1318,7 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
       "uniform sampler2DRect texture1;\n"
       /* horizontal distance between two corresponding texels from subband L'
          and H' in texels */
-      "uniform vec2 offset;\n" /* = vec2 (width / 2.0, 0.0) */
+      "uniform vec2 offset1;\n" /* = vec2 (width / 2.0, 0.0) */
       "void main (void) {\n"
       /* round x coordinate down from texel center n.5 to texel edge n.0 */
       "  float x = floor (gl_TexCoord[0].x);\n"
@@ -1243,7 +1326,7 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
       "  if (mod (x, 2.0) < 0.5) {\n"
       "    x = floor (x / 2.0);\n"
       "  } else {\n"
-      "    x = floor (x / 2.0) + offset.x;\n"
+      "    x = floor (x / 2.0) + offset1.x;\n"
       "  }\n"
       /* shift y coordinate from texel edge n.0 to texel center n.5 */
       "  vec2 coordinate = vec2 (x + 0.5, y);\n"
@@ -1254,7 +1337,7 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
       "uniform isampler2DRect texture1;\n"
       /* horizontal distance between two corresponding texels from subband L'
          and H' in texels */
-      "uniform vec2 offset;\n" /* = vec2 (width / 2.0, 0.0) */
+      "uniform vec2 offset1;\n" /* = vec2 (width / 2.0, 0.0) */
       "void main (void) {\n"
       /* round x coordinate down from texel center n.5 to texel edge n.0 */
       "  float x = floor (gl_TexCoord[0].x);\n"
@@ -1262,7 +1345,7 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
       "  if (mod (x, 2.0) < 0.5) {\n"
       "    x = floor (x / 2.0);\n"
       "  } else {\n"
-      "    x = floor (x / 2.0) + offset.x;\n"
+      "    x = floor (x / 2.0) + offset1.x;\n"
       "  }\n"
       /* shift y coordinate from texel edge n.0 to texel center n.5 */
       "  vec2 coordinate = vec2 (x + 0.5, y);\n"
@@ -1338,13 +1421,13 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
       "  write_u8 (cast_u8_s16 (sum));\n"
       "}\n" },
 
-  { SCHRO_OPENGL_SHADER_MC_OBMC_WEIGHT,
+  { SCHRO_OPENGL_SHADER_OBMC_WEIGHT,
       "mc_obmc_weight", SHADER_FLAG_USE_S16,
       SHADER_HEADER
       SHADER_WRITE_S16
       SHADER_DIVIDE_S16
       "uniform vec2 size;\n" /* block size */
-      "uniform vec2 offset;\n" /* block offset */
+      "uniform vec2 offset1;\n" /* block offset */
       "float ramp (float coordinate, float offset) {\n"
       "  if (offset == 1.0) {\n"
       "    if (coordinate == 0.0) {\n"
@@ -1368,14 +1451,14 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
       "void main (void) {\n"
       /* round coordinate down from texel center n.5 to texel edge n.0 */
       "  vec2 coordinate = floor (gl_TexCoord[0].xy);\n"
-      "  write_s16 (obmc_weight (coordinate.x, size.x, offset.x)\n"
-      "      * obmc_weight (coordinate.y, size.y, offset.y));\n"
+      "  write_s16 (obmc_weight (coordinate.x, size.x, offset1.x)\n"
+      "      * obmc_weight (coordinate.y, size.y, offset1.y));\n"
       "}\n",
       SHADER_HEADER_INTEGER
       SHADER_WRITE_S16_INTEGER
       SHADER_DIVIDE_S16_INTEGER
       "uniform vec2 size;\n" /* block size */ // FIXME: bind as int
-      "uniform vec2 offset;\n" /* block offset */ // FIXME: bind as int
+      "uniform vec2 offset1;\n" /* block offset */ // FIXME: bind as int
       "int ramp (int coordinate, int offset) {\n"
       "  if (offset == 1) {\n"
       "    if (coordinate == 0) {\n"
@@ -1398,10 +1481,10 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
       "void main (void) {\n"
       /* round coordinate down from texel center n.5 to texel edge n.0 */
       "  vec2 coordinate = floor (gl_TexCoord[0].xy);\n"
-      "  write_s16 (obmc_weight (int (coordinate.x), int (size.x), int (offset.x))\n"
-      "      * obmc_weight (int (coordinate.y), int (size.y), int (offset.y)));\n"
+      "  write_s16 (obmc_weight (int (coordinate.x), int (size.x), int (offset1.x))\n"
+      "      * obmc_weight (int (coordinate.y), int (size.y), int (offset1.y)));\n"
       "}\n" },
-  { SCHRO_OPENGL_SHADER_MC_CLEAR,
+  { SCHRO_OPENGL_SHADER_OBMC_CLEAR,
       "mc_clear", SHADER_FLAG_USE_S16,
       SHADER_HEADER
       SHADER_WRITE_S16
@@ -1413,11 +1496,11 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
       "void main (void) {\n"
       "  write_s16 (0);\n"
       "}\n" },
-  { SCHRO_OPENGL_SHADER_MC_RENDER_DC,
+  { SCHRO_OPENGL_SHADER_OBMC_RENDER_DC,
       "mc_render_dc", SHADER_FLAG_USE_U8 | SHADER_FLAG_USE_S16,
       SHADER_HEADER
-      SHADER_READ_S16 ("texture1", "_previous") /* previous to blend with */
-      SHADER_READ_S16 ("texture2", "_obmc_weight") /* obmc weight */
+      SHADER_READ_S16 ("texture1", "_previous")
+      SHADER_READ_S16 ("texture2", "_obmc_weight")
       SHADER_WRITE_S16
       "uniform vec2 origin;\n" /* block origin */
       "uniform float dc;\n"
@@ -1427,8 +1510,8 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
       "  write_s16 (previous + dc * obmc_weight);\n"
       "}\n",
       SHADER_HEADER_INTEGER
-      SHADER_READ_S16_INTEGER ("texture1", "_previous") /* previous to blend with */
-      SHADER_READ_S16_INTEGER ("texture2", "_obmc_weight") /* obmc weight */
+      SHADER_READ_S16_INTEGER ("texture1", "_previous")
+      SHADER_READ_S16_INTEGER ("texture2", "_obmc_weight")
       SHADER_WRITE_S16_INTEGER
       "uniform vec2 origin;\n" /* block origin */
       "uniform float dc;\n" // FIXME: bind as int
@@ -1437,103 +1520,333 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
       "  int obmc_weight = read_obmc_weight_s16 (-origin);\n"
       "  write_s16 (previous + int (dc) * obmc_weight);\n"
       "}\n" },
-  { SCHRO_OPENGL_SHADER_MC_RENDER_REF_PREC_0,
+  { SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_0,
       "mc_render_ref_prec_0", SHADER_FLAG_USE_U8 | SHADER_FLAG_USE_S16,
       SHADER_HEADER
-      SHADER_READ_S16 ("texture1", "_previous") /* previous to blend with */
-      SHADER_READ_S16 ("texture2", "_obmc_weight") /* obmc weight */
-      SHADER_READ_U8 ("texture3", "_sub0") /* upsampled sub frame 0 */
+      SHADER_READ_S16 ("texture1", "_previous")
+      SHADER_READ_S16 ("texture2", "_obmc_weight")
+      SHADER_READ_U8 ("texture3", "_upsampled") /* upsampled sub frame 0 */
       SHADER_WRITE_S16
-      "uniform vec2 offset;\n"
+      "uniform vec2 offset1;\n"
       "uniform vec2 origin;\n" /* block origin */
       "void main (void) {\n"
       "  float previous = read_previous_s16 ();\n"
       "  float obmc_weight = read_obmc_weight_s16 (-origin);\n"
-      "  float sub0 = read_sub0_u8 (offset);\n"
-      "  write_s16 (previous + sub0 * obmc_weight);\n"
+      "  float upsampled = read_upsampled_u8 (offset1);\n"
+      "  write_s16 (previous + upsampled * obmc_weight);\n"
       "}\n",
       SHADER_HEADER_INTEGER
-      SHADER_READ_S16_INTEGER ("texture1", "_previous") /* previous to blend with */
-      SHADER_READ_S16_INTEGER ("texture2", "_obmc_weight") /* obmc weight */
-      SHADER_READ_U8_INTEGER ("texture3", "_sub0") /* upsampled sub frame 0 */
+      SHADER_READ_S16_INTEGER ("texture1", "_previous")
+      SHADER_READ_S16_INTEGER ("texture2", "_obmc_weight")
+      SHADER_READ_U8_INTEGER ("texture3", "_upsampled") /* upsampled sub frame 0 */
       SHADER_WRITE_S16_INTEGER
       SHADER_CAST_S16_U8_INTEGER
-      "uniform vec2 offset;\n"
+      "uniform vec2 offset1;\n"
       "uniform vec2 origin;\n" /* block origin */
       "void main (void) {\n"
       "  int previous = read_previous_s16 ();\n"
       "  int obmc_weight = read_obmc_weight_s16 (-origin);\n"
-      "  int sub0 = cast_s16_u8 (read_sub0_u8 (offset));\n"
-      "  write_s16 (previous + sub0 * obmc_weight);\n"
+      "  int upsampled = cast_s16_u8 (read_upsampled_u8 (offset1));\n"
+      "  write_s16 (previous + upsampled * obmc_weight);\n"
       "}\n" },
-  { SCHRO_OPENGL_SHADER_MC_RENDER_REF_PREC_0_WEIGHT,
+  { SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_0_WEIGHT,
       "mc_render_ref_prec_0_weight", SHADER_FLAG_USE_U8 | SHADER_FLAG_USE_S16,
       SHADER_HEADER
-      SHADER_READ_S16 ("texture1", "_previous") /* previous to blend with */
-      SHADER_READ_S16 ("texture2", "_obmc_weight") /* obmc weight */
-      SHADER_READ_U8 ("texture3", "_sub0") /* upsampled sub frame 0 */
+      SHADER_READ_S16 ("texture1", "_previous")
+      SHADER_READ_S16 ("texture2", "_obmc_weight")
+      SHADER_READ_U8 ("texture3", "_upsampled") /* upsampled sub frame 0 */
       SHADER_WRITE_S16
-      SHADER_DIVIDE_S16
-      "uniform vec2 offset;\n"
+      SHADER_REF_WEIGHTING_S16
+      "uniform vec2 offset1;\n"
       "uniform vec2 origin;\n" /* block origin */
-      "uniform float weight;\n"
-      "uniform float addend;\n" /* 1 << (shift - 1) */
-      "uniform float divisor;\n" /* 1 << shift */
       "void main (void) {\n"
       "  float previous = read_previous_s16 ();\n"
       "  float obmc_weight = read_obmc_weight_s16 (-origin);\n"
-      "  float sub0 = read_sub0_u8 (offset);\n"
-      "  write_s16 (previous + divide_s16 (sub0 * weight + addend, divisor)\n"
-      "      * obmc_weight);\n"
+      "  float upsampled = read_upsampled_u8 (offset1);\n"
+      "  write_s16 (previous + ref_weighting_s16 (upsampled) * obmc_weight);\n"
       "}\n",
       SHADER_HEADER_INTEGER
-      SHADER_READ_S16_INTEGER ("texture1", "_previous") /* previous to blend with */
-      SHADER_READ_S16_INTEGER ("texture2", "_obmc_weight") /* obmc weight */
-      SHADER_READ_U8_INTEGER ("texture3", "_sub0") /* upsampled sub frame 0 */
+      SHADER_READ_S16_INTEGER ("texture1", "_previous")
+      SHADER_READ_S16_INTEGER ("texture2", "_obmc_weight")
+      SHADER_READ_U8_INTEGER ("texture3", "_upsampled") /* upsampled sub frame 0 */
+      SHADER_WRITE_S16_INTEGER
+      SHADER_CAST_S16_U8_INTEGER
+      SHADER_REF_WEIGHTING_S16_INTEGER
+      "uniform vec2 offset1;\n"
+      "uniform vec2 origin;\n" /* block origin */
+      "void main (void) {\n"
+      "  int previous = read_previous_s16 ();\n"
+      "  int obmc_weight = read_obmc_weight_s16 (-origin);\n"
+      "  int upsampled = cast_s16_u8 (read_upsampled_u8 (offset1));\n"
+      "  write_s16 (previous + ref_weighting_s16 (upsampled) * obmc_weight);\n"
+      "}\n" },
+  { SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_1,
+      "mc_render_ref_prec_1", SHADER_FLAG_USE_U8 | SHADER_FLAG_USE_S16,
+      SHADER_HEADER
+      SHADER_READ_S16 ("texture1", "_previous")
+      SHADER_READ_S16 ("texture2", "_obmc_weight")
+      SHADER_READ_U8 ("texture3", "_upsampled") /* upsampled sub frame x */
+      SHADER_WRITE_S16
+      "uniform vec2 offset1;\n"
+      "uniform vec2 origin;\n" /* block origin */
+      "void main (void) {\n"
+      "  float previous = read_previous_s16 ();\n"
+      "  float obmc_weight = read_obmc_weight_s16 (-origin);\n"
+      "  float upsampled = read_upsampled_u8 (offset1);\n"
+      "  write_s16 (previous + upsampled * obmc_weight);\n"
+      "}\n",
+      SHADER_HEADER_INTEGER
+      SHADER_READ_S16_INTEGER ("texture1", "_previous")
+      SHADER_READ_S16_INTEGER ("texture2", "_obmc_weight")
+      SHADER_READ_U8_INTEGER ("texture3", "_upsampled") /* upsampled sub frame x */
+      SHADER_WRITE_S16_INTEGER
+      SHADER_CAST_S16_U8_INTEGER
+      "uniform vec2 offset1;\n"
+      "uniform vec2 origin;\n" /* block origin */
+      "void main (void) {\n"
+      "  int previous = read_previous_s16 ();\n"
+      "  int obmc_weight = read_obmc_weight_s16 (-origin);\n"
+      "  int upsampled = cast_s16_u8 (read_upsampled_u8 (offset1));\n"
+      "  write_s16 (previous + upsampled * obmc_weight);\n"
+      "}\n" },
+  { SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_1_WEIGHT,
+      "mc_render_ref_prec_1_weight", SHADER_FLAG_USE_U8 | SHADER_FLAG_USE_S16,
+      SHADER_HEADER
+      SHADER_READ_S16 ("texture1", "_previous")
+      SHADER_READ_S16 ("texture2", "_obmc_weight")
+      SHADER_READ_U8 ("texture3", "_upsampled") /* upsampled sub frame x */
+      SHADER_WRITE_S16
+      SHADER_REF_WEIGHTING_S16
+      "uniform vec2 offset1;\n"
+      "uniform vec2 origin;\n" /* block origin */
+      "void main (void) {\n"
+      "  float previous = read_previous_s16 ();\n"
+      "  float obmc_weight = read_obmc_weight_s16 (-origin);\n"
+      "  float upsampled = read_upsampled_u8 (offset1);\n"
+      "  write_s16 (previous + ref_weighting_s16 (upsampled) * obmc_weight);\n"
+      "}\n",
+      SHADER_HEADER_INTEGER
+      SHADER_READ_S16_INTEGER ("texture1", "_previous")
+      SHADER_READ_S16_INTEGER ("texture2", "_obmc_weight")
+      SHADER_READ_U8_INTEGER ("texture3", "_upsampled") /* upsampled sub frame x */
+      SHADER_WRITE_S16_INTEGER
+      SHADER_CAST_S16_U8_INTEGER
+      SHADER_REF_WEIGHTING_S16_INTEGER
+      "uniform vec2 offset1;\n"
+      "uniform vec2 origin;\n" /* block origin */
+      "void main (void) {\n"
+      "  int previous = read_previous_s16 ();\n"
+      "  int obmc_weight = read_obmc_weight_s16 (-origin);\n"
+      "  int upsampled = cast_s16_u8 (read_upsampled_u8 (offset1));\n"
+      "  write_s16 (previous + ref_weighting_s16 (upsampled) * obmc_weight);\n"
+      "}\n" },
+  { SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_3a,
+      "mc_render_ref_prec_3", SHADER_FLAG_USE_U8 | SHADER_FLAG_USE_S16,
+      SHADER_HEADER
+      SHADER_READ_S16 ("texture1", "_previous")
+      SHADER_READ_S16 ("texture2", "_obmc_weight")
+      SHADER_READ_U8 ("texture3", "_upsampled1") /* upsampled sub frame x1 */
+      SHADER_READ_U8 ("texture4", "_upsampled2") /* upsampled sub frame x2 */
+      SHADER_WRITE_S16
+      SHADER_DIVIDE_S16
+      "uniform vec2 offset1;\n"
+      "uniform vec2 offset2;\n"
+      "uniform vec2 origin;\n" /* block origin */
+      "void main (void) {\n"
+      "  float previous = read_previous_s16 ();\n"
+      "  float obmc_weight = read_obmc_weight_s16 (-origin);\n"
+      "  float upsampled1 = read_upsampled1_u8 (offset1);\n"
+      "  float upsampled2 = read_upsampled2_u8 (offset2);\n"
+      "  float average = divide_s16 (upsampled1 + upsampled2 + 1.0, 2.0);\n"
+      "  write_s16 (previous + average * obmc_weight);\n"
+      "}\n",
+      SHADER_HEADER_INTEGER
+      SHADER_READ_S16_INTEGER ("texture1", "_previous")
+      SHADER_READ_S16_INTEGER ("texture2", "_obmc_weight")
+      SHADER_READ_U8_INTEGER ("texture3", "_upsampled1") /* upsampled sub frame x1 */
+      SHADER_READ_U8_INTEGER ("texture4", "_upsampled2") /* upsampled sub frame x2 */
       SHADER_WRITE_S16_INTEGER
       SHADER_CAST_S16_U8_INTEGER
       SHADER_DIVIDE_S16_INTEGER
-      "uniform vec2 offset;\n"
+      "uniform vec2 offset1;\n"
+      "uniform vec2 offset2;\n"
       "uniform vec2 origin;\n" /* block origin */
-      "uniform float weight;\n" // FIXME: bind as int
-      "uniform float addend;\n" /* 1 << (shift - 1) */ // FIXME: bind as int
-      "uniform float divisor;\n" /* 1 << shift */ // FIXME: bind as int
       "void main (void) {\n"
       "  int previous = read_previous_s16 ();\n"
       "  int obmc_weight = read_obmc_weight_s16 (-origin);\n"
-      "  int sub0 = cast_s16_u8 (read_sub0_u8 (offset));\n"
-      "  write_s16 (previous + divide_s16 ((sub0 * int (weight) + int (addend)),\n"
-      "      int (divisor)) * obmc_weight);\n"
+      "  int upsampled1 = cast_s16_u8 (read_upsampled1_u8 (offset1));\n"
+      "  int upsampled2 = cast_s16_u8 (read_upsampled2_u8 (offset2));\n"
+      "  int average = divide_s16 (upsampled1 + upsampled2 + 1, 2);\n"
+      "  write_s16 (previous + average * obmc_weight);\n"
       "}\n" },
-  { SCHRO_OPENGL_SHADER_MC_RENDER_REF_PREC_1,
-      "mc_render_ref_prec_1", SHADER_FLAG_USE_U8 | SHADER_FLAG_USE_S16,
+  { SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_3a_WEIGHT,
+      "mc_render_ref_prec_3_weight", SHADER_FLAG_USE_U8 | SHADER_FLAG_USE_S16,
       SHADER_HEADER
-      SHADER_READ_S16 ("texture1", "_obmc_weight") /* obmc weights */
-      SHADER_READ_U8 ("texture2", "_subx") /* upsampled sub frame x */
+      SHADER_READ_S16 ("texture1", "_previous")
+      SHADER_READ_S16 ("texture2", "_obmc_weight")
+      SHADER_READ_U8 ("texture3", "_upsampled1") /* upsampled sub frame x1 */
+      SHADER_READ_U8 ("texture4", "_upsampled2") /* upsampled sub frame x2 */
       SHADER_WRITE_S16
-      "uniform vec2 offset;\n"
+      SHADER_REF_WEIGHTING_S16
+      "uniform vec2 offset1;\n"
+      "uniform vec2 offset2;\n"
       "uniform vec2 origin;\n" /* block origin */
       "void main (void) {\n"
+      "  float previous = read_previous_s16 ();\n"
       "  float obmc_weight = read_obmc_weight_s16 (-origin);\n"
-      "  float subx = read_subx_u8 (offset);\n"
-      "  write_s16 (subx * obmc_weight);\n"
-      /* FIXME: ref weighting */
+      "  float upsampled1 = read_upsampled1_u8 (offset1);\n"
+      "  float upsampled2 = read_upsampled2_u8 (offset2);\n"
+      "  float average = divide_s16 (upsampled1 + upsampled2 + 1.0, 2.0);\n"
+      "  write_s16 (previous + ref_weighting_s16 (average) * obmc_weight);\n"
       "}\n",
-      "" },
-  { SCHRO_OPENGL_SHADER_MC_RENDER_REF_PREC_3,
+      SHADER_HEADER_INTEGER
+      SHADER_READ_S16_INTEGER ("texture1", "_previous")
+      SHADER_READ_S16_INTEGER ("texture2", "_obmc_weight")
+      SHADER_READ_U8_INTEGER ("texture3", "_upsampled1") /* upsampled sub frame x1 */
+      SHADER_READ_U8_INTEGER ("texture4", "_upsampled2") /* upsampled sub frame x2 */
+      SHADER_WRITE_S16_INTEGER
+      SHADER_CAST_S16_U8_INTEGER
+      SHADER_REF_WEIGHTING_S16_INTEGER
+      "uniform vec2 offset1;\n"
+      "uniform vec2 offset2;\n"
+      "uniform vec2 origin;\n" /* block origin */
+      "void main (void) {\n"
+      "  int previous = read_previous_s16 ();\n"
+      "  int obmc_weight = read_obmc_weight_s16 (-origin);\n"
+      "  int upsampled1 = cast_s16_u8 (read_upsampled1_u8 (offset1));\n"
+      "  int upsampled2 = cast_s16_u8 (read_upsampled2_u8 (offset2));\n"
+      "  int average = divide_s16 (upsampled1 + upsampled2 + 1, 2);\n"
+      "  write_s16 (previous + ref_weighting_s16 (average) * obmc_weight);\n"
+      "}\n" },
+  { SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_3b,
       "mc_render_ref_prec_3", SHADER_FLAG_USE_U8 | SHADER_FLAG_USE_S16,
       SHADER_HEADER
+      SHADER_READ_S16 ("texture1", "_previous")
+      SHADER_READ_S16 ("texture2", "_obmc_weight")
+      SHADER_READ_U8 ("texture3", "_upsampled1") /* upsampled sub frame x1 */
+      SHADER_READ_U8 ("texture4", "_upsampled2") /* upsampled sub frame x2 */
+      SHADER_READ_U8 ("texture5", "_upsampled3") /* upsampled sub frame x3 */
+      SHADER_READ_U8 ("texture6", "_upsampled4") /* upsampled sub frame x4 */
+      SHADER_WRITE_S16
+      SHADER_DIVIDE_S16
+      "uniform vec2 offset1;\n"
+      "uniform vec2 offset2;\n"
+      "uniform vec2 offset3;\n"
+      "uniform vec2 offset4;\n"
+      "uniform vec2 origin;\n" /* block origin */
+      "uniform vec2 remaining;\n" // FIXME: bind as ivec2
       "void main (void) {\n"
+      "  float w1 = (4.0 - remaining.y) * (4.0 - remaining.x);\n"
+      "  float w2 = (4.0 - remaining.y) * remaining.x;\n"
+      "  float w3 = remaining.y * (4.0 - remaining.x);\n"
+      "  float w4 = remaining.y * remaining.x;\n"
+      "  float previous = read_previous_s16 ();\n"
+      "  float obmc_weight = read_obmc_weight_s16 (-origin);\n"
+      "  float upsampled1 = w1 * read_upsampled1_u8 (offset1);\n"
+      "  float upsampled2 = w2 * read_upsampled2_u8 (offset2);\n"
+      "  float upsampled3 = w3 * read_upsampled3_u8 (offset3);\n"
+      "  float upsampled4 = w4 * read_upsampled4_u8 (offset4);\n"
+      "  float average = divide_s16 (upsampled1 + upsampled2 + upsampled3 + upsampled4 + 8.0, 16.0);\n"
+      "  write_s16 (previous + average * obmc_weight);\n"
       "}\n",
-      "" },
-  { SCHRO_OPENGL_SHADER_MC_RENDER_BIREF,
+      SHADER_HEADER_INTEGER
+      SHADER_READ_S16_INTEGER ("texture1", "_previous")
+      SHADER_READ_S16_INTEGER ("texture2", "_obmc_weight")
+      SHADER_READ_U8_INTEGER ("texture3", "_upsampled1") /* upsampled sub frame x1 */
+      SHADER_READ_U8_INTEGER ("texture4", "_upsampled2") /* upsampled sub frame x2 */
+      SHADER_READ_U8_INTEGER ("texture5", "_upsampled3") /* upsampled sub frame x3 */
+      SHADER_READ_U8_INTEGER ("texture6", "_upsampled4") /* upsampled sub frame x4 */
+      SHADER_WRITE_S16_INTEGER
+      SHADER_CAST_S16_U8_INTEGER
+      SHADER_DIVIDE_S16_INTEGER
+      "uniform vec2 offset1;\n"
+      "uniform vec2 offset2;\n"
+      "uniform vec2 offset3;\n"
+      "uniform vec2 offset4;\n"
+      "uniform vec2 origin;\n" /* block origin */
+      "uniform vec2 remaining;\n" // FIXME: bind as ivec2
+      "void main (void) {\n"
+      "  int w1 = (4 - remaining.y) * (4 - remaining.x);\n"
+      "  int w2 = (4 - remaining.y) * remaining.x;\n"
+      "  int w3 = remaining.y * (4 - remaining.x);\n"
+      "  int w4 = remaining.y * remaining.x;\n"
+      "  int previous = read_previous_s16 ();\n"
+      "  int obmc_weight = read_obmc_weight_s16 (-origin);\n"
+      "  int upsampled1 = w1 * cast_s16_u8 (read_upsampled1_u8 (offset1));\n"
+      "  int upsampled2 = w2 * cast_s16_u8 (read_upsampled2_u8 (offset2));\n"
+      "  int upsampled3 = w3 * cast_s16_u8 (read_upsampled3_u8 (offset3));\n"
+      "  int upsampled4 = w4 * cast_s16_u8 (read_upsampled4_u8 (offset4));\n"
+      "  int average = divide_s16 (upsampled1 + upsampled2 + upsampled3 + upsampled4 + 8, 16);\n"
+      "  write_s16 (previous + average * obmc_weight);\n"
+      "}\n" },
+  { SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_3b_WEIGHT,
+      "mc_render_ref_prec_3_weight", SHADER_FLAG_USE_U8 | SHADER_FLAG_USE_S16,
+      SHADER_HEADER
+      SHADER_READ_S16 ("texture1", "_previous")
+      SHADER_READ_S16 ("texture2", "_obmc_weight")
+      SHADER_READ_U8 ("texture3", "_upsampled1") /* upsampled sub frame x1 */
+      SHADER_READ_U8 ("texture4", "_upsampled2") /* upsampled sub frame x2 */
+      SHADER_READ_U8 ("texture5", "_upsampled3") /* upsampled sub frame x3 */
+      SHADER_READ_U8 ("texture6", "_upsampled4") /* upsampled sub frame x4 */
+      SHADER_WRITE_S16
+      SHADER_REF_WEIGHTING_S16
+      "uniform vec2 offset1;\n"
+      "uniform vec2 offset2;\n"
+      "uniform vec2 offset3;\n"
+      "uniform vec2 offset4;\n"
+      "uniform vec2 origin;\n" /* block origin */
+      "uniform vec2 remaining;\n" // FIXME: bind as ivec2
+      "void main (void) {\n"
+      "  float w1 = (4.0 - remaining.y) * (4.0 - remaining.x);\n"
+      "  float w2 = (4.0 - remaining.y) * remaining.x;\n"
+      "  float w3 = remaining.y * (4.0 - remaining.x);\n"
+      "  float w4 = remaining.y * remaining.x;\n"
+      "  float previous = read_previous_s16 ();\n"
+      "  float obmc_weight = read_obmc_weight_s16 (-origin);\n"
+      "  float upsampled1 = w1 * read_upsampled1_u8 (offset1);\n"
+      "  float upsampled2 = w2 * read_upsampled2_u8 (offset2);\n"
+      "  float upsampled3 = w3 * read_upsampled3_u8 (offset3);\n"
+      "  float upsampled4 = w4 * read_upsampled4_u8 (offset4);\n"
+      "  float average = divide_s16 (upsampled1 + upsampled2 + upsampled3 + upsampled4 + 8.0, 16.0);\n"
+      "  write_s16 (previous + ref_weighting_s16 (average) * obmc_weight);\n"
+      "}\n",
+      SHADER_HEADER_INTEGER
+      SHADER_READ_S16_INTEGER ("texture1", "_previous")
+      SHADER_READ_S16_INTEGER ("texture2", "_obmc_weight")
+      SHADER_READ_U8_INTEGER ("texture3", "_upsampled1") /* upsampled sub frame x1 */
+      SHADER_READ_U8_INTEGER ("texture4", "_upsampled2") /* upsampled sub frame x2 */
+      SHADER_READ_U8_INTEGER ("texture5", "_upsampled3") /* upsampled sub frame x3 */
+      SHADER_READ_U8_INTEGER ("texture6", "_upsampled4") /* upsampled sub frame x4 */
+      SHADER_WRITE_S16_INTEGER
+      SHADER_CAST_S16_U8_INTEGER
+      SHADER_REF_WEIGHTING_S16_INTEGER
+      "uniform vec2 offset1;\n"
+      "uniform vec2 offset2;\n"
+      "uniform vec2 offset3;\n"
+      "uniform vec2 offset4;\n"
+      "uniform vec2 origin;\n" /* block origin */
+      "uniform vec2 remaining;\n" // FIXME: bind as ivec2
+      "void main (void) {\n"
+      "  int w1 = (4 - remaining.y) * (4 - remaining.x);\n"
+      "  int w2 = (4 - remaining.y) * remaining.x;\n"
+      "  int w3 = remaining.y * (4 - remaining.x);\n"
+      "  int w4 = remaining.y * remaining.x;\n"
+      "  int previous = read_previous_s16 ();\n"
+      "  int obmc_weight = read_obmc_weight_s16 (-origin);\n"
+      "  int upsampled1 = w1 * cast_s16_u8 (read_upsampled1_u8 (offset1));\n"
+      "  int upsampled2 = w2 * cast_s16_u8 (read_upsampled2_u8 (offset2));\n"
+      "  int upsampled3 = w3 * cast_s16_u8 (read_upsampled3_u8 (offset3));\n"
+      "  int upsampled4 = w4 * cast_s16_u8 (read_upsampled4_u8 (offset4));\n"
+      "  int average = divide_s16 (upsampled1 + upsampled2 + upsampled3 + upsampled4 + 8, 16);\n"
+      "  write_s16 (previous + ref_weighting_s16 (average) * obmc_weight);\n"
+      "}\n" },
+  { SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF,
       "mc_render_biref", SHADER_FLAG_USE_U8 | SHADER_FLAG_USE_S16,
       SHADER_HEADER
       "void main (void) {\n"
       "}\n",
       "" },
-
-  { SCHRO_OPENGL_SHADER_MC_SHIFT,
+  { SCHRO_OPENGL_SHADER_OBMC_SHIFT,
       "mc_shift", SHADER_FLAG_USE_S16,
       SHADER_HEADER
       SHADER_READ_S16 ("texture1", "")
