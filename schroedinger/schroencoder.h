@@ -32,7 +32,7 @@ typedef enum {
   SCHRO_ENCODER_FRAME_STATE_ANALYSE = (1<<1),
   SCHRO_ENCODER_FRAME_STATE_HAVE_GOP = (1<<7),
   SCHRO_ENCODER_FRAME_STATE_HAVE_PARAMS = (1<<8),
-  /* SCHRO_ENCODER_FRAME_STATE_PREDICT = (1<<2), */ /* removed by Andrea */
+  SCHRO_ENCODER_FRAME_STATE_PREDICT = (1<<2), 
   SCHRO_ENCODER_FRAME_STATE_HAVE_REFS = (1<<10),
   SCHRO_ENCODER_FRAME_STATE_HAVE_QUANTS = (1<<11),
   SCHRO_ENCODER_FRAME_STATE_ENCODING = (1<<3),
@@ -40,8 +40,8 @@ typedef enum {
   SCHRO_ENCODER_FRAME_STATE_POSTANALYSE = (1<<5),
   SCHRO_ENCODER_FRAME_STATE_DONE = (1<<6),
   SCHRO_ENCODER_FRAME_STATE_FREE = (1<<9),
-  SCHRO_ENCODER_FRAME_STATE_FULLPEL_ME = (1<<2), /* Added by Andrea */
-  SCHRO_ENCODER_FRAME_STATE_SUBPEL_ME = (1<<12) /* Added by Andrea, includes mode decision */
+  SCHRO_ENCODER_FRAME_STATE_FULLPEL_ME = (1<<12), /* Added by Andrea */
+  SCHRO_ENCODER_FRAME_STATE_SUBPEL_ME = (1<<13) /* Added by Andrea, includes mode decision */
 } SchroEncoderFrameStateEnum;
 #endif
 
@@ -85,7 +85,7 @@ struct _SchroEncoderFrame {
 
   /* Bits telling the engine stages which stuff needs to happen */
   unsigned int need_downsampling;
-  unsigned int need_upsampling; /* Added by Andrea */ 
+  unsigned int need_upsampling; /* Added by Andrea */
   unsigned int need_filtering;
   unsigned int need_average_luma;
 
@@ -161,9 +161,10 @@ struct _SchroEncoderFrame {
 
   SchroEncoderFrame *ref_frame[2];
 
-  /* Added by Andrea - I need to store SchroMotionEst
+  /* Added by Andrea - I need to store all MVs after full-pel ME
    * in here to allow me to split ME from mode decision */
-  SchroMotionEst* motion_est;
+  SchroMotionField* mf[2];
+
   SchroMotion *motion;
   SchroList *motion_field_list;
 

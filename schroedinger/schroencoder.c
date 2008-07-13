@@ -693,7 +693,7 @@ schro_encoder_encode_bitrate_comment (SchroEncoder *encoder,
   s[3] = (bitrate>>0)&0xff;
   buffer = schro_encoder_encode_auxiliary_data (encoder,
       SCHRO_AUX_DATA_BITRATE, s, 4);
-  
+
   schro_encoder_insert_buffer (encoder, buffer);
 }
 
@@ -706,7 +706,7 @@ schro_encoder_encode_md5_checksum (SchroEncoderFrame *frame)
   schro_frame_md5 (frame->reconstructed_frame->frames[0], checksum);
   buffer = schro_encoder_encode_auxiliary_data (frame->encoder,
       SCHRO_AUX_DATA_MD5_CHECKSUM, checksum, 16);
-  
+
   schro_encoder_frame_insert_buffer (frame, buffer);
 }
 
@@ -984,7 +984,7 @@ schro_encoder_async_schedule (SchroEncoder *encoder, SchroExecDomain exec_domain
     todo = frame->needed_state & (~frame->state);
     if (todo & SCHRO_ENCODER_FRAME_STATE_FULLPEL_ME) {
       run_stage (frame, SCHRO_ENCODER_FRAME_STATE_FULLPEL_ME);
-      return true;
+      return TRUE;
     }
   }
 
@@ -1112,6 +1112,7 @@ schro_encoder_predict_picture (SchroEncoderFrame *frame)
 {
   SCHRO_INFO("predict picture %d", frame->frame_number);
 
+  /* AFAICT this is needed in render_picture, not in motion_predict */
   frame->tmpbuf = schro_malloc(sizeof(int16_t) *
       (frame->encoder->video_format.width + 16));
 
@@ -1122,15 +1123,13 @@ schro_encoder_predict_picture (SchroEncoderFrame *frame)
   schro_encoder_render_picture (frame);
 }
 
-/* Added by Andrea - should perform fullpel ME without "rendering" */
+/* Added by Andrea - should perform fullpel ME without "rendering",
+ * ie without mode decision and motion compensation and DWT */
 void
 schro_encoder_fullpel_predict_picture (SchroEncoderFrame* frame)
 {
-  SCHRO_ASSERT (frame && frame->reconstructed_frame);
+  SCHRO_ASSERT (frame);
   SCHRO_INFO ("fullpel predict picture %d", frame->frame_number);
-
-  frame->tmpbuf = schro_malloc(sizeof(int16_t) *
-      (frame->encoder->video_format.width + 16));
 
   if (frame->params.num_refs > 0) {
     schro_encoder_motion_predict_only (frame);
@@ -2485,7 +2484,7 @@ schro_encoder_frame_new (SchroEncoder *encoder)
       &iwt_width, &iwt_height);
   encoder_frame->iwt_frame = schro_frame_new_and_alloc (NULL, frame_format,
       iwt_width, iwt_height);
-  
+
   schro_video_format_get_picture_luma_size (&encoder->video_format,
       &picture_width, &picture_height);
   encoder_frame->prediction_frame = schro_frame_new_and_alloc (NULL, frame_format,
@@ -2521,10 +2520,18 @@ schro_encoder_frame_unref (SchroEncoderFrame *frame)
     if (frame->reconstructed_frame) {
       schro_upsampled_frame_free (frame->reconstructed_frame);
     }
+
     /* Added by Andrea */
     if (frame->upsampled_frame) {
       schro_upsampled_frame_free (frame->upsampled_frame);
     }
+    /* Added by Andrea */
+    for (i=0;2>i;++i) {
+      if (frame->mf[i]) {
+        schro_motion_field_free (frame->mf[i]);
+      }
+    }
+
     for(i=0;i<5;i++){
       if (frame->downsampled_frames[i]) {
         schro_frame_unref (frame->downsampled_frames[i]);

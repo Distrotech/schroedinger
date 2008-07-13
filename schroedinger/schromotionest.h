@@ -17,9 +17,9 @@ struct _SchroMotionEst {
 
   double lambda;
 
-  SchroUpsampledFrame *src0;
+  SchroUpsampledFrame *src0; /* not used */
   SchroFrame *downsampled_src0[5];
-  SchroUpsampledFrame *src1;
+  SchroUpsampledFrame *src1; /* not used */
   SchroFrame *downsampled_src1[5];
 
   SchroMotion *motion;
@@ -48,7 +48,7 @@ void schro_motionest_free (SchroMotionEst *me);
 /* this one does ME AND mode decision!! */
 void schro_encoder_motion_predict (SchroEncoderFrame *frame);
 /* Added by Andrea - it only performs ME, no mode decision */
-void schro_encoder_motion_predict_only (SchroEncoderFrame8 frame);
+void schro_encoder_motion_predict_only (SchroEncoderFrame* frame);
 
 void schro_encoder_global_estimation (SchroMotionEst *me);
 

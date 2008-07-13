@@ -888,6 +888,10 @@ median3(int a, int b, int c)
   }
 }
 
+/* It looks like it is searching through the parents of the current MV to form
+ * a prediction but rather than having a list of candidate MVs it generates an
+ * average value which is a lot less interesting, I think. Perhaps I should
+ * change this function to return a list of candidates - FIXME */
 void
 schro_motion_vector_prediction (SchroMotion *motion,
     int x, int y, int *pred_x, int *pred_y, int mode)

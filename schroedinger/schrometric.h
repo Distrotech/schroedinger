@@ -13,6 +13,8 @@ typedef struct _SchroMetricScan SchroMetricScan;
 
 #define SCHRO_LIMIT_METRIC_SCAN 32
 
+/* used to perform block matching; it matches an area scan_width*scan_height
+ * the costs are held in metrics (the metric is always SAD) */
 struct _SchroMetricScan {
   SchroFrame *frame;
   SchroFrame *ref_frame;

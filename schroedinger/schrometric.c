@@ -80,9 +80,11 @@ schro_metric_absdiff_u8 (uint8_t *a, int a_stride, uint8_t *b, int b_stride,
   return metric;
 }
 
+/* This seems to be the place where block-matching ME is finally done */
 void
 schro_metric_scan_do_scan (SchroMetricScan *scan)
 {
+  /* works on luminance only */
   SchroFrameData *fd = scan->frame->components + 0;
   SchroFrameData *fd_ref = scan->ref_frame->components + 0;
   int i,j;

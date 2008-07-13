@@ -34,7 +34,7 @@ schro_frame_new_and_alloc (SchroMemoryDomain *domain, SchroFrameFormat format,
   int h_shift, v_shift;
   int chroma_width;
   int chroma_height;
-  
+
   SCHRO_ASSERT(width > 0);
   SCHRO_ASSERT(height > 0);
 
@@ -1304,7 +1304,7 @@ schro_frame_component_downsample (SchroFrameData *dest,
     downsample_horiz_u8 (tmplist[11], dest->width,
         src->data + src->stride * CLAMP(j*2+6,0,src->height-1), src->width,
         taps, offsetshift);
-    
+
     oil_mas12across_addc_rshift_u8 (dest->data + dest->stride * j, tmplist,
         taps, offsetshift, dest->width);
   }
