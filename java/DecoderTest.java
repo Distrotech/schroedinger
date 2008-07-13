@@ -135,9 +135,10 @@ public final class DecoderTest {
 	Frame fr = new Frame("DecoderTest");
 	PictureDrawer cn = new PictureDrawer(dec);
 	WindowListener wl = new CloseListener();
+	cn.setSize(f.width, f.height);
 	fr.add(cn);
+	fr.pack();
 	fr.addWindowListener(wl);
-	fr.setSize(f.width, f.height);
 	fr.setVisible(true);
 	other_thread = new Thread(cn);
 	other_thread.start();

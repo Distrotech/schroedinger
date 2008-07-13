@@ -75,7 +75,7 @@ class SubBand {
     
     public void intraDCPredict(short out[]) {
 	int predict = 0;
-	for(int i = 0; i < out.length; i += frame.width * stride) {
+	for(int i = offset; i < out.length; i += frame.width * stride) {
 	    for(int j = i; j < i + frame.width; j += stride) {
 		if(j > i && i > 0) {
 		    predict = Util.mean(out[j - stride], 
@@ -318,7 +318,6 @@ public class Picture {
 
     private void decodeComponent(int c) {
 	Dimension dim = (c == 0) ? par.iwtLumaSize : par.iwtChromaSize;
-	int size = dim.width * dim.height;
 	coeffs[c][0].decodeCoeffs(frame[c]);
 	coeffs[c][0].intraDCPredict(frame[c]);
 	for(int i = 1; i < par.transformDepth; i++) {
@@ -339,11 +338,18 @@ public class Picture {
     }
 
     private void decodeYuv(int pixels[]) {
-        Dimension dim = par.iwtLumaSize;
-        for(int i = 0; i < format.height-10; i++) {
+        Dimension lum = par.iwtLumaSize;
+	Dimension chrom = par.iwtChromaSize;
+	ColourSpace col = format.colour;
+	short y,u,v;
+	int xFac = (lum.width > chrom.width ? 2 : 1);
+	int yFac = (lum.height > chrom.height ? 2 : 1);
+        for(int i = 0; i < format.height; i++) {
             for(int j = 0; j < format.width; j++) {
-                int v = (frame[0][j + i*format.width]);
-                pixels[j + i*format.width] = (v * 0x010101);
+		y = frame[0][j + i*lum.width];
+		u = frame[1][j/xFac + (i/yFac)*chrom.width];
+		v = frame[2][j/xFac + (i/yFac)*chrom.width];
+                pixels[j + i*format.width] = col.convert(y,u,v);
             }
         }
     }

@@ -9,7 +9,7 @@ x#7    Figure out how to structure decoding (I'd like not to create
        a million `helper' classes).
 x#8    Implement subband decoding (first component only)
 x#9    Implement short[]-to-image conversion
-#10    Fix colorspace conversion (at least initially)
+b#10   Fix colorspace conversion (at least initially)
 #11    Start arithmetic decoder
 #20    Unroll loops in Wavelet.synthesize() and SubBand.intraDCPredict()
 

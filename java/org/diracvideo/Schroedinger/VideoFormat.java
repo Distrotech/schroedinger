@@ -11,6 +11,7 @@ public class VideoFormat {
     public int clean_width, clean_height, left_offset, top_offset;
     public int luma_offset, luma_excursion, chroma_offset, chroma_excursion;
     public int interlaced_coding;
+    public ColourSpace colour;
     
     private static int[][] defaultFormats = {
 	{ 0, 640, 480, 0420, 0, 0, 24000, 1001, /*custom */
@@ -126,7 +127,7 @@ public class VideoFormat {
     }
 
     private void setDefaultColourSpec(int i) {
-	
+	colour = new ColourSpace(i, this);
     }
 
     /** VideoFormat:

@@ -13,6 +13,11 @@ final class Util {
 	return (i < l ? l : i > h ? h : i);
     }
 
+    public final static int clamp(double i, int l, int h) {
+	int v = (int)(i+0.5);
+	return clamp(v,l,h);
+    }
+
     public final static int mean(int ... numbers) {
 	int s = 0;
 	for(int i = 0; i < numbers.length; i++)

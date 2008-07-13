@@ -2,9 +2,11 @@ import org.diracvideo.Schroedinger.*;
 
 public class Wavelet2dTest {
     public static void main(String a[]) {
-	synthesizeTest();
-	interLeaveTest();
-	twoDimensionTest();
+	if(false) {
+	    synthesizeTest();
+	    interLeaveTest();
+	    twoDimensionTest();
+	}
     }
 
     private static void synthesizeTest() {

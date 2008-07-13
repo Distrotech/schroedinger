@@ -31,7 +31,7 @@ public class Wavelet {
 	    }
 	}
        	for(int i = 0; i < data.length; i++) {
-	  data[i] = (short)((data[i]+1)>>1);
+	  data[i] = (short)((data[i]+1)>>>1);
 	}
     }
     /** synthesize:
@@ -46,19 +46,15 @@ public class Wavelet {
 	for(int i = b; i < e; i += 2*s) {
 	    if(i - s < b) {
 		d[i] -= (d[i+s] + 1) >> 1;
-	    } else if (i + s >= e) {
-		d[i] -= (d[i-s] + 1) >> 1;
 	    } else {
-		d[i] -= (d[i-s] + d[i+s] + 2) >> 2;
+		d[i] -= (d[i-s] + d[i+s] + 2) >>> 2;
 	    }
 	}
 	for(int i = b + s; i < e; i += 2*s) {
 	    if(i + s >= e) {
 		d[i] += d[i-s];
-	    } else if(i - s < b) { 
-		d[i] += d[i+s];
 	    } else {
-		d[i] += (d[i-s] + d[i+s] + 1) >> 1;
+		d[i] += (d[i-s] + d[i+s] + 1) >>> 1;
 	    }
 	}
     }
