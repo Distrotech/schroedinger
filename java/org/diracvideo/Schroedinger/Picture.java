@@ -53,8 +53,9 @@ class SubBand {
 		if(u.decodeBool())
 		    continue;
 		if(par.codeblock_mode_index != 0) 
-		    qi += u.decodeSint();
+		  qi += u.decodeSint();
 		decodeCodeBlock(out, u, x,y);
+		u.align();
 	    }
 	}
     }
@@ -71,6 +72,7 @@ class SubBand {
 	    for(int j = i; j < i + block.width; j += stride) {
 		out[j] = u.decodeSint(qf,qo);
 	    }
+	
     }
     
     public void intraDCPredict(short out[]) {
@@ -304,28 +306,26 @@ public class Picture {
     }
 
     public void decode() {
-	decodeWaveletTransform();
+	if(!zero_residual) {
+	    decodeWaveletTransform();
+	}
 	createImage();
     }
 
     
     private void decodeWaveletTransform() {
 	initializeTransformFrames();
-	decodeComponent(0);
-	decodeComponent(1);
-	decodeComponent(2);
-    }
-
-    private void decodeComponent(int c) {
-	Dimension dim = (c == 0) ? par.iwtLumaSize : par.iwtChromaSize;
-	coeffs[c][0].decodeCoeffs(frame[c]);
-	coeffs[c][0].intraDCPredict(frame[c]);
-	for(int i = 1; i < par.transformDepth; i++) {
-	    coeffs[c][3*i+1].decodeCoeffs(frame[c]);
-	    coeffs[c][3*i+2].decodeCoeffs(frame[c]);
-	    coeffs[c][3*i+3].decodeCoeffs(frame[c]);
-	} 
-	Wavelet.inverse(frame[c], dim.width, par.transformDepth);  
+	for(int c = 0; c < 3; c++) {
+	    Dimension dim = (c == 0) ? par.iwtLumaSize : par.iwtChromaSize;
+	    coeffs[c][0].decodeCoeffs(frame[c]);
+	    coeffs[c][0].intraDCPredict(frame[c]);
+	    for(int i = 1; i < par.transformDepth; i++) {
+		coeffs[c][3*i+1].decodeCoeffs(frame[c]);
+		coeffs[c][3*i+2].decodeCoeffs(frame[c]);
+		coeffs[c][3*i+3].decodeCoeffs(frame[c]);
+	    } 
+	    Wavelet.inverse(frame[c], dim.width, par.transformDepth);  
+	}
     }
 
     private void initializeTransformFrames() {
@@ -347,8 +347,9 @@ public class Picture {
         for(int i = 0; i < format.height; i++) {
             for(int j = 0; j < format.width; j++) {
 		y = frame[0][j + i*lum.width];
-		u = frame[1][j/xFac + (i/yFac)*chrom.width];
-		v = frame[2][j/xFac + (i/yFac)*chrom.width];
+		int chromPos = (j/xFac) + (i/yFac)*chrom.width;
+		u = frame[1][chromPos];
+		v = frame[2][chromPos];
                 pixels[j + i*format.width] = col.convert(y,u,v);
             }
         }
@@ -358,7 +359,9 @@ public class Picture {
 	img = new BufferedImage(format.width , format.height , 
 				BufferedImage.TYPE_INT_RGB);
 	int pixels[] = new int[format.width * format.height];
-	decodeYuv(pixels);
+	if(!zero_residual) {
+	    decodeYuv(pixels);
+	}
 	img.setRGB(0,0, format.width, format.height, pixels, 0, format.width);
     }
 

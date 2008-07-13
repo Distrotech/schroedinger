@@ -210,6 +210,8 @@ public class VideoFormat {
 		    u.decodeUint();
 		}
 	    }
+	} else {
+	    colour = new ColourSpace(0,this);
 	}
 	
 	this.interlaced_coding = u.decodeUint();

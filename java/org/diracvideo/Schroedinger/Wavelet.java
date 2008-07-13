@@ -59,6 +59,20 @@ public class Wavelet {
 	}
     }
 
+    private static void
+	synthesizeDeslausriesDebuc(short d[], int s, int b, int e) {
+	for(int i = b; i < e; i += 2*s) {
+	    if(i - s < b) {
+		d[i] -= (d[i+s] + 1) >> 1;
+	    } else {
+		d[i] -= (d[i-s] + d[i+s] + 2) >>> 2;
+	    }
+	}
+	for(int i = b + s; i < e; i+= 2*s) {
+	    d[i] += (9*d[i-s] + 9*d[i+s] - d[i-3*s] - d[i+3*s] + 8) >>> 4;
+	}
+    }
+
     public static short[] interleave(short ll[], short hl[], 
 				     short lh[], short hh[], int width) {
 	short o[] = new short[ll.length*4];
