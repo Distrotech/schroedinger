@@ -29,10 +29,13 @@ public class Wavelet {
 	    for(int y = 0; y < data.length; y += w) {
 		synthesize(data,s,y,y + w); /* a row */
 	    }
+	    for(int i = 0; i < data.length; i += s*w) {
+		for(int j = i; j < w + i; j += s) {
+		    data[j] = (short)((data[j]+1)>>>1);
+		}
+	    }
 	}
-       	for(int i = 0; i < data.length; i++) {
-	  data[i] = (short)((data[i]+1)>>>1);
-	}
+
     }
     /** synthesize:
      *
