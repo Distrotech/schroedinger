@@ -36,7 +36,7 @@ public class ColourSpace {
 	int rgb[] = new int[3], yuv[] = {y,u,v};
 	/*	clampYuv(yuv);
 		applyMatrix(yuv,rgb);*/
-	return Util.clamp(y+128,0,255)*0x010101;
+	return Util.clamp((y-16)*(255/219),0,255)*0x010101;
     }
 }
 
