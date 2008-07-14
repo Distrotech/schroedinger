@@ -1,11 +1,10 @@
 package org.diracvideo.Schroedinger;
 import java.awt.*;
 import java.awt.image.*;
-/* pictures in the dirac stream specification can basically parse themselves
-   we are going to take advantage of that */
+
 
 class SubBand {
-    int qi, level, stride, offset, orient; 
+    int qi, level, stride, offset, orient, numX, numY;
     Buffer buf;
     Dimension frame, block;
     Parameters par;
@@ -19,45 +18,34 @@ class SubBand {
 	level = (i-1)/3;
 	frame = luma ? par.iwtLumaSize : par.iwtChromaSize;
 	orient = (i - 1) % 3 + 1;
-	if(orient != 0) {
-	    block = new Dimension(frame.width / par.horiz_codeblocks[level+1],
-				  frame.height / par.vert_codeblocks[level+1]);
-	} else {
-	    block = new Dimension(frame.width / par.horiz_codeblocks[0],
-				  frame.height / par.vert_codeblocks[0]);
-	}
 	stride = (1 << (par.transformDepth - level));
 	offset = (orient == 0 ? 0 : 
 		  (orient == 1 ? stride >> 1 :
 		   (orient == 2 ? (frame.width * stride) >> 1 :
 		    (stride + frame.width * stride) >> 1)));
+	numX = (orient == 0 ? par.horiz_codeblocks[0] :
+		par.horiz_codeblocks[level+1]);
+	numY = (orient == 0 ? par.vert_codeblocks[0] :
+		par.vert_codeblocks[level+1]);
     }
     
     public void decodeCoeffs(short[] out) {
-	/* basically the plan is to decode the coefficients
-	   into the frame array right where they should be */
 	if(buf == null)
 	    return;
 	Unpack u = new Unpack(buf);
-	int qf, qo, numX, numY;
-	numX = (orient == 0) ? par.horiz_codeblocks[0] :
-	    par.horiz_codeblocks[level+1];
-	numY = (orient == 0) ? par.vert_codeblocks[0] :
-	    par.vert_codeblocks[level+1];
 	if(numX * numY == 1) {
 	    decodeCodeBlock(out,u,0,0);
 	    return;
-	} 
+	}
 	for(int y = 0; y < numY; y++) {
 	    for(int x = 0; x < numX; x++) {
 		if(u.decodeBool())
 		    continue;
-		if(par.codeblock_mode_index != 0) 
-		  qi += u.decodeSint();
-		decodeCodeBlock(out, u, x,y);
-		u.align();
+		if(par.codeblock_mode_index != 0)
+		    qi += u.decodeSint();
+		decodeCodeBlock(out,u,x,y);
 	    }
-	}
+	} 
     }
 
 
@@ -65,14 +53,19 @@ class SubBand {
 				 int blockX, int blockY) {
 	int qo = quantOffset(qi);
 	int qf = quantFactor(qi);
-	int blockOffset = blockY*block.height*frame.width + blockX*block.width;
-	int blockEnd = blockOffset + (block.height-1)*frame.width + block.width;
-	assert blockEnd <= out.length : "blockEnd out of bounds";
-	for(int i = blockOffset + offset; i < blockEnd; i += frame.width*stride)
-	    for(int j = i; j < i + block.width; j += stride) {
+	int startX = (frame.width * blockX)/numX;
+	int startY = (frame.height * blockY)/numY;
+	int endX = (frame.width * (blockX+1))/numX;
+	int endY = (frame.height * (blockY+1))/numY;
+	int blockWidth = endX - startX;
+	int blockEnd = (frame.width*(endY-1)) + endX;
+	int blockOffset = (frame.width*startY) + startX;
+	for(int i = blockOffset + offset; i < blockEnd; 
+	    i += frame.width * stride) {
+	    for(int j = i; j < i + blockWidth; j += stride) {
 		out[j] = u.decodeSint(qf,qo);
 	    }
-	
+	}
     }
     
     public void intraDCPredict(short out[]) {
@@ -126,6 +119,7 @@ class SubBand {
 	}
     }
 }
+
 
 class Parameters {
     /* all that matters for now is wavelet depth */
@@ -295,6 +289,7 @@ public class Picture {
 		    coeffs[c][i].calculateSizes(i, c == 0);
 		} else {
 		    coeffs[c][i] = new SubBand(null,0,par);
+		    coeffs[c][i].calculateSizes(i, c == 0);
 		}
 	    }
 	}
@@ -320,7 +315,6 @@ public class Picture {
 	    coeffs[c][0].decodeCoeffs(frame[c]);
 	    coeffs[c][0].intraDCPredict(frame[c]);
 	    for(int i = 0; i < par.transformDepth; i++) {
-	    //for(int i = 0; i < 1; i++) {
 		coeffs[c][3*i+1].decodeCoeffs(frame[c]);
 		coeffs[c][3*i+2].decodeCoeffs(frame[c]);
 		coeffs[c][3*i+3].decodeCoeffs(frame[c]);
@@ -338,7 +332,7 @@ public class Picture {
 	frame[2] = new short[chrom.width * chrom.height];
     }
 
-    private void decodeYuv(int pixels[]) {
+    private void decodeYUV(int pixels[]) {
         Dimension lum = par.iwtLumaSize;
 	Dimension chrom = par.iwtChromaSize;
 	ColourSpace col = format.colour;
@@ -347,10 +341,8 @@ public class Picture {
 	int yFac = (lum.height > chrom.height ? 2 : 1);
         for(int i = 0; i < format.height; i++) {
             for(int j = 0; j < format.width; j++) {
-		y = (short)(frame[0][j + i*lum.width] + 128);
-		int chromPos = (j/xFac) + (i/yFac)*chrom.width;
-		u = frame[1][chromPos];
-		v = frame[2][chromPos];
+		y = (short)(frame[0][j + i*lum.width]+128);
+		u = v = 0;
                 pixels[j + i*format.width] = col.convert(y,u,v);
             }
         }
@@ -361,7 +353,7 @@ public class Picture {
 				BufferedImage.TYPE_INT_RGB);
 	int pixels[] = new int[format.width * format.height];
 	if(!zero_residual) {
-	    decodeYuv(pixels);
+	    decodeYUV(pixels);
 	}
 	img.setRGB(0,0, format.width, format.height, pixels, 0, format.width);
     }

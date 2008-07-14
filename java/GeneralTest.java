@@ -1,7 +1,10 @@
+import java.awt.Dimension;
+import java.awt.Point;
+
 public class GeneralTest {
     public static void main(String a[]) {
 	testLevel();
-	assertTest();
+	testBlockDimensions();
     }
 
     private static void testLevel() {
@@ -14,7 +17,34 @@ public class GeneralTest {
 	}
     }
 
-    private static void assertTest() {
-	assert false : "foo";
+    private static void testBlockDimensions() {
+	Dimension frame = new Dimension(320,240);
+	for(int numY = 1; numY < 10; numY ++) {
+	    for(int numX = 1; numX < 10; numX++) {
+		System.err.format("numX: %d\tnumY: %d\n", numX, numY);
+		Dimension block = new Dimension(frame.width / numX,
+						frame.height / numY);
+		for(int i = 0; i < numY; i++)
+		    for(int j = 0; j < numX; j++) {
+			int testStart = (block.width*j) +
+			    (frame.width*block.height*i);
+			int testEnd = testStart + block.width +
+			    (frame.width*(block.height-1));
+			int specX = (frame.width * j)/numX;
+			int specY = (frame.height *i)/numY;
+			int specStart = (frame.width*specY) + specX;
+			int specEndX = (frame.width * (j+1))/numX;
+			int specEndY = (frame.height *(i+1))/numY;
+			int specEnd = (frame.width*(specEndY - 1)) + specEndX;
+			if(specEnd != testEnd ||
+			   specStart != testStart) {
+			    System.err.format("Spec:\t\tTest\n%d\t\t%d\n",
+					      specEnd, testEnd);
+			    System.err.format("%d\t\t%d\n", specStart,
+					      testStart);
+			}
+		    }
+	    }
+	}
     }
 }

@@ -144,7 +144,7 @@ public class Unpack {
     public short decodeSint(int qf, int qo) {
 	int m = decodeUint();
 	if(m == 0) {
-	    return 0;
+	    return (short)((qo + 2) >> 2);
 	} else {
 	    m = (short)((m * qf + qo + 2)>>2);
 	    return (short)((bits(1) == 0) ? m : -m);

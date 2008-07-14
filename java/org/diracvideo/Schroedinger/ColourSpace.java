@@ -28,15 +28,14 @@ public class ColourSpace {
 	}
     }
     
-    private void clampYuv(int yuv[]) {
-       	yuv[0] = Util.clamp(yuv[0] + 128, format.luma_offset, format.luma_offset + format.luma_excursion);
+    private void clampYUV(int yuv[]) {
+       	yuv[0] = Util.clamp((yuv[0]-16)*(255/219), format.luma_offset,
+	    format.luma_offset + format.luma_excursion);
     }
 
     public final int convert(short y, short u, short v) {
-	int rgb[] = new int[3], yuv[] = {y,u,v};
-	/*	clampYuv(yuv);
-		applyMatrix(yuv,rgb);*/
 	return Util.clamp((y-16)*(255/219),0,255)*0x010101;
+
     }
 }
 
