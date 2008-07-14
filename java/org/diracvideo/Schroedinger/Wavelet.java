@@ -23,15 +23,17 @@ public class Wavelet {
     public static void inverse(short data[], int w, int depth) {
 	/* data is assumed to be preinterleaved */
 	for(int s = (1 << (depth - 1)); s > 0; s >>= 1) {
-	    for(int x = 0; x < w; x++) {
+	    for(int x = 0; x < w; x += s) {
 		synthesize(data,s*w,x,data.length); /* a column */
 	    }
-	    for(int y = 0; y < data.length; y += w) {
+	    for(int y = 0; y < data.length; y += w*s) {
 		synthesize(data,s,y,y + w); /* a row */
 	    }
-	}
-       	for(int i = 0; i < data.length; i++) {
-	  data[i] = (short)((data[i]+1)>>>1);
+            for(int y = 0; y < data.length; y += s*w) {
+                for(int x = 0; x < w; x += s) {
+	            data[y+x] = (short)((data[y+x]+1)>>1);
+		}
+	    }
 	}
     }
     /** synthesize:
@@ -47,14 +49,14 @@ public class Wavelet {
 	    if(i - s < b) {
 		d[i] -= (d[i+s] + 1) >> 1;
 	    } else {
-		d[i] -= (d[i-s] + d[i+s] + 2) >>> 2;
+		d[i] -= (d[i-s] + d[i+s] + 2) >> 2;
 	    }
 	}
 	for(int i = b + s; i < e; i += 2*s) {
 	    if(i + s >= e) {
 		d[i] += d[i-s];
 	    } else {
-		d[i] += (d[i-s] + d[i+s] + 1) >>> 1;
+		d[i] += (d[i-s] + d[i+s] + 1) >> 1;
 	    }
 	}
     }
@@ -65,11 +67,11 @@ public class Wavelet {
 	    if(i - s < b) {
 		d[i] -= (d[i+s] + 1) >> 1;
 	    } else {
-		d[i] -= (d[i-s] + d[i+s] + 2) >>> 2;
+		d[i] -= (d[i-s] + d[i+s] + 2) >> 2;
 	    }
 	}
 	for(int i = b + s; i < e; i+= 2*s) {
-	    d[i] += (9*d[i-s] + 9*d[i+s] - d[i-3*s] - d[i+3*s] + 8) >>> 4;
+	    d[i] += (9*d[i-s] + 9*d[i+s] - d[i-3*s] - d[i+3*s] + 8) >> 4;
 	}
     }
 

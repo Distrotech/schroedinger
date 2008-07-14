@@ -146,7 +146,7 @@ public class Unpack {
 	if(m == 0) {
 	    return 0;
 	} else {
-	    m = (short)((m * qf + qo + 2)/4);
+	    m = (short)((m * qf + qo + 2)>>2);
 	    return (short)((bits(1) == 0) ? m : -m);
 	}
     }

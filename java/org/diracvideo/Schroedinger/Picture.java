@@ -319,7 +319,8 @@ public class Picture {
 	    Dimension dim = (c == 0) ? par.iwtLumaSize : par.iwtChromaSize;
 	    coeffs[c][0].decodeCoeffs(frame[c]);
 	    coeffs[c][0].intraDCPredict(frame[c]);
-	    for(int i = 1; i < par.transformDepth; i++) {
+	    for(int i = 0; i < par.transformDepth; i++) {
+	    //for(int i = 0; i < 1; i++) {
 		coeffs[c][3*i+1].decodeCoeffs(frame[c]);
 		coeffs[c][3*i+2].decodeCoeffs(frame[c]);
 		coeffs[c][3*i+3].decodeCoeffs(frame[c]);
@@ -346,7 +347,7 @@ public class Picture {
 	int yFac = (lum.height > chrom.height ? 2 : 1);
         for(int i = 0; i < format.height; i++) {
             for(int j = 0; j < format.width; j++) {
-		y = frame[0][j + i*lum.width];
+		y = (short)(frame[0][j + i*lum.width] + 128);
 		int chromPos = (j/xFac) + (i/yFac)*chrom.width;
 		u = frame[1][chromPos];
 		v = frame[2][chromPos];
