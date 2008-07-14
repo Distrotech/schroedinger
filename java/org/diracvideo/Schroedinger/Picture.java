@@ -153,7 +153,11 @@ class Parameters {
 	sb.append("\nParameters:\n");
 	sb.append(String.format("Transform depth: %d\n", transformDepth));
 	sb.append(String.format("Using ac: %c\n", (no_ac ? 'n' : 'y')));
-	sb.append(String.format("Is ref: %c\n", (is_ref ? 'y' : 'n')));
+	sb.append(String.format("Is ref: %c", (is_ref ? 'y' : 'n')));
+	for(int i = 0; i < transformDepth; i++) {
+	    sb.append(String.format("\nHorizBlocks: %d\tVertBlocks: %d",
+				    horiz_codeblocks[i], vert_codeblocks[i]));
+	}
 	return sb.toString();
     }
 }    

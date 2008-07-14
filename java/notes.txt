@@ -1,0 +1,13 @@
+Creating a playable file with dirac_encoder:
+dirac_encoder -width 320 -height 240 -cformat YUV422P \
+	      -iwlt_filter LEGALL5_3 -num_L1 0 -lossless \
+	      -use_vlc -wlt_depth 4 -no_spartition <in> <out>
+
+Creating a playable file with schroenc:
+gst-launch videotestsrc ! schroenc intra_wavelet=1 \
+	    enable_noarith=true transform_depth=4  \
+	    gop_structure=1 rate_control=3 ! \
+	     filesink location=test.drc
+
+Hypotheses for the spatial partitioning error:
+* Incorrect partition size calculation	   

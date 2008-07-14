@@ -72,13 +72,15 @@ public final class DecoderTest {
 	    while(in.available() > 0) {
 		packet = readPacket(in);
 		dec.push(packet);
-		if(dec.status == Decoder.Status.DONE)
+		if(dec.status == Decoder.Status.DONE) {
 		    break;
+		}
 	    }
+	    dec.status = Decoder.Status.DONE;
 	    in.close();
+	    other_thread.join();
 	    win.setVisible(false);
 	    win.dispose();
-	    other_thread.join();
 	} catch(IOException e) {
 	    e.printStackTrace();
 	    ev = 1;
