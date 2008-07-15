@@ -9,19 +9,10 @@ x#7    Figure out how to structure decoding (I'd like not to create
        a million `helper' classes).
 x#8    Implement subband decoding (first component only)
 x#9    Implement short[]-to-image conversion
-b#10   Fix colorspace conversion (at least initially)
+x#10   Fix colorspace conversion (at least initially)
 #11    Start arithmetic decoder
+#12    Fix spatial partitioning and colour
 #20    Unroll loops in Wavelet.synthesize() and SubBand.intraDCPredict()
 
 
-The plan for subband decoding:
-Basically, every subband should decode into a separate array. Suppose
-the transform depth is n, picture transform size is w*h, then each
-array at subband b should have the size (w*h)/2^(n-b). There should be 
-4*n+1 of such arrays; 3 per subband for each component, and 1 for
-temporary storage.
-
-That, or, subbands should decode into a large short[] array which can
-be transformed into the final output picture. (This is what has
-actually been implemented).
      

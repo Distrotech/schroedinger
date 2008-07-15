@@ -337,7 +337,7 @@ public class Picture {
     }
 
     private void decodeYUV(int pixels[]) {
-        Dimension lum = par.iwtLumaSize;
+	Dimension lum = par.iwtLumaSize;
 	Dimension chrom = par.iwtChromaSize;
 	ColourSpace col = format.colour;
 	short y,u,v;
@@ -345,11 +345,13 @@ public class Picture {
 	int yFac = (lum.height > chrom.height ? 2 : 1);
         for(int i = 0; i < format.height; i++) {
             for(int j = 0; j < format.width; j++) {
-		y = (short)(frame[0][j + i*lum.width]+128);
-		u = v = 0;
+		y = (short)(frame[0][j + i*lum.width]+120);
+		u = (short)(frame[1][j/xFac + (i/yFac)*chrom.width]);
+		v = (short)(frame[2][j/xFac + (i/yFac)*chrom.width]);
                 pixels[j + i*format.width] = col.convert(y,u,v);
             }
-        }
+	} 
+
     }
     
     private void createImage() {

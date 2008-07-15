@@ -36,6 +36,7 @@ class PictureDrawer extends Canvas implements Runnable {
     public void paint(Graphics gr) {
 	if(dec.hasPicture()) {
 	    Picture pic = dec.pull();
+	    System.err.println(pic);
 	    Image img = pic.getImage();
 	    gr.drawImage(img,0,0,null);
 	}

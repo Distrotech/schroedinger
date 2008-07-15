@@ -27,7 +27,7 @@ public class Wavelet {
 		synthesize(data,s*w,x,data.length); /* a column */
 	    }
 	    for(int y = 0; y < data.length; y += w*s) {
-		synthesize(data,s,y,y + w); /* a row */
+		synthesize(data,s,y, y + w); /* a row */
 	    }
             for(int y = 0; y < data.length; y += s*w) {
                 for(int x = 0; x < w; x += s) {

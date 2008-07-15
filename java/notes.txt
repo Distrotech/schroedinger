@@ -1,7 +1,8 @@
 Creating a playable file with dirac_encoder:
 dirac_encoder -width 320 -height 240 -cformat YUV422P \
 	      -iwlt_filter LEGALL5_3 -num_L1 0 -lossless \
-	      -use_vlc -wlt_depth 4 -no_spartition <in> <out>
+	      -use_vlc -wlt_depth 4 <in> <out>
+
 
 Creating a playable file with schroenc:
 gst-launch videotestsrc ! schroenc intra_wavelet=1 \
@@ -9,5 +10,38 @@ gst-launch videotestsrc ! schroenc intra_wavelet=1 \
 	    gop_structure=1 rate_control=3 ! \
 	     filesink location=test.drc
 
+Actually -wlt_depth is arbitrary, because the decoder does
+just as fine with higher dephts.
+
 Hypotheses for the spatial partitioning error:
-* Incorrect partition size calculation	   
+* Incorrect partition size calculation (likely!)	
+* Incorrect quantization calculation  
+
+Note that error does not display when encoded with schroenc.
+My hypothesis is that schroenc partitions the image differently from
+dirac_encoder. That suggests that partition size calculation is
+(still) wrong.
+
+On the implementing of a Dirac plugin for jst: 
+Basically, you have to create to pads, a Sink and a Src,
+both subclasses of Pad(), to do the actual work of the plugin.
+Then, as dirac is supposed to be muxed by Ogg, implement the 
+OggPayload interface, which is basically an interface to the
+OggDemux plugin.	  
+   
+The plan for subband decoding:
+Sbbands should decode into a large short[] array which can
+be transformed into the final output picture. 
+
+Spatial partitioning:
+Currently, the bounds of the block in which to decode are precalculated,
+and then the block is filled with values from decodeSint() according to
+the striding logic. I'm pretty confident the striding logic works; I'm
+not so confident the precalculating logic works.
+
+As for colour: visual inspection suggests that the colour bands
+are decoded incorrectly even in the no-spatial-partitioning case.
+
+Colour conversion should be much faster. This is probably doable
+by changing to integer arithmetic and by not using temporary arrays
+(or matrix multiplication).
