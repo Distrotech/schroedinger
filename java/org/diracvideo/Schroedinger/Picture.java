@@ -4,6 +4,7 @@ import java.awt.image.*;
 
 
 class SubBand {
+
     int qi, level, stride, offset, orient, numX, numY;
     Buffer buf;
     Dimension frame, block;
@@ -28,7 +29,9 @@ class SubBand {
 	numY = (orient == 0 ? par.vert_codeblocks[0] :
 		par.vert_codeblocks[level+1]);
     }
-    
+
+    /* Maybe we should rewrite this using blocks.
+     * I'm not sure */
     public void decodeCoeffs(short[] out) {
 	if(buf == null)
 	    return;
@@ -107,7 +110,7 @@ class SubBand {
 	if(qi == 0) {
 	    return 0;
 	} else {
-	    if(par.num_refs == 0) {
+	    if(par.is_intra) {
 		if(qi == 1) {
 		    return 2;
 		} else {
@@ -122,20 +125,28 @@ class SubBand {
 
 
 class Parameters {
-    /* all that matters for now is wavelet depth */
+    /* Wavelet transform parameters */
     public int transformDepth = 4, wavelet_index;
     public int codeblock_mode_index = 0;
-    public boolean no_ac, is_ref, is_lowdelay;
+    public boolean no_ac, is_ref, is_lowdelay, is_intra;
     public int[] horiz_codeblocks = new int[7],
 	vert_codeblocks = new int[7];
     public int num_refs;
     public Dimension iwtLumaSize, iwtChromaSize;
+    /* Motion prediction parametrs */
+    public int xblen_luma, yblen_luma, 
+	xbsep_luma, ybsep_luma;
+    public boolean have_global_motion;
+    public int picture_prediction_mode, mv_precision;
+    public int picture_weight_bits = 1, 
+	picture_weight_1 = 1,picture_weight_2 = 1;
 
     public Parameters(int c) {
 	no_ac = !((c & 0x48) == 0x8);
 	num_refs = (c & 0x3);
 	is_ref = (c & 0x0c) == 0x0c;
 	is_lowdelay = ((c & 0x88) == 0x88);
+	is_intra = (num_refs == 0);
     }
 
     public void calculateIwtSizes(VideoFormat format) {
@@ -148,6 +159,44 @@ class Parameters {
 				      Util.roundUpPow2(size[1], transformDepth));
     }
 
+    public void verifyBlockParams() throws Exception {
+	boolean ok = true;
+	ok = ok && xblen_luma >= 0;
+	ok = ok && yblen_luma >= 0;
+	ok = ok && xbsep_luma >= 0;
+	ok = ok && ybsep_luma >= 0;
+	if(!ok) {
+	    throw new Exception("Block Paramters incorrect");
+	}
+    }
+
+    public void setBlockParams(int i) throws Exception {
+	switch(i) {
+	case 1:
+	    xblen_luma = yblen_luma = 8;
+	    xbsep_luma = ybsep_luma = 4;
+	    break;
+	case 2:
+	    xblen_luma = yblen_luma = 12;
+	    xbsep_luma = ybsep_luma = 8;
+	    break;
+	case 3:
+	    xblen_luma = yblen_luma = 16;
+	    xbsep_luma = ybsep_luma = 12;
+	    break;
+	case 4:
+	    xblen_luma = yblen_luma = 24;
+	    xbsep_luma = ybsep_luma = 16;
+	    break;
+	default:
+	    throw new Exception("Unsupported Block Parameters index");
+	}
+    }
+
+    public void calculateMCSizes() {
+	/* to be done */
+    }
+    
     public String toString() {
 	StringBuilder sb = new StringBuilder();
 	sb.append("\nParameters:\n");
@@ -175,6 +224,7 @@ public class Picture {
     private SubBand[][] coeffs;
     private short[][] frame;
     private BufferedImage img;
+    private Buffer[] motion_buffers;
     public Decoder.Status status = Decoder.Status.OK;
     public Exception error = null;
     public final int num;
@@ -202,20 +252,22 @@ public class Picture {
 	format = d.getVideoFormat();
 	par = new Parameters(c);
 	coeffs = new SubBand[3][19];
+	motion_buffers = new Buffer[9];
     }
 
     public void parse() {
 	try {
 	    Unpack u = new Unpack(buf);
 	    parseHeader(u);
-	    if(par.num_refs > 0) {
+	    if(!par.is_intra) {
 		u.align();
 		parsePredictionParameters(u);
+		par.calculateMCSizes();
 		u.align();
 		parseBlockData(u);
 	    }
 	    u.align();
-	    if(par.num_refs > 0) {
+	    if(!par.is_intra) {
 		zero_residual = u.decodeBool();
 	    }
 	    if(!zero_residual) {
@@ -237,7 +289,7 @@ public class Picture {
 
     private void parseHeader(Unpack u) throws Exception {
 	u.align();
-	if(par.num_refs > 0) {
+	if(!par.is_intra) {
 	    refs[0] = dec.refs.get(num + u.decodeSint());
 	}
 	if(par.num_refs > 1) {
@@ -253,11 +305,49 @@ public class Picture {
     }
     
     private void parsePredictionParameters(Unpack u) throws Exception {
-	System.err.println("parsePredictionParamters()");
+	int index = u.decodeUint();
+	if(index == 0) {
+	    par.xblen_luma = u.decodeUint();
+	    par.yblen_luma = u.decodeUint();
+	    par.xbsep_luma = u.decodeUint();
+	    par.ybsep_luma = u.decodeUint();
+	    par.verifyBlockParams();
+	} else {
+	    par.setBlockParams(index);
+	}
+	par.mv_precision = u.decodeUint();
+	if(par.mv_precision > 3) {
+	    throw new Exception("mv_precision greater than supported");
+	}
+	par.have_global_motion = u.decodeBool();
+	if(par.have_global_motion) {
+	    if(true) {
+		throw new Exception("Global Motion unsupported as of yet");
+	    }
+	    for(int i = 0; i < par.num_refs; i++) {
+
+	    }
+	}
+	par.picture_prediction_mode = u.decodeUint();
+	if(par.picture_prediction_mode != 0) {
+	    throw new Exception("Unsupported picture prediction mode");
+	}
+	if(u.decodeBool()) {
+	    par.picture_weight_bits = u.decodeUint();
+	    par.picture_weight_1 = u.decodeSint();
+	    if(par.num_refs > 1) {
+		par.picture_weight_2 = u.decodeSint();
+	    }
+	}
     }
 
     private void parseBlockData(Unpack u) throws Exception {
-	System.err.println("parseBlockData()");
+	for(int i = 0; i < 9; i++) {
+	    if(par.num_refs < 2 && (i == 4 || i == 5))
+		continue;
+	    int l = u.decodeUint();
+	    motion_buffers[i] = u.getSubBuffer(l);
+	}
     }
 
     private void parseTransformParameters(Unpack u) throws Exception {
@@ -377,7 +467,7 @@ public class Picture {
 			       num, code));
 	b.append(par.toString());
 	if(status == Decoder.Status.OK) {
-	    if(par.num_refs > 0) {
+	    if(!par.is_intra) {
 		b.append(String.format("\nHas %d reference(s)",
 				       par.num_refs));
 	    }

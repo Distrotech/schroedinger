@@ -8,10 +8,10 @@ class ArithmeticDecoder {
     int code, range_size, cntr;
     byte shift;
     byte[] data;
-    short probabilities[];
+    short probabilities[] = new short[70];
     int range[];
     int index, offset, carry, size;
-    ArithmeticContext contexts[];
+    ArithmeticContext contexts[] = new ArithmeticContext[70];
 
     private short lut[] = new short[512]; /* look up table */
 
@@ -20,12 +20,15 @@ class ArithmeticDecoder {
 	range[0] = 0;
 	range[1] = 0xffff;
 	range_size = 0xffff;
-	code = 0;
 	index = b.b;
 	size = b.e;
 	data = b.d;
+	code = ((size - index) > 0 ? data[0] : 0xff) << 8;
+	code |= ((size - index) > 1 ? data[1] : 0xff);
+	offset = 2;
     }
 
+    
     public int decodeUint(int cont, int val) {
 	int v = 1;
 	while(decodeBit(cont) == 0) {
