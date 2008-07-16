@@ -30,6 +30,9 @@
 #include <liboil/liboil.h>
 #include <math.h>
 
+#define SCHRO_ENABLE_UNSTABLE_API
+#include <schroedinger/schroparse.h>
+
 
 GST_DEBUG_CATEGORY_EXTERN (schro_debug);
 #define GST_CAT_DEFAULT schro_debug
@@ -60,15 +63,25 @@ struct _GstSchroParse
 
   SchroDecoder *decoder;
 
+  /* video properties */
+  int fps_n, fps_d;
+  int par_n, par_d;
+  int width, height;
+  guint64 duration;
+  GstCaps *caps;
+  
   /* state */
-  int n_frames;
-  gint64 granulepos;
+  gboolean have_seq_header;
+  int picture_number;
   GstSegment segment;
   gboolean discont;
+  uint64_t granulepos_offset;
+  uint64_t granulepos_low;
+  uint64_t granulepos_hi;
+  gint64 timestamp_offset;
+  gboolean update_granulepos;
 
   int bytes_per_picture;
-  int fps_numerator;
-  int fps_denominator;
 };
 
 struct _GstSchroParseClass
@@ -181,9 +194,20 @@ static void
 gst_schro_parse_reset (GstSchroParse *dec)
 {
   GST_DEBUG("reset");
-  dec->granulepos = 0;
+  dec->have_seq_header = FALSE;
   dec->discont = TRUE;
-  dec->n_frames = 0;
+  dec->picture_number = 0;
+  dec->update_granulepos = TRUE;
+  dec->granulepos_offset = 0;
+  dec->granulepos_low = 0;
+  dec->granulepos_hi = 0;
+  dec->duration = GST_SECOND/30;
+  dec->fps_n = 30;
+  dec->fps_d = 1;
+  dec->par_n = 1;
+  dec->par_d = 1;
+  dec->width = -1;
+  dec->height = -1;
 
   gst_segment_init (&dec->segment, GST_FORMAT_TIME);
   gst_adapter_clear (dec->adapter);
@@ -210,6 +234,7 @@ gst_schro_parse_finalize (GObject *object)
 #define OGG_DIRAC_GRANULE_SHIFT 32
 #define OGG_DIRAC_GRANULE_LOW_MASK ((1ULL<<OGG_DIRAC_GRANULE_SHIFT)-1)
 
+#if 0
 static gint64
 granulepos_to_frame (gint64 granulepos)
 {
@@ -218,6 +243,7 @@ granulepos_to_frame (gint64 granulepos)
   return (granulepos >> OGG_DIRAC_GRANULE_SHIFT) +
     (granulepos & OGG_DIRAC_GRANULE_LOW_MASK);
 }
+#endif
 
 static const GstQueryType *
 gst_schro_parse_get_query_types (GstPad *pad)
@@ -266,7 +292,7 @@ gst_schro_parse_src_convert (GstPad *pad,
       switch (*dest_format) {
         case GST_FORMAT_TIME:
           *dest_value = gst_util_uint64_scale (src_value,
-              GST_SECOND * dec->fps_denominator, dec->fps_numerator);
+              GST_SECOND * dec->fps_d, dec->fps_n);
           break;
         case GST_FORMAT_BYTES:
           *dest_value = gst_util_uint64_scale_int (src_value,
@@ -307,8 +333,8 @@ gst_schro_parse_sink_convert (GstPad *pad,
     case GST_FORMAT_DEFAULT:
       switch (*dest_format) {
         case GST_FORMAT_TIME:
-          *dest_value = gst_util_uint64_scale (granulepos_to_frame (src_value),
-              dec->fps_denominator * GST_SECOND, dec->fps_numerator);
+          *dest_value = gst_util_uint64_scale (src_value,
+              dec->fps_d * GST_SECOND, dec->fps_n);
           break;
         default:
           res = FALSE;
@@ -319,7 +345,7 @@ gst_schro_parse_sink_convert (GstPad *pad,
         case GST_FORMAT_DEFAULT:
         {
           *dest_value = gst_util_uint64_scale (src_value,
-              dec->fps_numerator, dec->fps_denominator * GST_SECOND);
+              dec->fps_n, dec->fps_d * GST_SECOND);
           break;
         }
         default:
@@ -354,8 +380,8 @@ gst_schro_parse_src_query (GstPad *pad, GstQuery *query)
 
       gst_query_parse_position (query, &format, NULL);
 
-      time = gst_util_uint64_scale (granulepos_to_frame (dec->granulepos),
-              dec->fps_numerator, dec->fps_denominator);
+      time = gst_util_uint64_scale (dec->picture_number,
+              dec->fps_n, dec->fps_d);
       //time -= dec->segment.start;
       time += dec->segment.time;
       GST_DEBUG("query position %lld", time);
@@ -601,6 +627,34 @@ gst_schro_parse_change_state (GstElement *element, GstStateChange transition)
   return ret;
 }
 
+static void
+handle_sequence_header (GstSchroParse *schro_parse, guint8 *data, int size)
+{
+  SchroVideoFormat video_format;
+  int ret;
+
+  ret = schro_parse_decode_sequence_header (data + 13, size - 13,
+      &video_format);
+  if (ret) {
+    schro_parse->fps_n = video_format.frame_rate_numerator;
+    schro_parse->fps_d = video_format.frame_rate_denominator;
+    GST_INFO("Frame rate is %d/%d", schro_parse->fps_n,
+        schro_parse->fps_d);
+
+    schro_parse->width = video_format.width;
+    schro_parse->height = video_format.height;
+    GST_INFO("Frame dimensions are %d x %d\n", schro_parse->width,
+        schro_parse->height);
+
+    schro_parse->par_n = video_format.aspect_ratio_numerator;
+    schro_parse->par_d = video_format.aspect_ratio_denominator;
+    GST_INFO("Pixel aspect ratio is %d/%d", schro_parse->par_n,
+        schro_parse->par_d);
+  } else {
+    GST_ERROR("Failed to get frame rate from sequence header");
+  }
+}
+
 static GstFlowReturn
 gst_schro_parse_push_all (GstSchroParse *schro_parse, gboolean at_eos)
 {
@@ -610,6 +664,9 @@ gst_schro_parse_push_all (GstSchroParse *schro_parse, gboolean at_eos)
   while (TRUE) {
     int size;
     unsigned char header[SCHRO_PARSE_HEADER_SIZE];
+    guint8 *data;
+    int parse_code;
+    int presentation_frame;
 
     if (gst_adapter_available (schro_parse->adapter) <
         SCHRO_PARSE_HEADER_SIZE) {
@@ -629,8 +686,7 @@ gst_schro_parse_push_all (GstSchroParse *schro_parse, gboolean at_eos)
     GST_LOG ("Have complete parse unit of %d bytes", size);
 
     if (size == 0) {
-      GST_WARNING("BBCD packet with zero size");
-      return GST_FLOW_ERROR;
+      size = 13;
     }
 
     if (gst_adapter_available (schro_parse->adapter) < size) {
@@ -638,6 +694,70 @@ gst_schro_parse_push_all (GstSchroParse *schro_parse, gboolean at_eos)
     }
 
     outbuf = gst_adapter_take_buffer (schro_parse->adapter, size);
+
+    data = GST_BUFFER_DATA(outbuf);
+    parse_code = data[4];
+    presentation_frame = schro_parse->picture_number;
+
+    if (SCHRO_PARSE_CODE_IS_SEQ_HEADER(parse_code)) {
+      if (!schro_parse->have_seq_header) {
+        handle_sequence_header (schro_parse, data, GST_BUFFER_SIZE(outbuf));
+        schro_parse->have_seq_header = TRUE;
+      }
+
+      schro_parse->update_granulepos = TRUE;
+    }
+    if (SCHRO_PARSE_CODE_IS_PICTURE(parse_code)) {
+      if (schro_parse->update_granulepos) {
+        schro_parse->granulepos_hi = schro_parse->granulepos_offset +
+          presentation_frame + 1;
+        schro_parse->update_granulepos = FALSE;
+      }
+      schro_parse->granulepos_low = schro_parse->granulepos_offset +
+        presentation_frame + 1 - schro_parse->granulepos_hi;
+    }
+    
+    GST_BUFFER_OFFSET_END (outbuf) =
+      (schro_parse->granulepos_hi<<OGG_DIRAC_GRANULE_SHIFT) +
+      schro_parse->granulepos_low;
+    GST_BUFFER_OFFSET (outbuf) = gst_util_uint64_scale (
+        (schro_parse->granulepos_hi + schro_parse->granulepos_low),
+        schro_parse->fps_d * GST_SECOND, schro_parse->fps_n);
+    if (SCHRO_PARSE_CODE_IS_PICTURE(parse_code)) {
+      GST_BUFFER_DURATION (outbuf) = schro_parse->duration;
+      GST_BUFFER_TIMESTAMP (outbuf) =
+        schro_parse->timestamp_offset + gst_util_uint64_scale (
+          schro_parse->picture_number,
+          schro_parse->fps_d * GST_SECOND, schro_parse->fps_n);
+      schro_parse->picture_number++;
+      if (!SCHRO_PARSE_CODE_IS_INTRA(parse_code)) {
+        GST_BUFFER_FLAG_SET (outbuf, GST_BUFFER_FLAG_DELTA_UNIT);
+      } else {
+        GST_BUFFER_FLAG_UNSET (outbuf, GST_BUFFER_FLAG_DELTA_UNIT);
+      }
+    } else {
+      GST_BUFFER_DURATION (outbuf) = -1;
+      GST_BUFFER_TIMESTAMP (outbuf) =
+        schro_parse->timestamp_offset + gst_util_uint64_scale (
+          schro_parse->picture_number,
+          schro_parse->fps_d * GST_SECOND, schro_parse->fps_n);
+      GST_BUFFER_FLAG_UNSET (outbuf, GST_BUFFER_FLAG_DELTA_UNIT);
+    }
+
+    if (!schro_parse->caps) {
+      schro_parse->caps = gst_caps_new_simple ("video/x-dirac",
+              "width", G_TYPE_INT, schro_parse->width,
+              "height", G_TYPE_INT, schro_parse->height,
+              "framerate", GST_TYPE_FRACTION, schro_parse->fps_n,
+              schro_parse->fps_d, NULL);
+      
+      if (schro_parse->par_d != 1 || schro_parse->par_n != 1)
+          gst_caps_set_simple (schro_parse->caps, "pixel-aspect-ratio",
+	      GST_TYPE_FRACTION, schro_parse->par_n, schro_parse->par_d, NULL);
+
+      gst_pad_set_caps (schro_parse->srcpad, schro_parse->caps);
+    }
+    gst_buffer_set_caps (outbuf, schro_parse->caps);
 
     ret = gst_pad_push (schro_parse->srcpad, outbuf);
     if (ret != GST_FLOW_OK)
@@ -658,7 +778,6 @@ gst_schro_parse_chain (GstPad *pad, GstBuffer *buf)
     GST_DEBUG_OBJECT (schro_parse, "received DISCONT buffer");
     //dec->need_keyframe = TRUE;
     //dec->last_timestamp = -1;
-    schro_parse->granulepos = -1;
     schro_parse->discont = TRUE;
   }
 

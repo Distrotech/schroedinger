@@ -32,6 +32,12 @@ struct _SchroThread {
   int index;
 };
 
+void
+schro_async_init (void)
+{
+
+}
+
 SchroAsync *
 schro_async_new(int n_threads,
     SchroAsyncScheduleFunc schedule,
@@ -143,6 +149,27 @@ void schro_async_unlock (SchroAsync *async)
 }
 
 void schro_async_signal_scheduler (SchroAsync *async)
+{
+}
+
+SchroMutex *
+schro_mutex_new (void)
+{
+  return NULL;
+}
+
+void
+schro_mutex_lock (SchroMutex *mutex)
+{
+}
+
+void
+schro_mutex_unlock (SchroMutex *mutex)
+{
+}
+
+void
+schro_mutex_free (SchroMutex *mutex)
 {
 }
 

@@ -13,7 +13,11 @@ lib_LTLIBRARIES = libschroedinger-@SCHRO_MAJORMINOR@.la
 
 DISTCLEANFILES = schro-stdint.h
 
-EXTRA_DIST = schroarith-i386.c
+EXTRA_DIST = schroarith-i386.c \
+	schroasync-none.c \
+	schroasync-pthread.c \
+	schroasync-gthread.c \
+	schroasync-win32.c
 
 pkginclude_HEADERS = \
 	schro.h \
@@ -40,6 +44,7 @@ pkginclude_HEADERS = \
 	schromotionest.h \
 	schropack.h \
 	schroparams.h \
+	schroparse.h \
 	schrophasecorrelation.h \
 	schroqueue.h \
 	schrossim.h \
@@ -54,6 +59,7 @@ pkginclude_HEADERS = \
 
 noinst_HEADERS = \
 	schrooil.h \
+	schroorc.h \
 	schrogpuframe.h
 
 if HAVE_CUDA
@@ -67,12 +73,6 @@ endif
 
 if HAVE_OPENGL
 opengl_libs = opengl/libopengl.la
-endif
-
-if HAVE_PTHREAD
-async_sources = schroasync-pthread.c
-else
-async_sources = schroasync-none.c
 endif
 
 libschroedinger_@SCHRO_MAJORMINOR@_la_SOURCES = \
@@ -98,6 +98,7 @@ libschroedinger_@SCHRO_MAJORMINOR@_la_SOURCES = \
 	schrooil.c \
 	schropack.c \
 	schroparams.c \
+	schroparse.c \
 	schrophasecorrelation.c \
 	schroquantiser.c \
 	schroqueue.c \
@@ -111,12 +112,17 @@ libschroedinger_@SCHRO_MAJORMINOR@_la_SOURCES = \
 	schrowavelet.c \
 	schrowavelettables.c \
 	$(cuda_sources) \
-	$(async_sources)
+	schroasync-@THREAD_IMPL@.c
+
+if HAVE_ORC
+libschroedinger_@SCHRO_MAJORMINOR@_la_SOURCES += schroorc.c
+endif
 
 
 libschroedinger_@SCHRO_MAJORMINOR@_la_CFLAGS = \
-	$(SCHRO_CFLAGS) $(LIBOIL_CFLAGS) $(ERROR_CFLAGS) \
+	$(SCHRO_CFLAGS) $(LIBOIL_CFLAGS) $(ORC_CFLAGS) $(ERROR_CFLAGS) \
 	-DSCHRO_ENABLE_UNSTABLE_API \
+	$(GTHREAD_CFLAGS) \
 	$(CUDA_CFLAGS) -I$(srcdir)/cuda -I$(srcdir)/opengl
 
 libschroedinger_@SCHRO_MAJORMINOR@_la_LIBADD = \
@@ -125,9 +131,10 @@ libschroedinger_@SCHRO_MAJORMINOR@_la_LIBADD = \
 	$(opengl_libs) \
 	$(OPENGL_LIBS) \
 	$(LIBOIL_LIBS) \
+	$(ORC_LIBS) \
 	$(PTHREAD_LIBS)
 libschroedinger_@SCHRO_MAJORMINOR@_la_LDFLAGS = \
 	-no-undefined \
 	-version-info $(SCHRO_LIBVERSION) \
-	-export-symbols-regex '^(oil|schro)_'
+	-export-symbols-regex '^schro_'
 

@@ -1,6 +1,6 @@
 AC_PREREQ([2.58])
 dnl PLEASE remove the nano when doing a release
-AC_INIT(schroedinger,1.0.3.1)
+AC_INIT(schroedinger,1.0.5.1)
 
 AS_NANO(SCHRO_CVS=no,SCHRO_CVS=yes)
 
@@ -19,7 +19,7 @@ dnl - library source changed -> increment REVISION
 dnl - interfaces added/removed/changed -> increment CURRENT, REVISION = 0
 dnl - interfaces added -> increment AGE
 dnl - interfaces removed -> AGE = 0
-SCHRO_LIBVERSION="0:0:0"
+SCHRO_LIBVERSION="1:0:1"
 AC_SUBST(SCHRO_LIBVERSION)
 AC_LIBTOOL_WIN32_DLL
 AC_PROG_LIBTOOL
@@ -49,17 +49,61 @@ PKG_CHECK_MODULES(LIBOIL, liboil-0.3 >= $OIL_VER, HAVE_LIBOIL=yes, HAVE_LIBOIL=n
 if test "x${HAVE_LIBOIL}" != xyes ; then
   AC_ERROR([liboil-0.3 >= $OIL_VER is required])
 fi
+SCHRO_PKG_DEPS="liboil-0.3 >= $OIL_VER"
 
-AC_ARG_WITH([pthread],
-    AS_HELP_STRING([--with-pthread],[use pthread library [[default=yes]]]),
-    [],
-    [with_pthread=yes])
-if test "x${with_pthread}" = "xyes" ; then
-  PTHREAD_LIBS="-lpthread"
-  AC_SUBST(PTHREAD_LIBS)
-  AC_DEFINE(HAVE_PTHREAD, 1, [Whether or not pthread is enabled])
+AC_ARG_ENABLE(orc, AC_HELP_STRING([--enable-orc],
+              [enable orc support (default=disabled)]))
+if test "x$enable_orc" = xyes
+then
+  ORC_VER="0.3.13"
+  PKG_CHECK_MODULES(ORC, orc-0.3 >= $ORC_VER, HAVE_ORC=yes, HAVE_ORC=no)
+else
+  HAVE_ORC=no
 fi
-AM_CONDITIONAL(HAVE_PTHREAD, test "x$with_pthread" = "xyes")
+if test "x${HAVE_ORC}" = xyes ; then
+  AC_DEFINE(HAVE_ORC, 1, [Whether or not orc is enabled])
+  SCHRO_PKG_DEPS="$SCHRO_PKG_DEPS orc-0.3 >= $ORC_VER"
+fi
+AM_CONDITIONAL(HAVE_ORC, test "x$HAVE_ORC" = "xyes")
+
+AC_ARG_WITH([thread],
+    AS_HELP_STRING([--with-thread=IMPL],[use threading library {auto,pthread,gthread,win32,none} [[default=auto]]]),
+    [],
+    [with_thread=auto])
+
+AC_MSG_CHECKING([threading implementation to use])
+if test "x${with_thread}" = "xauto" ; then
+  case $host_os in
+    mingw* | pw32*)
+      with_thread=win32
+      ;;
+    *)
+      with_thread=pthread
+      ;;
+  esac
+fi
+AC_MSG_RESULT([$with_thread])
+
+THREAD_IMPL=${with_thread}
+AC_SUBST(THREAD_IMPL)
+
+if test "x${with_thread}" = "xpthread" ; then
+  case "$host_os" in 
+    *)
+      PTHREAD_CFLAGS=
+      PTHREAD_LIBS=-lpthread
+      ;;
+  esac
+  AC_SUBST(PTHREAD_CFLAGS)
+  AC_SUBST(PTHREAD_LIBS)
+fi
+
+if test "x${with_thread}" = "xgthread" ; then
+  PKG_CHECK_MODULES(GTHREAD, gthread-2.0, HAVE_GTHREAD=yes, HAVE_GTHREAD=no)
+  AC_SUBST(GTHREAD_LIBS)
+  AC_SUBST(GTHREAD_CFLAGS)
+  SCHRO_PKG_DEPS="$SCHRO_PKG_DEPS gthread-2.0"
+fi
 
 AC_ARG_WITH([opengl],
     AS_HELP_STRING([--with-opengl=PATH],[prefix where OpenGL is installed [[default=no]]]),
@@ -86,6 +130,7 @@ fi
 AS_COMPILER_FLAG(-O3, CFLAGS=`echo $CFLAGS | sed s/O2/O3/`)
 
 # Enable severe pain
+#AS_COMPILER_FLAGS(COMPANY_CFLAGS,"-Wextra -Wno-missing-field-initializers -Wno-unused-parameter -Wold-style-definition -Wdeclaration-after-statement -Wmissing-declarations -Wmissing-prototypes -Wredundant-decls -Wmissing-noreturn -Wshadow -Wpointer-arith -Wcast-align -Wwrite-strings -Winline -Wformat-nonliteral -Wformat-security -Wswitch-enum -Wswitch-default")
 #COMPANY_CFLAGS="-Wextra -Wno-missing-field-initializers -Wno-unused-parameter -Wold-style-definition -Wdeclaration-after-statement -Wmissing-declarations -Wmissing-prototypes -Wredundant-decls -Wmissing-noreturn -Wshadow -Wpointer-arith -Wcast-align -Wwrite-strings -Winline -Wformat-nonliteral -Wformat-security -Wswitch-enum -Wswitch-default"
 #SCHRO_CFLAGS="$SCHRO_CFLAGS $COMPANY_CFLAGS"
 
@@ -108,7 +153,7 @@ AC_ARG_ENABLE(gstreamer, AC_HELP_STRING([--disable-gstreamer],
               [disable gstreamer support (default=enabled)]))
 if test "x$enable_gstreamer" != xno
 then
-  PKG_CHECK_MODULES(GST, gstreamer-0.10 >= 0.10.12 gstreamer-base-0.10 >= 0.10.12 gstreamer-video-0.10 ${GST_GL_DEP},
+  PKG_CHECK_MODULES(GST, gstreamer-0.10 >= 0.10.19 gstreamer-base-0.10 >= 0.10.19 gstreamer-video-0.10 >= 0.10.19 ${GST_GL_DEP},
       HAVE_GST=yes, HAVE_GST=no)
 else
   HAVE_GST=no
@@ -200,10 +245,11 @@ AM_CONDITIONAL(BUILD_BROKEN_TESTS, false)
 
 SCHRO_LIBS="\$(top_builddir)/schroedinger/libschroedinger-$SCHRO_MAJORMINOR.la"
 # hack around ld bug
-SCHRO_LIBS="$SCHRO_LIBS $LIBOIL_LIBS $CUDA_LIBS $OPENGL_LIBS $PTHREAD_LIBS $LIBM"
+SCHRO_LIBS="$SCHRO_LIBS $LIBOIL_LIBS $CUDA_LIBS $OPENGL_LIBS $PTHREAD_LIBS $GTHREAD_LIBS $LIBM"
 #SCHRO_LIBS="$SCHRO_LIBS -lprofiler"
 AC_SUBST(SCHRO_LIBS)
 
+AC_SUBST(SCHRO_PKG_DEPS)
 AS_HOST_DEFINES()
 	
 pkgconfigdir="\$(libdir)/pkgconfig"

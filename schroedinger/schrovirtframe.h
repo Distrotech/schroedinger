@@ -22,6 +22,8 @@ SchroFrame *schro_virt_frame_new_unpack (SchroFrame *vf);
 SchroFrame *schro_virt_frame_new_pack_YUY2 (SchroFrame *vf);
 SchroFrame *schro_virt_frame_new_pack_UYVY (SchroFrame *vf);
 SchroFrame *schro_virt_frame_new_pack_AYUV (SchroFrame *vf);
+SchroFrame *schro_virt_frame_new_color_matrix (SchroFrame *vf);
+SchroFrame * schro_virt_frame_new_subsample (SchroFrame *vf, SchroFrameFormat format);
 
 SCHRO_END_DECLS
 

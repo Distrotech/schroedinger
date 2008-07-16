@@ -16,14 +16,15 @@ buildnoinst_LTLIBRARIES = libschrotest.la
 noinst_PROGRAMS = arith arith_encode \
 	 encode wavelet wavelet_2d \
 	 phasecorrelation motion \
-	 quant decode decode_loop divide \
+	 quant decode decode_coded_order decode_loop divide \
 	 global_motion upsample \
 	 motion2 sort filter ssim gaussian fft \
 	 wavelet_gain wavelet_noise_gain \
 	 wavelet_gain_curve \
 	 perceptual_weight perceptual_curves \
 	 wavelet_noise_2d \
-	 unpack downsample hist_noise_level taps ramp
+	 unpack downsample hist_noise_level taps ramp \
+	 abi colorspace
 
 noinst_HEADERS = common.h
 

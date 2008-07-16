@@ -58,6 +58,8 @@ struct _SchroDecoder {
 
   int queue_depth;
   int end_of_stream;
+  int flushing;
+  int coded_order;
 
   SchroPictureNumber earliest_frame;
 
@@ -66,8 +68,8 @@ struct _SchroDecoder {
   int next_parse_offset;
   int prev_parse_offset;
 
-  int have_access_unit;
-  SchroBuffer *access_unit_buffer;
+  int have_sequence_header;
+  SchroBuffer *sequence_header_buffer;
   int have_frame_number;
 
   double skip_value;
@@ -136,7 +138,13 @@ enum {
   SCHRO_DECODER_FIRST_ACCESS_UNIT,
   SCHRO_DECODER_NEED_BITS,
   SCHRO_DECODER_NEED_FRAME,
-  SCHRO_DECODER_WAIT
+  SCHRO_DECODER_WAIT,
+  SCHRO_DECODER_STALLED
+};
+
+enum {
+  SCHRO_DECODER_PICTURE_ORDER_PRESENTATION = 0,
+  SCHRO_DECODER_PICTURE_ORDER_CODED
 };
 
 SchroDecoder * schro_decoder_new (void);
@@ -146,24 +154,22 @@ SchroVideoFormat * schro_decoder_get_video_format (SchroDecoder *decoder);
 void schro_decoder_add_output_picture (SchroDecoder *decoder, SchroFrame *frame);
 int schro_decoder_push_ready (SchroDecoder *decoder);
 int schro_decoder_push (SchroDecoder *decoder, SchroBuffer *buffer);
+int schro_decoder_set_flushing (SchroDecoder *decoder, int flushing);
+void schro_decoder_set_picture_order (SchroDecoder *decoder, int picture_order);
 int schro_decoder_push_end_of_stream (SchroDecoder *decoder);
 SchroFrame *schro_decoder_pull (SchroDecoder *decoder);
-int schro_decoder_is_parse_unit (SchroBuffer *buffer);
-int schro_decoder_is_access_unit (SchroBuffer *buffer);
-int schro_decoder_is_intra (SchroBuffer *buffer);
-int schro_decoder_is_picture (SchroBuffer *buffer);
-int schro_decoder_iterate (SchroDecoder *decoder);
 int schro_decoder_wait (SchroDecoder *decoder);
 
 void schro_decoder_set_earliest_frame (SchroDecoder *decoder, SchroPictureNumber earliest_frame);
 void schro_decoder_set_skip_ratio (SchroDecoder *decoder, double ratio);
 SchroPictureNumber schro_decoder_get_picture_number (SchroDecoder *decoder);
+int schro_decoder_need_output_frame (SchroDecoder *decoder);
 
 #ifdef SCHRO_ENABLE_UNSTABLE_API
 
 void schro_decoder_decode_parse_header (SchroDecoder *decoder);
-void schro_decoder_parse_access_unit (SchroDecoder *decoder);
-int schro_decoder_compare_access_unit_buffer (SchroBuffer *a, SchroBuffer *b);
+void schro_decoder_parse_sequence_header (SchroDecoder *decoder);
+int schro_decoder_compare_sequence_header_buffer (SchroBuffer *a, SchroBuffer *b);
 
 void schro_decoder_subband_dc_predict (SchroFrameData *fd);
 

@@ -7,15 +7,19 @@
 
 SCHRO_BEGIN_DECLS
 
+typedef int SchroExecDomain;
+
 typedef struct _SchroAsync SchroAsync;
 typedef struct _SchroThread SchroThread;
 typedef struct _SchroAsyncTask SchroAsyncTask;
+typedef struct _SchroMutex SchroMutex;
 
 #ifdef SCHRO_ENABLE_UNSTABLE_API
 
 typedef int (*SchroAsyncScheduleFunc)(void *, SchroExecDomain exec_domain);
 typedef void (*SchroAsyncCompleteFunc)(void *);
 
+void schro_async_init (void);
 SchroAsync * schro_async_new(int n_threads,
     SchroAsyncScheduleFunc schedule,
     SchroAsyncCompleteFunc complete,
@@ -36,6 +40,12 @@ SchroExecDomain schro_async_get_exec_domain (void);
 
 void schro_async_add_exec_domain (SchroAsync *async,
     SchroExecDomain exec_domain);
+
+SchroMutex *schro_mutex_new (void);
+SchroMutex *schro_mutex_new_recursive (void);
+void schro_mutex_lock (SchroMutex *mutex);
+void schro_mutex_unlock (SchroMutex *mutex);
+void schro_mutex_free (SchroMutex *mutex);
 
 #endif
 

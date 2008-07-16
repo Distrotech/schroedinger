@@ -19,23 +19,6 @@ typedef struct _SchroEncoder SchroEncoder;
 typedef struct _SchroEncoderFrame SchroEncoderFrame;
 typedef struct _SchroEncoderSetting SchroEncoderSetting;
 
-#if 0
-typedef enum {
-  SCHRO_PREF_ENGINE,
-  SCHRO_PREF_QUANT_ENGINE,
-  SCHRO_PREF_REF_DISTANCE,
-  SCHRO_PREF_TRANSFORM_DEPTH,
-  SCHRO_PREF_INTRA_WAVELET,
-  SCHRO_PREF_INTER_WAVELET,
-  SCHRO_PREF_LAMBDA,
-  SCHRO_PREF_PSNR,
-  SCHRO_PREF_BITRATE,
-  SCHRO_PREF_NOARITH,
-  SCHRO_PREF_MD5,
-  SCHRO_PREF_LAST
-} SchroPrefEnum;
-#endif
-
 typedef enum {
   SCHRO_STATE_NEED_FRAME,
   SCHRO_STATE_HAVE_BUFFER,
@@ -43,6 +26,7 @@ typedef enum {
   SCHRO_STATE_END_OF_STREAM
 } SchroStateEnum;
 
+#ifdef SCHRO_ENABLE_UNSTABLE_API
 typedef enum {
   SCHRO_ENCODER_FRAME_STATE_NEW = 0,
   SCHRO_ENCODER_FRAME_STATE_ANALYSE = (1<<1),
@@ -57,6 +41,7 @@ typedef enum {
   SCHRO_ENCODER_FRAME_STATE_DONE = (1<<6),
   SCHRO_ENCODER_FRAME_STATE_FREE = (1<<9)
 } SchroEncoderFrameStateEnum;
+#endif
 
 typedef enum {
   SCHRO_ENCODER_PERCEPTUAL_CONSTANT,
@@ -94,6 +79,8 @@ struct _SchroEncoderFrame {
   SchroEncoderFrameStateEnum working;
   int busy;
 
+  void *priv;
+
   /* Bits telling the engine stages which stuff needs to happen */
   unsigned int need_downsampling;
   unsigned int need_filtering;
@@ -109,7 +96,7 @@ struct _SchroEncoderFrame {
 
   /* other stuff */
 
-  int start_access_unit;
+  int start_sequence_header;
   int gop_length;
 
   SchroPictureNumber frame_number;
@@ -118,7 +105,7 @@ struct _SchroEncoderFrame {
   SchroFrame *downsampled_frames[5];
   SchroUpsampledFrame *reconstructed_frame;
 
-  SchroBuffer *access_unit_buffer;
+  SchroBuffer *sequence_header_buffer;
   SchroList *inserted_buffers;
   int output_buffer_size;
   SchroBuffer *output_buffer;
@@ -220,6 +207,8 @@ struct _SchroEncoder {
   int bitrate;
   int max_bitrate;
   int min_bitrate;
+  int buffer_size;
+  int buffer_level;
   double noise_threshold;
   int gop_structure;
   int queue_depth;
@@ -284,6 +273,7 @@ struct _SchroEncoder {
   int end_of_stream_pulled;
   int completed_eos;
   int prev_offset;
+  int force_sequence_header;
 
   SchroPictureNumber au_frame;
   int next_slot;
@@ -311,8 +301,6 @@ struct _SchroEncoder {
   double subband_weights[SCHRO_N_WAVELETS][SCHRO_LIMIT_TRANSFORM_DEPTH][SCHRO_LIMIT_SUBBANDS];
   SchroHistogramTable intra_hist_tables[60];
 
-  int buffer_size;
-  int buffer_level;
   int bits_per_picture;
 
   /* statistics */
@@ -398,27 +386,22 @@ void schro_encoder_set_video_format (SchroEncoder *encoder,
 void schro_encoder_end_of_stream (SchroEncoder *encoder);
 int schro_encoder_push_ready (SchroEncoder *encoder);
 void schro_encoder_push_frame (SchroEncoder *encoder, SchroFrame *frame);
+void schro_encoder_push_frame_full (SchroEncoder *encoder, SchroFrame *frame, void *priv);
+void schro_encoder_force_sequence_header (SchroEncoder *encoder);
 
 SchroBuffer * schro_encoder_encode_auxiliary_data (SchroEncoder *encoder,
     SchroAuxiliaryDataID id, void *data, int size);
-void schro_encoder_copy_to_frame_buffer (SchroEncoder *encoder, SchroBuffer *buffer);
 void schro_encoder_encode_access_unit_header (SchroEncoder *encoder, SchroPack *bits);
 void schro_encoder_encode_parse_info (SchroPack *bits, int parse_code);
 void schro_encoder_insert_buffer (SchroEncoder *encoder, SchroBuffer *buffer);
 void schro_encoder_frame_insert_buffer (SchroEncoderFrame *frame, SchroBuffer *buffer);
 void schro_encoder_start (SchroEncoder *encoder);
 
-#if 0
-int schro_encoder_preference_get_range (SchroEncoder *encoder,
-    SchroPrefEnum pref, int *min, int *max);
-int schro_encoder_preference_get (SchroEncoder *encoder, SchroPrefEnum pref);
-int schro_encoder_preference_set (SchroEncoder *encoder, SchroPrefEnum pref,
-    int value);
-#endif
-
 SchroStateEnum schro_encoder_wait (SchroEncoder *encoder);
 SchroBuffer * schro_encoder_pull (SchroEncoder *encoder,
     int *n_decodable_frames);
+SchroBuffer * schro_encoder_pull_full (SchroEncoder *encoder, int *presentation_frame,
+    void **priv);
 
 int schro_encoder_get_n_settings (void);
 const SchroEncoderSetting *schro_encoder_get_setting_info (int i);
@@ -457,7 +440,7 @@ void schro_encoder_encode_picture_header (SchroEncoderFrame *frame);
 SchroBuffer * schro_encoder_encode_end_of_stream (SchroEncoder *encoder);
 void schro_encoder_clean_up_transform (SchroEncoderFrame *frame);
 void schro_encoder_choose_quantisers (SchroEncoderFrame *frame);
-SchroBuffer * schro_encoder_encode_access_unit (SchroEncoder *encoder);
+SchroBuffer * schro_encoder_encode_sequence_header (SchroEncoder *encoder);
 void schro_encoder_output_push (SchroEncoder *encoder,
     SchroBuffer *buffer, int slot, int presentation_frame);
 

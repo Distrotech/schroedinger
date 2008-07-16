@@ -10,6 +10,7 @@
 #include <schroedinger/schroutils.h>
 #include <liboil/liboil.h>
 #include <string.h>
+#include <math.h>
 
 
 SchroFrame *
@@ -435,6 +436,143 @@ schro_virt_frame_new_pack_AYUV (SchroFrame *vf)
       vf->width, vf->height);
   virt_frame->virt_frame1 = vf;
   virt_frame->render_line = pack_ayuv;
+
+  return virt_frame;
+}
+
+static void
+color_matrix (SchroFrame *frame, void *_dest, int component, int i)
+{
+  uint8_t *dest = _dest;
+  uint8_t *src1;
+  uint8_t *src2;
+  uint8_t *src3;
+  double m1, m2, m3;
+  double offset;
+  int j;
+
+  src1 = schro_virt_frame_get_line (frame->virt_frame1, 0, i);
+  src2 = schro_virt_frame_get_line (frame->virt_frame1, 1, i);
+  src3 = schro_virt_frame_get_line (frame->virt_frame1, 2, i);
+
+  switch (component) {
+    case 0:
+      m1 = 0.25679;
+      m2 = 0.50413;
+      m3 = 0.097906;
+      offset = 16;
+      break;
+    case 1:
+      m1 = -0.14822;
+      m2 = -0.29099;
+      m3 = 0.43922;
+      offset = 128;
+      break;
+    case 2:
+      m1 = 0.43922;
+      m2 = -0.36779;
+      m3 = -0.071427;
+      offset = 128;
+      break;
+    default:
+      m1 = 0.0;
+      m2 = 0.0;
+      m3 = 0.0;
+      offset = 0;
+      break;
+  }
+
+  for(j=0;j<frame->width;j++){
+    dest[j] = floor (src1[j]*m1 + src2[j]*m2 + src3[j]*m3 + offset + 0.5);
+  }
+
+}
+
+SchroFrame *
+schro_virt_frame_new_color_matrix (SchroFrame *vf)
+{
+  SchroFrame *virt_frame;
+  
+  virt_frame = schro_frame_new_virtual (NULL, SCHRO_FRAME_FORMAT_U8_444,
+      vf->width, vf->height);
+  virt_frame->virt_frame1 = vf;
+  virt_frame->render_line = color_matrix;
+
+  return virt_frame;
+}
+
+static void
+convert_444_422 (SchroFrame *frame, void *_dest, int component, int i)
+{
+  uint8_t *dest = _dest;
+  uint8_t *src;
+  int j;
+
+  src = schro_virt_frame_get_line (frame->virt_frame1, component, i);
+
+  if (component == 0) {
+    memcpy (dest, src, frame->width);
+  } else {
+    for(j=0;j<frame->components[component].width;j++){
+      dest[j] = src[j*2];
+    }
+  }
+}
+
+static void
+convert_444_420 (SchroFrame *frame, void *_dest, int component, int i)
+{
+  uint8_t *dest = _dest;
+  uint8_t *src;
+  int j;
+
+  if (component == 0) {
+    src = schro_virt_frame_get_line (frame->virt_frame1, component, i);
+    memcpy (dest, src, frame->components[component].width);
+  } else {
+    src = schro_virt_frame_get_line (frame->virt_frame1, component, i*2);
+    for(j=0;j<frame->components[component].width;j++){
+      dest[j] = src[j*2];
+    }
+  }
+}
+
+static void
+convert_422_420 (SchroFrame *frame, void *_dest, int component, int i)
+{
+  uint8_t *dest = _dest;
+  uint8_t *src;
+
+  if (component == 0) {
+    src = schro_virt_frame_get_line (frame->virt_frame1, component, i);
+  } else {
+    src = schro_virt_frame_get_line (frame->virt_frame1, component, i*2);
+  }
+  memcpy (dest, src, frame->components[component].width);
+}
+
+
+SchroFrame *
+schro_virt_frame_new_subsample (SchroFrame *vf, SchroFrameFormat format)
+{
+  SchroFrame *virt_frame;
+  SchroFrameRenderFunc render_line;
+  
+  if (vf->format == SCHRO_FRAME_FORMAT_U8_422 &&
+      format == SCHRO_FRAME_FORMAT_U8_420) {
+    render_line = convert_422_420;
+  } else if (vf->format == SCHRO_FRAME_FORMAT_U8_444 &&
+      format == SCHRO_FRAME_FORMAT_U8_420) {
+    render_line = convert_444_420;
+  } else if (vf->format == SCHRO_FRAME_FORMAT_U8_444 &&
+      format == SCHRO_FRAME_FORMAT_U8_422) {
+    render_line = convert_444_422;
+  } else {
+    return NULL;
+  }
+  virt_frame = schro_frame_new_virtual (NULL, format, vf->width, vf->height);
+  virt_frame->virt_frame1 = vf;
+  virt_frame->render_line = render_line;
 
   return virt_frame;
 }

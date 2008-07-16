@@ -35,6 +35,8 @@ static void schro_encoder_fixup_offsets (SchroEncoder *encoder,
 static void schro_encoder_frame_complete (SchroEncoderFrame *frame);
 static int schro_encoder_async_schedule (SchroEncoder *encoder, SchroExecDomain exec_domain);
 static void schro_encoder_init_perceptual_weighting (SchroEncoder *encoder);
+void schro_encoder_encode_sequence_header_header (SchroEncoder *encoder,
+    SchroPack *pack);
 
 SchroEncoder *
 schro_encoder_new (void)
@@ -56,6 +58,8 @@ schro_encoder_new (void)
   encoder->bitrate = 13824000;
   encoder->max_bitrate = 13824000;
   encoder->min_bitrate = 13824000;
+  encoder->buffer_size = 0;
+  encoder->buffer_level = 0;
   encoder->noise_threshold = 25.0;
   encoder->gop_structure = 0;
   encoder->queue_depth = 20;
@@ -72,7 +76,7 @@ schro_encoder_new (void)
 
   encoder->ref_distance = 4;
   encoder->transform_depth = 4;
-  encoder->intra_wavelet = SCHRO_WAVELET_DESLAURIES_DUBUC_9_7;
+  encoder->intra_wavelet = SCHRO_WAVELET_DESLAURIERS_DUBUC_9_7;
   encoder->inter_wavelet = SCHRO_WAVELET_LE_GALL_5_3;
   encoder->mv_precision = 0;
   encoder->motion_block_size = 0;
@@ -128,7 +132,7 @@ handle_gop_enum (SchroEncoder *encoder)
     case SCHRO_ENCODER_GOP_BACKREF:
     case SCHRO_ENCODER_GOP_CHAINED_BACKREF:
       SCHRO_DEBUG("Setting backref\n");
-      encoder->engine_iterate = schro_encoder_engine_tworef;
+      encoder->profile = 8;
       encoder->init_frame = schro_encoder_init_frame;
       encoder->handle_gop = schro_encoder_handle_gop_backref;
       encoder->handle_quants = schro_encoder_handle_quants;
@@ -136,7 +140,11 @@ handle_gop_enum (SchroEncoder *encoder)
       break;
     case SCHRO_ENCODER_GOP_INTRA_ONLY:
       SCHRO_DEBUG("Setting intra only\n");
-      encoder->engine_iterate = schro_encoder_engine_tworef;
+      if (encoder->enable_noarith) {
+        encoder->profile = 1;
+      } else {
+        encoder->profile = 2;
+      }
       encoder->init_frame = schro_encoder_init_frame;
       encoder->handle_gop = schro_encoder_handle_gop_intra_only;
       encoder->handle_quants = schro_encoder_handle_quants;
@@ -146,7 +154,7 @@ handle_gop_enum (SchroEncoder *encoder)
     case SCHRO_ENCODER_GOP_BIREF:
     case SCHRO_ENCODER_GOP_CHAINED_BIREF:
       SCHRO_DEBUG("Setting tworef engine\n");
-      encoder->engine_iterate = schro_encoder_engine_tworef;
+      encoder->profile = 8;
       encoder->init_frame = schro_encoder_init_frame;
       encoder->handle_gop = schro_encoder_handle_gop_tworef;
       encoder->handle_quants = schro_encoder_handle_quants;
@@ -159,6 +167,7 @@ void
 schro_encoder_start (SchroEncoder *encoder)
 {
   encoder->engine_init = 1;
+  encoder->force_sequence_header = TRUE;
 
   if (encoder->video_format.luma_excursion >= 256 ||
       encoder->video_format.chroma_excursion >= 256) {
@@ -185,8 +194,12 @@ schro_encoder_start (SchroEncoder *encoder)
       handle_gop_enum (encoder);
       encoder->quantiser_engine = SCHRO_QUANTISER_ENGINE_RATE_DISTORTION;
 
-      encoder->buffer_size = 3 * encoder->bitrate;
-      encoder->buffer_level = encoder->buffer_size;
+      if (encoder->buffer_size == 0) {
+        encoder->buffer_size = 3 * encoder->bitrate;
+      }
+      if (encoder->buffer_level == 0) {
+        encoder->buffer_level = encoder->buffer_size;
+      }
       encoder->bits_per_picture = muldiv64 (encoder->bitrate,
             encoder->video_format.frame_rate_denominator,
             encoder->video_format.frame_rate_numerator);
@@ -198,8 +211,8 @@ schro_encoder_start (SchroEncoder *encoder)
       break;
     case SCHRO_ENCODER_RATE_CONTROL_LOW_DELAY:
       encoder->quantiser_engine = SCHRO_QUANTISER_ENGINE_LOWDELAY;
+      encoder->profile = 0;
 
-      encoder->engine_iterate = schro_encoder_engine_tworef;
       encoder->init_frame = schro_encoder_init_frame;
       encoder->handle_gop = schro_encoder_handle_gop_lowdelay;
       encoder->handle_quants = schro_encoder_handle_quants;
@@ -209,7 +222,7 @@ schro_encoder_start (SchroEncoder *encoder)
       break;
     case SCHRO_ENCODER_RATE_CONTROL_LOSSLESS:
       encoder->quantiser_engine = SCHRO_QUANTISER_ENGINE_LOSSLESS;
-      encoder->engine_iterate = schro_encoder_engine_tworef;
+      encoder->profile = 8;
       encoder->init_frame = schro_encoder_init_frame;
       encoder->handle_gop = schro_encoder_handle_gop_lossless;
       encoder->handle_quants = schro_encoder_handle_quants;
@@ -339,7 +352,19 @@ schro_encoder_push_ready (SchroEncoder *encoder)
 }
 
 void
+schro_encoder_force_sequence_header (SchroEncoder *encoder)
+{
+  encoder->force_sequence_header = TRUE;
+}
+
+void
 schro_encoder_push_frame (SchroEncoder *encoder, SchroFrame *frame)
+{
+  schro_encoder_push_frame_full (encoder, frame, NULL);
+}
+
+void
+schro_encoder_push_frame_full (SchroEncoder *encoder, SchroFrame *frame, void *priv)
 {
   if (encoder->video_format.interlaced_coding == 0) {
     SchroEncoderFrame *encoder_frame;
@@ -347,6 +372,8 @@ schro_encoder_push_frame (SchroEncoder *encoder, SchroFrame *frame)
 
     encoder_frame = schro_encoder_frame_new(encoder);
     encoder_frame->encoder = encoder;
+
+    encoder_frame->priv = priv;
 
     format = schro_params_get_frame_format (8, encoder->video_format.chroma_format);
     if (format == frame->format) {
@@ -445,6 +472,13 @@ schro_encoder_shift_frame_queue (SchroEncoder *encoder)
 SchroBuffer *
 schro_encoder_pull (SchroEncoder *encoder, int *presentation_frame)
 {
+  return schro_encoder_pull_full (encoder, presentation_frame, NULL);
+}
+
+SchroBuffer *
+schro_encoder_pull_full (SchroEncoder *encoder, int *presentation_frame,
+    void **priv)
+{
   SchroBuffer *buffer;
   int i;
 
@@ -461,15 +495,19 @@ schro_encoder_pull (SchroEncoder *encoder, int *presentation_frame)
       if (presentation_frame) {
         *presentation_frame = frame->presentation_frame;
       }
-      if (frame->access_unit_buffer) {
-        buffer = frame->access_unit_buffer;
-        frame->access_unit_buffer = NULL;
+      if (frame->sequence_header_buffer) {
+        buffer = frame->sequence_header_buffer;
+        frame->sequence_header_buffer = NULL;
       } else if (schro_list_get_size(frame->inserted_buffers)>0) {
         buffer = schro_list_remove (frame->inserted_buffers, 0);
       } else if (schro_list_get_size(encoder->inserted_buffers)>0) {
         buffer = schro_list_remove (encoder->inserted_buffers, 0);
       } else {
         double elapsed_time;
+
+        if (priv) {
+          *priv = frame->priv;
+        }
 
         buffer = frame->output_buffer;
         frame->output_buffer = NULL;
@@ -707,7 +745,7 @@ schro_encoder_encode_auxiliary_data (SchroEncoder *encoder,
 }
 
 SchroBuffer *
-schro_encoder_encode_access_unit (SchroEncoder *encoder)
+schro_encoder_encode_sequence_header (SchroEncoder *encoder)
 {
   SchroPack *pack;
   SchroBuffer *buffer;
@@ -718,7 +756,7 @@ schro_encoder_encode_access_unit (SchroEncoder *encoder)
   pack = schro_pack_new ();
   schro_pack_encode_init (pack, buffer);
 
-  schro_encoder_encode_access_unit_header (encoder, pack);
+  schro_encoder_encode_sequence_header_header (encoder, pack);
 
   schro_pack_flush (pack);
 
@@ -826,8 +864,8 @@ schro_encoder_frame_complete (SchroEncoderFrame *frame)
       schro_encoder_frame_unref (frame->ref_frame[1]);
     }
 
-    if (frame->start_access_unit) {
-      frame->access_unit_buffer = schro_encoder_encode_access_unit (frame->encoder);
+    if (frame->start_sequence_header) {
+      frame->sequence_header_buffer = schro_encoder_encode_sequence_header (frame->encoder);
     }
     if (frame->last_frame) {
       frame->encoder->completed_eos = TRUE;
@@ -835,26 +873,168 @@ schro_encoder_frame_complete (SchroEncoderFrame *frame)
   }
 }
 
+/**
+ * run_stage:
+ * @frame:
+ * @state:
+ *
+ * Runs a stage in the encoding process.
+ */
+static void
+run_stage (SchroEncoderFrame *frame, SchroEncoderFrameStateEnum state)
+{
+  void *func;
+
+  SCHRO_ASSERT(!(frame->state & state));
+
+  frame->busy = TRUE;
+  frame->working = state;
+  switch (state) {
+    case SCHRO_ENCODER_FRAME_STATE_ANALYSE:
+      func = schro_encoder_analyse_picture;
+      break;
+    case SCHRO_ENCODER_FRAME_STATE_PREDICT:
+      func = schro_encoder_predict_picture;
+      break;
+    case SCHRO_ENCODER_FRAME_STATE_ENCODING:
+      func = schro_encoder_encode_picture;
+      break;
+    case SCHRO_ENCODER_FRAME_STATE_RECONSTRUCT:
+      func = schro_encoder_reconstruct_picture;
+      break;
+    case SCHRO_ENCODER_FRAME_STATE_POSTANALYSE:
+      func = schro_encoder_postanalyse_picture;
+      break;
+    default:
+      SCHRO_ASSERT(0);
+  }
+  schro_async_run_locked (frame->encoder->async, func, frame);
+}
+
+/**
+ * check_refs:
+ * @frame: encoder frame
+ *
+ * Checks whether reference pictures are available to be used for motion
+ * rendering.
+ */
+static int
+check_refs (SchroEncoderFrame *frame)
+{
+  if (frame->num_refs == 0) return TRUE;
+
+  if (frame->num_refs > 0 &&
+      !(frame->ref_frame[0]->state & SCHRO_ENCODER_FRAME_STATE_DONE)) {
+    return FALSE;
+  }
+  if (frame->num_refs > 1 &&
+      !(frame->ref_frame[1]->state & SCHRO_ENCODER_FRAME_STATE_DONE)) {
+    return FALSE;
+  }
+
+  return TRUE;
+}
+
 static int
 schro_encoder_async_schedule (SchroEncoder *encoder, SchroExecDomain exec_domain)
 {
-  SCHRO_DEBUG("iterate");
+  SchroEncoderFrame *frame;
+  int i;
+  int ref;
+  unsigned int todo;
 
   SCHRO_INFO("iterate %d", encoder->completed_eos);
 
-#if 0
-  /* For debugging purposes */
-  {
-    int i;
-    for(i=0;i<encoder->frame_queue->n;i++){
-      SchroEncoderFrame *frame = encoder->frame_queue->elements[i].data;
-      SCHRO_ERROR("%p %d %d", frame, frame->frame_number, frame->state);
+  for(i=0;i<encoder->frame_queue->n;i++) {
+    frame = encoder->frame_queue->elements[i].data;
+    SCHRO_DEBUG("analyse i=%d picture=%d state=%d busy=%d", i, frame->frame_number, frame->state, frame->busy);
+
+    if (frame->busy) continue;
+
+    todo = frame->needed_state & (~frame->state);
+
+    if (todo & SCHRO_ENCODER_FRAME_STATE_ANALYSE) {
+      encoder->init_frame (frame);
+      run_stage (frame, SCHRO_ENCODER_FRAME_STATE_ANALYSE);
+      return TRUE;
     }
   }
-#endif
 
-  return encoder->engine_iterate (encoder);
+  for(i=0;i<encoder->frame_queue->n;i++) {
+    frame = encoder->frame_queue->elements[i].data;
+    if (frame->frame_number == encoder->gop_picture) {
+      encoder->handle_gop (encoder, i);
+      break;
+    }
+  }
+
+  /* Reference pictures are higher priority, so we pass over the list
+   * first for reference pictures, then for non-ref. */
+  for(ref = 1; ref >= 0; ref--){
+    for(i=0;i<encoder->frame_queue->n;i++) {
+      frame = encoder->frame_queue->elements[i].data;
+      SCHRO_DEBUG("backref i=%d picture=%d state=%d busy=%d", i, frame->frame_number, frame->state, frame->busy);
+
+      if (frame->busy) continue;
+
+      if (frame->is_ref != ref) continue;
+
+      todo = frame->needed_state & (~frame->state);
+
+      if (todo & SCHRO_ENCODER_FRAME_STATE_HAVE_PARAMS &&
+          frame->state & SCHRO_ENCODER_FRAME_STATE_HAVE_GOP) {
+        if (encoder->setup_frame (frame)) {
+          frame->state |= SCHRO_ENCODER_FRAME_STATE_HAVE_PARAMS;
+        }
+      }
+      if (todo & SCHRO_ENCODER_FRAME_STATE_PREDICT &&
+          frame->state & SCHRO_ENCODER_FRAME_STATE_HAVE_PARAMS) {
+        if (!check_refs(frame)) continue;
+        run_stage (frame, SCHRO_ENCODER_FRAME_STATE_PREDICT);
+        return TRUE;
+      }
+    }
+  }
+
+  for(i=0;i<encoder->frame_queue->n;i++) {
+    frame = encoder->frame_queue->elements[i].data;
+    if (frame->slot == encoder->quant_slot) {
+      int ret;
+      ret = encoder->handle_quants (encoder, i);
+      if (!ret) break;
+    }
+  }
+
+  for(ref = 1; ref >= 0; ref--){
+    for(i=0;i<encoder->frame_queue->n;i++) {
+      frame = encoder->frame_queue->elements[i].data;
+      SCHRO_DEBUG("backref i=%d picture=%d state=%d busy=%d", i, frame->frame_number, frame->state, frame->busy);
+
+      if (frame->busy) continue;
+
+      todo = frame->needed_state & (~frame->state);
+
+      if (todo & SCHRO_ENCODER_FRAME_STATE_ENCODING &&
+          frame->state & SCHRO_ENCODER_FRAME_STATE_HAVE_QUANTS) {
+        run_stage (frame, SCHRO_ENCODER_FRAME_STATE_ENCODING);
+        return TRUE;
+      }
+      if (todo & SCHRO_ENCODER_FRAME_STATE_RECONSTRUCT &&
+          frame->state & SCHRO_ENCODER_FRAME_STATE_ENCODING) {
+        run_stage (frame, SCHRO_ENCODER_FRAME_STATE_RECONSTRUCT);
+        return TRUE;
+      }
+      if (todo & SCHRO_ENCODER_FRAME_STATE_POSTANALYSE &&
+          frame->state & SCHRO_ENCODER_FRAME_STATE_RECONSTRUCT) {
+        run_stage (frame, SCHRO_ENCODER_FRAME_STATE_POSTANALYSE);
+        return TRUE;
+      }
+    }
+  }
+
+  return FALSE;
 }
+
 
 void
 schro_encoder_analyse_picture (SchroEncoderFrame *frame)
@@ -1262,11 +1442,11 @@ schro_encoder_encode_prediction_modes (SchroEncoderFrame *frame)
   for(j=0;j<params->y_num_blocks;j+=4){
     for(i=0;i<params->x_num_blocks;i+=4){
       int k,l;
-      SchroMotionVector *mv =
+      SchroMotionVector *mv1 =
         &frame->motion->motion_vectors[j*params->x_num_blocks + i];
 
-      for(l=0;l<4;l+=(4>>mv->split)) {
-        for(k=0;k<4;k+=(4>>mv->split)) {
+      for(l=0;l<4;l+=(4>>mv1->split)) {
+        for(k=0;k<4;k+=(4>>mv1->split)) {
           SchroMotionVector *mv =
             &frame->motion->motion_vectors[(j+l)*params->x_num_blocks + i + k];
           int pred_mode;
@@ -1365,11 +1545,11 @@ schro_encoder_encode_vector_data (SchroEncoderFrame *frame, int ref, int xy)
   for(j=0;j<params->y_num_blocks;j+=4){
     for(i=0;i<params->x_num_blocks;i+=4){
       int k,l;
-      SchroMotionVector *mv =
+      SchroMotionVector *mv1 =
         &frame->motion->motion_vectors[j*params->x_num_blocks + i];
 
-      for(l=0;l<4;l+=(4>>mv->split)) {
-        for(k=0;k<4;k+=(4>>mv->split)) {
+      for(l=0;l<4;l+=(4>>mv1->split)) {
+        for(k=0;k<4;k+=(4>>mv1->split)) {
           int pred_x, pred_y;
           int x, y;
           SchroMotionVector *mv =
@@ -1436,11 +1616,11 @@ schro_encoder_encode_dc_data (SchroEncoderFrame *frame, int comp)
   for(j=0;j<params->y_num_blocks;j+=4){
     for(i=0;i<params->x_num_blocks;i+=4){
       int k,l;
-      SchroMotionVector *mv =
+      SchroMotionVector *mv1 =
         &frame->motion->motion_vectors[j*params->x_num_blocks + i];
 
-      for(l=0;l<4;l+=(4>>mv->split)) {
-        for(k=0;k<4;k+=(4>>mv->split)) {
+      for(l=0;l<4;l+=(4>>mv1->split)) {
+        for(k=0;k<4;k+=(4>>mv1->split)) {
           SchroMotionVector *mv =
             &frame->motion->motion_vectors[(j+l)*params->x_num_blocks + i + k];
 
@@ -1500,7 +1680,7 @@ schro_encoder_encode_dc_data (SchroEncoderFrame *frame, int comp)
 
 
 void
-schro_encoder_encode_access_unit_header (SchroEncoder *encoder,
+schro_encoder_encode_sequence_header_header (SchroEncoder *encoder,
     SchroPack *pack)
 {
   SchroVideoFormat *format = &encoder->video_format;
@@ -2098,7 +2278,7 @@ out:
 
   schro_arith_flush (arith);
 
-  SCHRO_ASSERT(arith->offset < frame->subband_size);
+  SCHRO_ASSERT(arith->offset < frame->subband_buffer->length);
 
   schro_dump(SCHRO_DUMP_SUBBAND_EST, "%d %d %d %g %d %g\n",
       frame->frame_number, component, index,
@@ -2221,7 +2401,7 @@ schro_encoder_encode_subband_noarith (SchroEncoderFrame *frame,
   }
   schro_pack_flush (pack);
 
-  SCHRO_ASSERT(schro_pack_get_offset(pack) < frame->subband_size);
+  SCHRO_ASSERT(schro_pack_get_offset(pack) < frame->subband_buffer->length);
 
   schro_dump(SCHRO_DUMP_SUBBAND_EST, "%d %d %d %d %d\n",
       frame->frame_number, component, index,
@@ -2422,6 +2602,8 @@ static SchroEncoderSetting encoder_settings[] = {
   INT ("bitrate", 0, INT_MAX, 13824000),
   INT ("max_bitrate", 0, INT_MAX, 13824000),
   INT ("min_bitrate", 0, INT_MAX, 13824000),
+  INT ("buffer_size", 0, INT_MAX, 0),
+  INT ("buffer_level", 0, INT_MAX, 0),
   DOUB("noise_threshold", 0, 100.0, 25.0),
   ENUM("gop_structure", gop_structure_list, 0),
   INT("queue_depth", 1, SCHRO_LIMIT_FRAME_QUEUE_LENGTH, 20),
@@ -2437,7 +2619,7 @@ static SchroEncoderSetting encoder_settings[] = {
 
   INT ("ref_distance", 2, 20, 4),
   INT ("transform_depth", 1, SCHRO_LIMIT_ENCODER_TRANSFORM_DEPTH, 4),
-  ENUM("intra_wavelet", wavelet_list, SCHRO_WAVELET_DESLAURIES_DUBUC_9_7),
+  ENUM("intra_wavelet", wavelet_list, SCHRO_WAVELET_DESLAURIERS_DUBUC_9_7),
   ENUM("inter_wavelet", wavelet_list, SCHRO_WAVELET_LE_GALL_5_3),
   INT ("mv_precision", 0, 3, 0),
   ENUM("motion_block_size", block_size_list, 0),
@@ -2503,6 +2685,8 @@ schro_encoder_setting_set_double (SchroEncoder *encoder, const char *name,
   VAR_SET(bitrate);
   VAR_SET(max_bitrate);
   VAR_SET(min_bitrate);
+  VAR_SET(buffer_size);
+  VAR_SET(buffer_level);
   VAR_SET(noise_threshold);
   VAR_SET(gop_structure);
   VAR_SET(queue_depth);
@@ -2559,6 +2743,8 @@ schro_encoder_setting_get_double (SchroEncoder *encoder, const char *name)
   VAR_GET(bitrate);
   VAR_GET(max_bitrate);
   VAR_GET(min_bitrate);
+  VAR_GET(buffer_size);
+  VAR_GET(buffer_level);
   VAR_GET(noise_threshold);
   VAR_GET(gop_structure);
   VAR_GET(queue_depth);
