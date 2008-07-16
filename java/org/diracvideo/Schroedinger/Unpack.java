@@ -80,8 +80,8 @@ public class Unpack {
 	}
     }
 
-    /** bits:
-     * @n: number of bits to be decoded
+    /** bits
+     * @param n number of bits to be decoded
      *
      * Decodes a number of bits from the input buffer.
      * Does not (generally) work when there are 32 bits left 
@@ -103,7 +103,7 @@ public class Unpack {
     }
     
     /** skip:
-     * @n: number of bits to be skipped
+     * @param n number of bits to be skipped
      * 
      * This function is known not to work 100% correctly when given
      * a non-multiple-of-8 number of bits when it is not aligned.
@@ -170,7 +170,7 @@ public class Unpack {
     }
 
     /** getSubBuffer:
-     * @bytes: length of sub buffer in bytes
+     * @param bytes length of sub buffer in bytes
      * 
      * Aligns current structure, returns a buffer starting at
      * the current byte to be read, and advances the index to

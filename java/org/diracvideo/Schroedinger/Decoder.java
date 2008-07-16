@@ -1,7 +1,13 @@
 package org.diracvideo.Schroedinger;
 
-
-
+/** 
+ * Decoder
+ *
+ * An interface to decoding a dirac stream. 
+ * Most (all) of the actual work is done by the
+ * Picture class, however Decoder can do general
+ * dispatching, scheduling and bookkeeping.
+ * That is the reason we keep it arround */
 
 public class Decoder {
     private VideoFormat format;
@@ -19,11 +25,13 @@ public class Decoder {
     }
 
     /** Push:
-     * @d: array containing data from the stream
+     * @param d array containing data from the stream
      *
      * Pushes an array of stream data onto the decoder.
      * Currently each packet should be pushed seperately.
-     * Pushing incomplete packets could result in parse errors */
+     * Pushing incomplete packets could result in parse errors 
+     * We could probably fix that some day.
+     */
 
     public void push(byte d[]) throws Exception {
 	Unpack u = new Unpack(d);
@@ -84,11 +92,14 @@ public class Decoder {
 	
     }
 
-    /** getVideoFormat:
-     *
+    /** 
+     * @see VideoFormat
      * Returns the in-use videoformat object. An application 
      * can use it to determine the size of the window for the
-     * video and other such useful properties */
+     * video and other such useful properties. This would be 
+     * useless if format where public, which is a 
+     * reasonable option. */
+
     public VideoFormat getVideoFormat() {
 	return format;
     }

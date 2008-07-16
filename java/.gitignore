@@ -1,2 +1,6 @@
 *.class
 *.drc
+*.html
+*.gif
+*.css
+resources/

@@ -11,15 +11,14 @@ package org.diracvideo.Schroedinger;
 
 public class Wavelet {
     /** inverse:
-     * @data   a short[] array containing the frame
-     * @width  width of the frame
-     * @depth  transform depth
+     * @param data   a short[] array containing the frame
+     * @param width  width of the frame
+     * @param depth  transform depth
      *
      * Inverse is the only method users should ever call, except possibly 
      * for interleave, which interleaves four subbands so that it is ready
-     * to be used for inverse().
-     * 
-     */
+     * to be used for inverse(). The actual picture decoding sequence never
+     * calles interleave() though.  **/
     public static void inverse(short data[], int w, int depth) {
 	/* data is assumed to be preinterleaved */
 	for(int s = (1 << (depth - 1)); s > 0; s >>= 1) {
@@ -38,10 +37,10 @@ public class Wavelet {
     }
     /** synthesize:
      *
-     * @d   short[] data array
-     * @s   stride
-     * @b   begin
-     * @e   end
+     * @param d   short[] data array
+     * @param s   stride
+     * @param b   begin
+     * @param e   end
      *
      *  This method is public for testing purposes only. */
     public static void synthesize(short d[], int s, int b, int e) {
@@ -74,7 +73,10 @@ public class Wavelet {
 	    d[i] += (9*d[i-s] + 9*d[i+s] - d[i-3*s] - d[i+3*s] + 8) >> 4;
 	}
     }
-
+    /**
+     * interleave interleaves four subbands.
+     * @param ll array containing the subband data (like hl, lh, hh)
+     * @param width: the width of each subband **/
     public static short[] interleave(short ll[], short hl[], 
 				     short lh[], short hh[], int width) {
 	short o[] = new short[ll.length*4];

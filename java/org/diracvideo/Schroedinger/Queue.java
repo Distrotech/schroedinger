@@ -1,5 +1,14 @@
 package org.diracvideo.Schroedinger;
 
+/**
+ * Queue
+ *
+ * Synchronized Picture Queue.
+ * This Queue implmentation is probably slow (linear),
+ * but the number of elements is not expected to
+ * be very high for any reasonable Queue. 
+ * Therefore, I don't care. */
+
 class Queue {
     private Picture[] pics;
     private int used;

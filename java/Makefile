@@ -13,8 +13,18 @@ lib:
 	javac $<
 
 
-clean:
+clean: cleandoc
 	@find -name "*.class" -delete
 	@find -name "*~" -delete
 	@rm -f *.drc
 	@echo "Done"
+
+doc:
+	javadoc org.diracvideo.Schroedinger
+
+cleandoc:
+	@find -name "*.html" -delete
+	@find -name "*.css" -delete
+	@rm -rf resources/
+	@rm -f package-list
+

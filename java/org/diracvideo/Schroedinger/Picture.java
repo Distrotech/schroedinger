@@ -4,7 +4,6 @@ import java.awt.image.*;
 
 
 class SubBand {
-
     int qi, level, stride, offset, orient, numX, numY;
     Buffer buf;
     Dimension frame, band;
@@ -58,6 +57,8 @@ class SubBand {
 				 int blockX, int blockY) {
 	int qo = quantOffset(qi);
 	int qf = quantFactor(qi);
+	/* This is horrible, and yet, the only way
+	   that works. */
 	int shift = par.transformDepth - level;
 	int startX = ((band.width * blockX)/numX) << shift;
 	int startY = ((band.height * blockY)/numY) << shift;
@@ -139,6 +140,8 @@ class Parameters {
     /* Motion prediction parametrs */
     public int xblen_luma, yblen_luma, 
 	xbsep_luma, ybsep_luma;
+    public int x_num_blocks, y_num_blocks,
+	x_offset, y_offset;
     public boolean have_global_motion;
     public int picture_prediction_mode, mv_precision;
     public int picture_weight_bits = 1, 
@@ -197,7 +200,10 @@ class Parameters {
     }
 
     public void calculateMCSizes() {
-	/* to be done */
+	x_num_blocks = 4*Util.divideRoundUp(iwtLumaSize.width, 4*xbsep_luma);
+	y_num_blocks = 4*Util.divideRoundUp(iwtLumaSize.height, 4*ybsep_luma);
+	x_offset = (xblen_luma - xbsep_luma)/2;
+	y_offset = (yblen_luma - ybsep_luma)/2;
     }
     
     public String toString() {
@@ -234,10 +240,10 @@ public class Picture {
 
 
     /** Picture:
-     * @c: picture parse code
-     * @n: picture number
-     * @b: payload buffer
-     * @d: decoder of the picture 
+     * @param c picture parse code
+     * @param n picture number
+     * @param b payload buffer
+     * @param d decoder of the picture 
      *
      * The b buffer should only point to the payload data section of 
      * the picture (not the header). The only methods that would ever need 
@@ -262,6 +268,7 @@ public class Picture {
 	try {
 	    Unpack u = new Unpack(buf);
 	    parseHeader(u);
+	    par.calculateIwtSizes(format);
 	    if(!par.is_intra) {
 		u.align();
 		parsePredictionParameters(u);
@@ -279,7 +286,6 @@ public class Picture {
 		if(par.is_lowdelay) {
 		    parseLowDelayTransformData(u);
 		} else {
-		    par.calculateIwtSizes(format);
 		    parseTransformData(u);
 		}
 	    }
@@ -397,16 +403,24 @@ public class Picture {
 	System.err.println("parseLowDelayTransformData()");
     }
 
+    /**
+     * Decodes the picture. Does nothing when error != null */
     public void decode() {
+	if(error != null) {
+	    return;
+	}
+	initializeFrames();
 	if(!zero_residual) {
 	    decodeWaveletTransform();
+	}
+	if(!par.is_intra) {
+	    decodeMotionCompensate();
 	}
 	createImage();
     }
 
     
     private void decodeWaveletTransform() {
-	initializeTransformFrames();
 	for(int c = 0; c < 3; c++) {
 	    Dimension dim = (c == 0) ? par.iwtLumaSize : par.iwtChromaSize;
 	    coeffs[c][0].decodeCoeffs(frame[c]);
@@ -420,7 +434,7 @@ public class Picture {
 	}
     }
 
-    private void initializeTransformFrames() {
+    private void initializeFrames() {
 	Dimension lum = par.iwtLumaSize;
 	Dimension chrom = par.iwtChromaSize;
 	frame = new short[3][];

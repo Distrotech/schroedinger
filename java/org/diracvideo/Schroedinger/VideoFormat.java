@@ -131,14 +131,15 @@ public class VideoFormat {
     }
 
     /** VideoFormat:
-     * @u: Unpack object
+     * @param u Unpack object
      *
      * u should be initialized so that it can read
      * directly from the `payload' section of the
      * video format data buffer.
      * Basically, after initialization, the object is
      * `finished'. One should only need to call get*Size
-     * and equals(). */
+     * and equals(). Most fields are public for maximum
+     * utility. **/
 
     public VideoFormat(Unpack u) throws Exception {
 	setDefaultVideoFormat(u.decodeUint());
