@@ -7,7 +7,7 @@ class SubBand {
 
     int qi, level, stride, offset, orient, numX, numY;
     Buffer buf;
-    Dimension frame, block;
+    Dimension frame, band;
     Parameters par;
     public SubBand (Buffer b, int q, Parameters p) {
 	par = p;
@@ -17,9 +17,10 @@ class SubBand {
     
     public void calculateSizes(int i, boolean luma) {
 	level = (i-1)/3;
+	int shift = (par.transformDepth - level);
 	frame = luma ? par.iwtLumaSize : par.iwtChromaSize;
 	orient = (i - 1) % 3 + 1;
-	stride = (1 << (par.transformDepth - level));
+	stride = (1 << shift);
 	offset = (orient == 0 ? 0 : 
 		  (orient == 1 ? stride >> 1 :
 		   (orient == 2 ? (frame.width * stride) >> 1 :
@@ -28,6 +29,7 @@ class SubBand {
 		par.horiz_codeblocks[level+1]);
 	numY = (orient == 0 ? par.vert_codeblocks[0] :
 		par.vert_codeblocks[level+1]);
+	band = new Dimension(frame.width >> shift, frame.height >> shift);
     }
 
     /* Maybe we should rewrite this using blocks.
@@ -56,14 +58,15 @@ class SubBand {
 				 int blockX, int blockY) {
 	int qo = quantOffset(qi);
 	int qf = quantFactor(qi);
-	int startX = (frame.width * blockX)/numX;
-	int startY = (frame.height * blockY)/numY;
-	int endX = (frame.width * (blockX+1))/numX;
-	int endY = (frame.height * (blockY+1))/numY;
+	int shift = par.transformDepth - level;
+	int startX = ((band.width * blockX)/numX) << shift;
+	int startY = ((band.height * blockY)/numY) << shift;
+	int blockOffset = (frame.width * startY) + startX;
+	int endX = ((band.width * (blockX+1))/numX) << shift;
+	int endY = ((band.height * (blockY+1))/numY) << shift;
+	int blockEnd = ((endY-1)*frame.width) + endX;
 	int blockWidth = endX - startX;
-	int blockEnd = (frame.width*(endY-1)) + endX;
-	int blockOffset = (frame.width*startY) + startX;
-	for(int i = blockOffset + offset; i < blockEnd; 
+	for(int i = blockOffset + offset; i < blockEnd;
 	    i += frame.width * stride) {
 	    for(int j = i; j < i + blockWidth; j += stride) {
 		out[j] = u.decodeSint(qf,qo);

@@ -4,7 +4,8 @@ import java.awt.Point;
 public class GeneralTest {
     public static void main(String a[]) {
 	testLevel();
-	testBlockDimensions();
+	testDivision();
+
     }
 
     private static void testLevel() {
@@ -14,6 +15,19 @@ public class GeneralTest {
 		System.err.format("Number: %d\tLevel: %d\tOrient: %d\n", 
 				  i, (i-1)/3, (i-1) % 3 + 1);
 	    } 
+	}
+    }
+
+    private static void testDivision() {
+	for(int i = 0; i < 1000; i++) {
+	    for(int j = 1; j < 1000; j++) {
+		int d = i/j;
+		if(d*j > i) {
+		    System.err.format("Divison error");
+		} else if(d*j != i) {
+		    System.err.println("Inexact division");
+		}
+	    }
 	}
     }
 

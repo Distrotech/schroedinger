@@ -31,7 +31,8 @@ final class Buffer {
 /** Block
  *
  * Has methods for getting the correct positions
- * of elements in the data array */
+ * of elements in the data array. I would call it
+ * Frame but that conflicts with java.awt.Frame. */
 
 
 final class Block {
