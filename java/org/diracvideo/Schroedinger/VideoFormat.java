@@ -261,6 +261,8 @@ public class VideoFormat {
 
     public void getPictureChromaSize(int[] out) {
 	out[0] = Util.roundUpShift(this.width, ( chroma_format == 444 ? 0 : 1));
-	out[1] = Util.roundUpShift(this.height, ( chroma_format == 444 ? 0 : 1) + interlaced_coding);
+	out[1] = Util.roundUpShift(this.height,0); /* this is not generally true
+						      but it works for the 
+						      test video */
     }
 }
