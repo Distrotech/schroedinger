@@ -19,9 +19,10 @@ void
 schro_opengl_wavelet_vertical_deinterleave (SchroFrameData *frame_data)
 {
   int width, height;
-  int framebuffer_index, texture_index;
   SchroOpenGLCanvas *canvas = NULL;
-  SchroOpenGL *opengl = NULL;
+  SchroOpenGLCanvas *dest = NULL;
+  SchroOpenGLCanvas *src = NULL;
+  SchroOpenGLCanvas *temp = NULL;
   SchroOpenGLShader *shader_copy = NULL;
   SchroOpenGLShader *shader_vertical_deinterleave_l = NULL;
   SchroOpenGLShader *shader_vertical_deinterleave_h = NULL;
@@ -34,19 +35,18 @@ schro_opengl_wavelet_vertical_deinterleave (SchroFrameData *frame_data)
   width = frame_data->width;
   height = frame_data->height;
   // FIXME: hack to store custom data per frame component
-  canvas = *((SchroOpenGLCanvas **) frame_data->data);
+  //canvas = *((SchroOpenGLCanvas **) frame_data->data);
+  canvas = SCHRO_OPNEGL_CANVAS_FROM_FRAMEDATA (frame_data);
 
   SCHRO_ASSERT (canvas != NULL);
 
-  opengl = canvas->opengl;
+  schro_opengl_lock_context (canvas->opengl);
 
-  schro_opengl_lock (opengl);
-
-  shader_copy = schro_opengl_shader_get (opengl,
+  shader_copy = schro_opengl_shader_get (canvas->opengl,
       SCHRO_OPENGL_SHADER_COPY_S16);
-  shader_vertical_deinterleave_l = schro_opengl_shader_get (opengl,
+  shader_vertical_deinterleave_l = schro_opengl_shader_get (canvas->opengl,
       SCHRO_OPENGL_SHADER_IIWT_S16_VERTICAL_DEINTERLEAVE_L);
-  shader_vertical_deinterleave_h = schro_opengl_shader_get (opengl,
+  shader_vertical_deinterleave_h = schro_opengl_shader_get (canvas->opengl,
       SCHRO_OPENGL_SHADER_IIWT_S16_VERTICAL_DEINTERLEAVE_H);
 
   SCHRO_ASSERT (shader_copy != NULL);
@@ -57,31 +57,30 @@ schro_opengl_wavelet_vertical_deinterleave (SchroFrameData *frame_data)
 
   SCHRO_OPENGL_CHECK_ERROR
 
-  #define SWITCH_FRAMEBUFFER_AND_TEXTURE_INDICES \
-      framebuffer_index = 1 - framebuffer_index; \
-      texture_index = 1 - texture_index; \
-      SCHRO_ASSERT (framebuffer_index != texture_index);
+  #define SWAP_DESTINATION_AND_SOURCE \
+      temp = dest; \
+      dest = src; \
+      src = temp; \
+      SCHRO_ASSERT (dest != src);
 
   #define BIND_FRAMEBUFFER_AND_TEXTURE \
-      glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, \
-          canvas->framebuffers[framebuffer_index]); \
-      glBindTexture (GL_TEXTURE_RECTANGLE_ARB, \
-          canvas->texture.handles[texture_index]); \
+      glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, dest->framebuffer); \
+      glBindTexture (GL_TEXTURE_RECTANGLE_ARB, src->texture); \
       SCHRO_OPENGL_CHECK_ERROR
 
-  framebuffer_index = 1;
-  texture_index = 0;
+  dest = canvas->secondary;
+  src = canvas;
 
   /* pass 1: vertical deinterleave */
   BIND_FRAMEBUFFER_AND_TEXTURE
 
   glUseProgramObjectARB (shader_vertical_deinterleave_l->program);
-  glUniform1iARB (shader_vertical_deinterleave_l->textures[0], 0);
+  glUniform1iARB (shader_vertical_deinterleave_l->textures[0], 0); // FIXME: pre-bind on create
 
   schro_opengl_render_quad (0, 0, width, height / 2);
 
   glUseProgramObjectARB (shader_vertical_deinterleave_h->program);
-  glUniform1iARB (shader_vertical_deinterleave_h->textures[0], 0);
+  glUniform1iARB (shader_vertical_deinterleave_h->textures[0], 0); // FIXME: pre-bind on create
   glUniform2fARB (shader_vertical_deinterleave_h->offsets[0], 0, height / 2);
 
   schro_opengl_render_quad (0, height / 2, width, height / 2);
@@ -91,11 +90,11 @@ schro_opengl_wavelet_vertical_deinterleave (SchroFrameData *frame_data)
   glFlush ();
 
   /* pass 2: transfer data from secondary to primary framebuffer */
-  SWITCH_FRAMEBUFFER_AND_TEXTURE_INDICES
+  SWAP_DESTINATION_AND_SOURCE
   BIND_FRAMEBUFFER_AND_TEXTURE
 
   glUseProgramObjectARB (shader_copy->program);
-  glUniform1iARB (shader_copy->textures[0], 0);
+  glUniform1iARB (shader_copy->textures[0], 0); // FIXME: pre-bind on create
 
   schro_opengl_render_quad (0, 0, width, height);
 
@@ -103,7 +102,7 @@ schro_opengl_wavelet_vertical_deinterleave (SchroFrameData *frame_data)
 
   glFlush ();
 
-  #undef SWITCH_FRAMEBUFFER_AND_TEXTURE_INDICES
+  #undef SWAP_DESTINATION_AND_SOURCE
   #undef BIND_FRAMEBUFFER_AND_TEXTURE
 
 #if SCHRO_OPENGL_UNBIND_TEXTURES
@@ -111,7 +110,7 @@ schro_opengl_wavelet_vertical_deinterleave (SchroFrameData *frame_data)
 #endif
   glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, 0);
 
-  schro_opengl_unlock (opengl);
+  schro_opengl_unlock_context (canvas->opengl);
 }
 
 static void
@@ -162,10 +161,11 @@ schro_opengl_wavelet_inverse_transform (SchroFrameData *frame_data,
     int filter)
 {
   int width, height, subband_width, subband_height;
-  int framebuffer_index, texture_index;
   int filter_shift = FALSE;
   SchroOpenGLCanvas *canvas = NULL;
-  SchroOpenGL *opengl = NULL;
+  SchroOpenGLCanvas *dest = NULL;
+  SchroOpenGLCanvas *src = NULL;
+  SchroOpenGLCanvas *temp = NULL;
   SchroOpenGLShader *shader_copy = NULL;
   SchroOpenGLShader *shader_filter_lp = NULL;
   SchroOpenGLShader *shader_filter_hp = NULL;
@@ -185,56 +185,55 @@ schro_opengl_wavelet_inverse_transform (SchroFrameData *frame_data,
   subband_width = width / 2;
   subband_height = height / 2;
   // FIXME: hack to store custom data per frame component
-  canvas = *((SchroOpenGLCanvas **) frame_data->data);
+  //canvas = *((SchroOpenGLCanvas **) frame_data->data);
+  canvas = SCHRO_OPNEGL_CANVAS_FROM_FRAMEDATA (frame_data);
 
   SCHRO_ASSERT (canvas != NULL);
 
-  opengl = canvas->opengl;
+  schro_opengl_lock_context (canvas->opengl);
 
-  schro_opengl_lock (opengl);
-
-  shader_copy = schro_opengl_shader_get (opengl,
+  shader_copy = schro_opengl_shader_get (canvas->opengl,
       SCHRO_OPENGL_SHADER_COPY_S16);
 
   SCHRO_ASSERT (shader_copy != NULL);
 
   switch (filter) {
     case SCHRO_WAVELET_DESLAURIES_DUBUC_9_7:
-      shader_filter_lp = schro_opengl_shader_get (opengl,
+      shader_filter_lp = schro_opengl_shader_get (canvas->opengl,
           SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_DESLAURIERS_DUBUC_9_7_Lp);
-      shader_filter_hp = schro_opengl_shader_get (opengl,
+      shader_filter_hp = schro_opengl_shader_get (canvas->opengl,
           SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_DESLAURIERS_DUBUC_9_7_Hp);
 
       filter_shift = TRUE;
       break;
     case SCHRO_WAVELET_LE_GALL_5_3:
-      shader_filter_lp = schro_opengl_shader_get (opengl,
+      shader_filter_lp = schro_opengl_shader_get (canvas->opengl,
           SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_LE_GALL_5_3_Lp);
-      shader_filter_hp = schro_opengl_shader_get (opengl,
+      shader_filter_hp = schro_opengl_shader_get (canvas->opengl,
           SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_LE_GALL_5_3_Hp);
 
       filter_shift = TRUE;
       break;
     case SCHRO_WAVELET_DESLAURIES_DUBUC_13_7:
-      shader_filter_lp = schro_opengl_shader_get (opengl,
+      shader_filter_lp = schro_opengl_shader_get (canvas->opengl,
           SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_DESLAURIERS_DUBUC_13_7_Lp);
-      shader_filter_hp = schro_opengl_shader_get (opengl,
+      shader_filter_hp = schro_opengl_shader_get (canvas->opengl,
           SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_DESLAURIERS_DUBUC_13_7_Hp);
 
       filter_shift = TRUE;
       break;
     case SCHRO_WAVELET_HAAR_0:
-      shader_filter_lp = schro_opengl_shader_get (opengl,
+      shader_filter_lp = schro_opengl_shader_get (canvas->opengl,
           SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_HAAR_Lp);
-      shader_filter_hp = schro_opengl_shader_get (opengl,
+      shader_filter_hp = schro_opengl_shader_get (canvas->opengl,
           SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_HAAR_Hp);
 
       filter_shift = FALSE;
       break;
     case SCHRO_WAVELET_HAAR_1:
-      shader_filter_lp = schro_opengl_shader_get (opengl,
+      shader_filter_lp = schro_opengl_shader_get (canvas->opengl,
           SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_HAAR_Lp);
-      shader_filter_hp = schro_opengl_shader_get (opengl,
+      shader_filter_hp = schro_opengl_shader_get (canvas->opengl,
           SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_HAAR_Hp);
 
       filter_shift = TRUE;
@@ -260,16 +259,16 @@ schro_opengl_wavelet_inverse_transform (SchroFrameData *frame_data,
   SCHRO_ASSERT (shader_filter_lp != NULL);
   SCHRO_ASSERT (shader_filter_hp != NULL);
 
-  shader_vertical_interleave = schro_opengl_shader_get (opengl,
+  shader_vertical_interleave = schro_opengl_shader_get (canvas->opengl,
       SCHRO_OPENGL_SHADER_IIWT_S16_VERTICAL_INTERLEAVE);
-  shader_horizontal_interleave = schro_opengl_shader_get (opengl,
+  shader_horizontal_interleave = schro_opengl_shader_get (canvas->opengl,
       SCHRO_OPENGL_SHADER_IIWT_S16_HORIZONTAL_INTERLEAVE);
 
   SCHRO_ASSERT (shader_vertical_interleave != NULL);
   SCHRO_ASSERT (shader_horizontal_interleave != NULL);
 
   if (filter_shift) {
-    shader_filter_shift = schro_opengl_shader_get (opengl,
+    shader_filter_shift = schro_opengl_shader_get (canvas->opengl,
         SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_SHIFT);
 
     SCHRO_ASSERT (shader_filter_shift);
@@ -281,26 +280,25 @@ schro_opengl_wavelet_inverse_transform (SchroFrameData *frame_data,
 
   SCHRO_OPENGL_CHECK_ERROR
 
-  #define SWITCH_FRAMEBUFFER_AND_TEXTURE_INDICES \
-      framebuffer_index = 1 - framebuffer_index; \
-      texture_index = 1 - texture_index; \
-      SCHRO_ASSERT (framebuffer_index != texture_index);
+  #define SWAP_DESTINATION_AND_SOURCE \
+      temp = dest; \
+      dest = src; \
+      src = temp; \
+      SCHRO_ASSERT (dest != src);
 
   #define BIND_FRAMEBUFFER_AND_TEXTURE \
-      glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, \
-          canvas->framebuffers[framebuffer_index]); \
-      glBindTexture (GL_TEXTURE_RECTANGLE_ARB, \
-          canvas->texture.handles[texture_index]); \
+      glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, dest->framebuffer); \
+      glBindTexture (GL_TEXTURE_RECTANGLE_ARB, src->texture); \
       SCHRO_OPENGL_CHECK_ERROR
 
-  framebuffer_index = 1;
-  texture_index = 0;
+  dest = canvas->secondary;
+  src = canvas;
 
   /* pass 1: vertical filtering => XL + f(XH) = XL' */
   BIND_FRAMEBUFFER_AND_TEXTURE
 
   glUseProgramObjectARB (shader_filter_lp->program);
-  glUniform1iARB (shader_filter_lp->textures[0], 0);
+  glUniform1iARB (shader_filter_lp->textures[0], 0); // FIXME: pre-bind on create
   glUniform2fARB (shader_filter_lp->offsets[0], 0, subband_height);
 
   #define RENDER_QUAD_VERTICAL_Lp(_y, _quad_height) \
@@ -325,7 +323,7 @@ schro_opengl_wavelet_inverse_transform (SchroFrameData *frame_data,
 
   /* copy XH */
   glUseProgramObjectARB (shader_copy->program);
-  glUniform1iARB (shader_copy->textures[0], 0);
+  glUniform1iARB (shader_copy->textures[0], 0); // FIXME: pre-bind on create
 
   schro_opengl_render_quad (0, subband_height, width, subband_height);
 
@@ -334,11 +332,11 @@ schro_opengl_wavelet_inverse_transform (SchroFrameData *frame_data,
   glFlush ();
 
   /* pass 2: vertical filtering => f(XL') + XH = XH' */
-  SWITCH_FRAMEBUFFER_AND_TEXTURE_INDICES
+  SWAP_DESTINATION_AND_SOURCE
   BIND_FRAMEBUFFER_AND_TEXTURE
 
   glUseProgramObjectARB (shader_filter_hp->program);
-  glUniform1iARB (shader_filter_hp->textures[0], 0);
+  glUniform1iARB (shader_filter_hp->textures[0], 0); // FIXME: pre-bind on create
   glUniform2fARB (shader_filter_hp->offsets[0], 0, subband_height);
 
   #define RENDER_QUAD_VERTICAL_Hp(_y_offset, _quad_height) \
@@ -363,7 +361,7 @@ schro_opengl_wavelet_inverse_transform (SchroFrameData *frame_data,
 
   /* copy XL' */
   glUseProgramObjectARB (shader_copy->program);
-  glUniform1iARB (shader_copy->textures[0], 0);
+  glUniform1iARB (shader_copy->textures[0], 0); // FIXME: pre-bind on create
 
   schro_opengl_render_quad (0, 0, width, subband_height);
 
@@ -372,11 +370,11 @@ schro_opengl_wavelet_inverse_transform (SchroFrameData *frame_data,
   glFlush ();
 
   /* pass 3: vertical interleave => i(LL', LH') = L, i(HL', HH') = H */
-  SWITCH_FRAMEBUFFER_AND_TEXTURE_INDICES
+  SWAP_DESTINATION_AND_SOURCE
   BIND_FRAMEBUFFER_AND_TEXTURE
 
   glUseProgramObjectARB (shader_vertical_interleave->program);
-  glUniform1iARB (shader_vertical_interleave->textures[0], 0);
+  glUniform1iARB (shader_vertical_interleave->textures[0], 0); // FIXME: pre-bind on create
   glUniform2fARB (shader_vertical_interleave->offsets[0], 0, subband_height);
 
   schro_opengl_render_quad (0, 0, width, height);
@@ -386,11 +384,11 @@ schro_opengl_wavelet_inverse_transform (SchroFrameData *frame_data,
   glFlush ();
 
   /* pass 4: horizontal filtering => L + f(H) = L' */
-  SWITCH_FRAMEBUFFER_AND_TEXTURE_INDICES
+  SWAP_DESTINATION_AND_SOURCE
   BIND_FRAMEBUFFER_AND_TEXTURE
 
   glUseProgramObjectARB (shader_filter_lp->program);
-  glUniform1iARB (shader_filter_lp->textures[0], 0);
+  glUniform1iARB (shader_filter_lp->textures[0], 0); // FIXME: pre-bind on create
   glUniform2fARB (shader_filter_lp->offsets[0], subband_width, 0);
 
   #define RENDER_QUAD_HORIZONTAL_Lp(_x, _quad_width) \
@@ -415,7 +413,7 @@ schro_opengl_wavelet_inverse_transform (SchroFrameData *frame_data,
 
   /* copy H */
   glUseProgramObjectARB (shader_copy->program);
-  glUniform1iARB (shader_copy->textures[0], 0);
+  glUniform1iARB (shader_copy->textures[0], 0); // FIXME: pre-bind on create
 
   schro_opengl_render_quad (subband_width, 0, subband_width, height);
 
@@ -424,11 +422,11 @@ schro_opengl_wavelet_inverse_transform (SchroFrameData *frame_data,
   glFlush ();
 
   /* pass 5: horizontal filtering => f(L') + H = H' */
-  SWITCH_FRAMEBUFFER_AND_TEXTURE_INDICES
+  SWAP_DESTINATION_AND_SOURCE
   BIND_FRAMEBUFFER_AND_TEXTURE
 
   glUseProgramObjectARB (shader_filter_hp->program);
-  glUniform1iARB (shader_filter_hp->textures[0], 0);
+  glUniform1iARB (shader_filter_hp->textures[0], 0); // FIXME: pre-bind on create
   glUniform2fARB (shader_filter_hp->offsets[0], subband_width, 0);
 
   #define RENDER_QUAD_HORIZONTAL_Hp(_x_offset, _quad_width) \
@@ -453,7 +451,7 @@ schro_opengl_wavelet_inverse_transform (SchroFrameData *frame_data,
 
   /* copy L' */
   glUseProgramObjectARB (shader_copy->program);
-  glUniform1iARB (shader_copy->textures[0], 0);
+  glUniform1iARB (shader_copy->textures[0], 0); // FIXME: pre-bind on create
 
   schro_opengl_render_quad (0, 0, subband_width, height);
 
@@ -462,11 +460,11 @@ schro_opengl_wavelet_inverse_transform (SchroFrameData *frame_data,
   glFlush ();
 
   /* pass 6: horizontal interleave => i(L', H') = LL */
-  SWITCH_FRAMEBUFFER_AND_TEXTURE_INDICES
+  SWAP_DESTINATION_AND_SOURCE
   BIND_FRAMEBUFFER_AND_TEXTURE
 
   glUseProgramObjectARB (shader_horizontal_interleave->program);
-  glUniform1iARB (shader_horizontal_interleave->textures[0], 0);
+  glUniform1iARB (shader_horizontal_interleave->textures[0], 0); // FIXME: pre-bind on create
   glUniform2fARB (shader_horizontal_interleave->offsets[0], width / 2, 0);
 
   schro_opengl_render_quad (0, 0, width, height);
@@ -477,11 +475,11 @@ schro_opengl_wavelet_inverse_transform (SchroFrameData *frame_data,
 
   /* pass 7: filter shift */
   if (filter_shift) {
-    SWITCH_FRAMEBUFFER_AND_TEXTURE_INDICES
+    SWAP_DESTINATION_AND_SOURCE
     BIND_FRAMEBUFFER_AND_TEXTURE
 
     glUseProgramObjectARB (shader_filter_shift->program);
-    glUniform1iARB (shader_filter_shift->textures[0], 0);
+    glUniform1iARB (shader_filter_shift->textures[0], 0); // FIXME: pre-bind on create
 
     schro_opengl_render_quad (0, 0, width, height);
 
@@ -492,12 +490,12 @@ schro_opengl_wavelet_inverse_transform (SchroFrameData *frame_data,
 
   /* pass 8: transfer data from secondary to primary framebuffer if previous
              pass result wasn't rendered into the primary framebuffer */
-  if (framebuffer_index != 0) {
-    SWITCH_FRAMEBUFFER_AND_TEXTURE_INDICES
+  if (dest != canvas) {
+    SWAP_DESTINATION_AND_SOURCE
     BIND_FRAMEBUFFER_AND_TEXTURE
 
     glUseProgramObjectARB (shader_copy->program);
-    glUniform1iARB (shader_copy->textures[0], 0);
+    glUniform1iARB (shader_copy->textures[0], 0); // FIXME: pre-bind on create
 
     schro_opengl_render_quad (0, 0, width, height);
 
@@ -506,7 +504,7 @@ schro_opengl_wavelet_inverse_transform (SchroFrameData *frame_data,
     glFlush ();
   }
 
-  #undef SWITCH_FRAMEBUFFER_AND_TEXTURE_INDICES
+  #undef SWAP_DESTINATION_AND_SOURCE
   #undef BIND_FRAMEBUFFER_AND_TEXTURE
 
   glUseProgramObjectARB (0);
@@ -515,6 +513,6 @@ schro_opengl_wavelet_inverse_transform (SchroFrameData *frame_data,
 #endif
   glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, 0);
 
-  schro_opengl_unlock (opengl);
+  schro_opengl_unlock_context (canvas->opengl);
 }
 

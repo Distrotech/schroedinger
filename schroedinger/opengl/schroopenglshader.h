@@ -83,7 +83,7 @@ struct _SchroOpenGLShader {
     ((SCHRO_OPENGL_SHADER_OBMC_SHIFT) + 1)
 
 SchroOpenGLShaderLibrary *schro_opengl_shader_library_new (SchroOpenGL *opengl);
-void schro_opengl_shader_library_free (SchroOpenGLShaderLibrary *library);
+void schro_opengl_shader_library_free (SchroOpenGLShaderLibrary *shader_library);
 SchroOpenGLShader *schro_opengl_shader_get (SchroOpenGL *opengl, int index);
 
 SCHRO_END_DECLS

@@ -10,35 +10,45 @@
 #include <GL/glew.h>
 #include <GL/glxew.h>
 
-#define REQUIRED_TEXTURE_UNITS 9
+/* OBMC in biref precision 2 and 3 mode needs 10 textures at the same time */
+#define SCHRO_OPENGL_REQUIRED_TEXTURE_UNITS 10
 
 struct _SchroOpenGL {
   int is_initialized;
   int is_usable;
   int is_visible;
-  int lock_count;
-  SchroMutex *mutex;
+
+  SchroMutex *context_mutex;
+  int context_lock_count;
+
+  SchroMutex *resources_mutex;
+  int resources_lock_count;
+
   Display *display;
   Window root;
   int screen;
   XVisualInfo *visual_info;
   GLXContext context;
   Window window;
+
   void *tmp;
   int tmp_size;
+
   SchroOpenGLShaderLibrary *shader_library;
-  SchroOpenGLCanvasPool* canvas_pool;
+
+  SchroOpenGLResources* resources;
+
   SchroOpenGLCanvas *obmc_weight_canvas;
 };
 
 static int
 schro_opengl_x_error_handler (Display *display, XErrorEvent *event)
 {
-  char errormsg[512];
+  char message[512];
 
-  XGetErrorText (display, event->error_code, errormsg, sizeof (errormsg));
+  XGetErrorText (display, event->error_code, message, sizeof (message));
 
-  SCHRO_ERROR ("Xlib error: %s", errormsg);
+  SCHRO_ERROR ("Xlib error: %s", message);
   SCHRO_ASSERT (0);
 
   return 0;
@@ -52,7 +62,7 @@ schro_opengl_open_display (SchroOpenGL *opengl, const char *display_name)
   opengl->display = XOpenDisplay (display_name);
 
   if (opengl->display == NULL) {
-    SCHRO_ERROR ("failed to open display %s", display_name);
+    SCHRO_ERROR ("failed to open display '%s'", display_name);
     return FALSE;
   }
 
@@ -171,7 +181,7 @@ schro_opengl_init_glew (SchroOpenGL *opengl)
   int major, minor, micro;
   GLenum error;
 
-  schro_opengl_lock (opengl);
+  schro_opengl_lock_context (opengl);
 
   error = glewInit ();
 
@@ -195,7 +205,7 @@ schro_opengl_init_glew (SchroOpenGL *opengl)
     ok = FALSE;
   }
 
-  schro_opengl_unlock (opengl);
+  schro_opengl_unlock_context (opengl);
 
   return ok;
 }
@@ -204,9 +214,9 @@ static int
 schro_opengl_check_essential_extensions (SchroOpenGL *opengl)
 {
   int ok = TRUE;
-  //GLint texture_units;
+  GLint texture_units;
 
-  schro_opengl_lock (opengl);
+  schro_opengl_lock_context (opengl);
 
   #define CHECK_EXTENSION(_name) \
     if (!GLEW_##_name) { \
@@ -226,22 +236,23 @@ schro_opengl_check_essential_extensions (SchroOpenGL *opengl)
   CHECK_EXTENSION (ARB_shader_objects)
   CHECK_EXTENSION (ARB_shading_language_100)
   CHECK_EXTENSION (ARB_fragment_shader)
+  CHECK_EXTENSION (ARB_fragment_program) /* for GL_MAX_TEXTURE_IMAGE_UNITS_ARB */
 
   #undef CHECK_EXTENSION
   #undef CHECK_EXTENSION_GROUPS
 
   if (ok) {
-    /*glGetIntegerv (GL_MAX_TEXTURE_UNITS_ARB, &texture_units);
+    glGetIntegerv (GL_MAX_TEXTURE_IMAGE_UNITS_ARB, &texture_units);
 
-    if (texture_units < REQUIRED_TEXTURE_UNITS) {
-      SCHRO_ERROR ("GL_MAX_TEXTURE_UNITS_ARB >= %i required, have %i",
-          REQUIRED_TEXTURE_UNITS, texture_units);
+    if (texture_units < SCHRO_OPENGL_REQUIRED_TEXTURE_UNITS) {
+      SCHRO_ERROR ("GL_MAX_TEXTURE_IMAGE_UNITS_ARB >= %i required, have %i",
+          SCHRO_OPENGL_REQUIRED_TEXTURE_UNITS, texture_units);
 
       ok = FALSE;
-    }*/
+    }
   }
 
-  schro_opengl_unlock (opengl);
+  schro_opengl_unlock_context (opengl);
 
   return ok;
 }
@@ -255,12 +266,14 @@ SchroOpenGL *
 schro_opengl_new (void)
 {
   SchroOpenGL *opengl = schro_malloc0 (sizeof (SchroOpenGL));
-  const char *display_name;
 
   opengl->is_initialized = FALSE;
   opengl->is_usable = TRUE;
   opengl->is_visible = FALSE;
-  opengl->lock_count = 0;
+  opengl->context_mutex = schro_mutex_new_recursive ();
+  opengl->context_lock_count = 0;
+  opengl->resources_mutex = schro_mutex_new_recursive ();
+  opengl->resources_lock_count = 0;
   opengl->display = NULL;
   opengl->root = None;
   opengl->screen = 0;
@@ -270,14 +283,10 @@ schro_opengl_new (void)
   opengl->tmp = NULL;
   opengl->tmp_size = 0;
   opengl->shader_library = NULL;
-  opengl->canvas_pool = NULL;
+  opengl->resources = NULL;
   opengl->obmc_weight_canvas = NULL;
 
-  opengl->mutex = schro_mutex_new_recursive ();
-
-  display_name = getenv ("SCHRO_OPENGL_DISPLAY");
-
-  if (!schro_opengl_open_display (opengl, display_name)) {
+  if (!schro_opengl_open_display (opengl, getenv ("SCHRO_OPENGL_DISPLAY"))) {
     opengl->is_usable = FALSE;
     return opengl;
   }
@@ -298,15 +307,14 @@ schro_opengl_new (void)
   }
 
   opengl->shader_library = schro_opengl_shader_library_new (opengl);
-
-  opengl->canvas_pool = schro_opengl_canvas_pool_new (opengl);
+  opengl->resources = schro_opengl_resources_new (opengl);
 
   schro_opengl_canvas_check_flags ();
 
   opengl->obmc_weight_canvas = schro_opengl_canvas_new (opengl,
-      SCHRO_FRAME_FORMAT_S16_444, 32, 32);
+      SCHRO_OPENGL_CANVAS_TYPE_PRIMARAY, SCHRO_FRAME_FORMAT_S16_444, 32, 32);
 
-  schro_opengl_lock (opengl);
+  schro_opengl_lock_context (opengl);
 
   glMatrixMode (GL_MODELVIEW);
   glLoadIdentity ();
@@ -316,7 +324,7 @@ schro_opengl_new (void)
 
   glEnable (GL_TEXTURE_RECTANGLE_ARB);
 
-  schro_opengl_unlock (opengl);
+  schro_opengl_unlock_context (opengl);
 
   opengl->is_initialized = TRUE;
 
@@ -328,7 +336,8 @@ schro_opengl_new (void)
 void
 schro_opengl_free (SchroOpenGL *opengl)
 {
-  SCHRO_ASSERT (opengl->lock_count == 0);
+  SCHRO_ASSERT (opengl->context_lock_count == 0);
+  SCHRO_ASSERT (opengl->resources_lock_count == 0);
 
   if (opengl->shader_library) {
     schro_opengl_shader_library_free (opengl->shader_library);
@@ -336,16 +345,19 @@ schro_opengl_free (SchroOpenGL *opengl)
   }
 
   if (opengl->obmc_weight_canvas) {
-    schro_opengl_canvas_free (opengl->obmc_weight_canvas);
+    schro_opengl_canvas_unref (opengl->obmc_weight_canvas);
     opengl->obmc_weight_canvas = NULL;
   }
 
-  SCHRO_ASSERT (opengl->lock_count == 0);
+  SCHRO_ASSERT (opengl->context_lock_count == 0);
+  SCHRO_ASSERT (opengl->resources_lock_count == 0);
 
-  if (opengl->canvas_pool) {
-    schro_opengl_canvas_pool_free (opengl->canvas_pool);
-    opengl->canvas_pool = NULL;
+  if (opengl->resources) {
+    schro_opengl_resources_free (opengl->resources);
+    opengl->resources = NULL;
   }
+
+  SCHRO_ASSERT (opengl->resources_lock_count == 0);
 
   schro_opengl_destroy_window (opengl);
   schro_opengl_close_display (opengl);
@@ -355,7 +367,8 @@ schro_opengl_free (SchroOpenGL *opengl)
     opengl->tmp = NULL;
   }
 
-  schro_mutex_free (opengl->mutex);
+  schro_mutex_free (opengl->context_mutex);
+  schro_mutex_free (opengl->resources_mutex);
 
   schro_free (opengl);
 }
@@ -366,16 +379,16 @@ schro_opengl_is_usable (SchroOpenGL *opengl) {
 }
 
 void
-schro_opengl_lock (SchroOpenGL *opengl)
+schro_opengl_lock_context (SchroOpenGL *opengl)
 {
   SCHRO_ASSERT (opengl->display != NULL);
   SCHRO_ASSERT (opengl->window != None);
   SCHRO_ASSERT (opengl->context != NULL);
-  SCHRO_ASSERT (opengl->lock_count < (INT_MAX - 1));
+  SCHRO_ASSERT (opengl->context_lock_count < (INT_MAX - 1));
 
-  schro_mutex_lock (opengl->mutex);
+  schro_mutex_lock (opengl->context_mutex);
 
-  if (opengl->lock_count == 0) {
+  if (opengl->context_lock_count == 0) {
     XLockDisplay (opengl->display);
 
     if (!glXMakeCurrent (opengl->display, opengl->window, opengl->context)) {
@@ -385,13 +398,13 @@ schro_opengl_lock (SchroOpenGL *opengl)
     XUnlockDisplay (opengl->display);
   }
 
-  ++opengl->lock_count;
+  ++opengl->context_lock_count;
 
   SCHRO_OPENGL_CHECK_ERROR
 }
 
 void
-schro_opengl_unlock (SchroOpenGL *opengl)
+schro_opengl_unlock_context (SchroOpenGL *opengl)
 {
 #if SCHRO_OPENGL_UNBIND_TEXTURES
   int i;
@@ -400,16 +413,16 @@ schro_opengl_unlock (SchroOpenGL *opengl)
   GLint framebuffer;
 
   SCHRO_ASSERT (opengl->display != NULL);
-  SCHRO_ASSERT (opengl->lock_count > 0);
+  SCHRO_ASSERT (opengl->context_lock_count > 0);
 
   SCHRO_OPENGL_CHECK_ERROR
 
-  --opengl->lock_count;
+  --opengl->context_lock_count;
 
-  if (opengl->lock_count == 0) {
+  if (opengl->context_lock_count == 0) {
     if (opengl->is_initialized) {
 #if SCHRO_OPENGL_UNBIND_TEXTURES
-      for (i = 0; i < REQUIRED_TEXTURE_UNITS; ++i) {
+      for (i = 0; i < SCHRO_OPENGL_REQUIRED_TEXTURE_UNITS; ++i) {
         glActiveTextureARB (GL_TEXTURE0_ARB + i);
         glGetIntegerv (GL_TEXTURE_BINDING_RECTANGLE_ARB, &texture);
 
@@ -447,7 +460,27 @@ schro_opengl_unlock (SchroOpenGL *opengl)
     XUnlockDisplay (opengl->display);
   }
 
-  schro_mutex_unlock (opengl->mutex);
+  schro_mutex_unlock (opengl->context_mutex);
+}
+
+void
+schro_opengl_lock_resources (SchroOpenGL *opengl)
+{
+  SCHRO_ASSERT (opengl->resources_lock_count < (INT_MAX - 1));
+
+  schro_mutex_lock (opengl->resources_mutex);
+
+  ++opengl->resources_lock_count;
+}
+
+void
+schro_opengl_unlock_resources (SchroOpenGL *opengl)
+{
+  SCHRO_ASSERT (opengl->resources_lock_count > 0);
+
+  --opengl->resources_lock_count;
+
+  schro_mutex_unlock (opengl->resources_mutex);
 }
 
 void
@@ -457,7 +490,7 @@ schro_opengl_check_error (const char* file, int line, const char* func)
 
   if (error) {
     SCHRO_ERROR ("GL Error 0x%04x in %s(%d) %s", (int) error, file, line, func);
-    //SCHRO_ASSERT (0);
+    SCHRO_ASSERT (0);
   }
 }
 
@@ -466,7 +499,7 @@ schro_opengl_check_framebuffer (const char *file, int line, const char *func)
 {
   switch (glCheckFramebufferStatusEXT (GL_FRAMEBUFFER_EXT)) {
     case GL_FRAMEBUFFER_COMPLETE_EXT:
-      break;
+      return;
     case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT_EXT:
       SCHRO_ERROR ("GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT_EXT in %s(%d) %s",
           file, line, func);
@@ -500,6 +533,8 @@ schro_opengl_check_framebuffer (const char *file, int line, const char *func)
           "%s(%d) %s", file, line, func);
       break;
   }
+
+  SCHRO_ASSERT (0);
 }
 
 void
@@ -564,25 +599,26 @@ schro_opengl_get_tmp (SchroOpenGL *opengl, int size)
   return opengl->tmp;
 }
 
+SchroOpenGLResources *
+schro_opengl_get_resources (SchroOpenGL *opengl)
+{
+  return opengl->resources;
+}
+
 SchroOpenGLCanvas *
 schro_opengl_get_obmc_weight_canvas (SchroOpenGL *opengl, int width,
     int height)
 {
   if (width > opengl->obmc_weight_canvas->width ||
       height > opengl->obmc_weight_canvas->height) {
-    schro_opengl_canvas_free (opengl->obmc_weight_canvas);
+    schro_opengl_canvas_unref (opengl->obmc_weight_canvas);
 
     opengl->obmc_weight_canvas = schro_opengl_canvas_new (opengl,
-        SCHRO_FRAME_FORMAT_S16_444, MAX (width, 64), MAX (height, 64));
+        SCHRO_OPENGL_CANVAS_TYPE_PRIMARAY, SCHRO_FRAME_FORMAT_S16_444,
+        MAX (width, 64), MAX (height, 64));
   }
 
   return opengl->obmc_weight_canvas;
-}
-
-SchroOpenGLCanvasPool *
-schro_opengl_get_canvas_pool (SchroOpenGL *opengl)
-{
-  return opengl->canvas_pool;
 }
 
 static void *

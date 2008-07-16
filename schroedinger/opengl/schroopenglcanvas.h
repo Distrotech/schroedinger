@@ -8,7 +8,11 @@
 
 SCHRO_BEGIN_DECLS
 
-#define SCHRO_OPENGL_TRANSFER_PIXELBUFFERS 4
+#define SCHRO_OPNEGL_CANVAS_FROM_FRAMEDATA(_framedata) \
+    *((SchroOpenGLCanvas **) (_framedata)->data)
+
+#define SCHRO_OPNEGL_CANVAS_TO_FRAMEDATA(_framedata, _canvas) \
+    *((SchroOpenGLCanvas **) (_framedata)->data) = _canvas
 
 /*typedef enum _SchroOpenGLTextureFormat {
   SCHRO_OPENGL_TEXTURE_FORMAT_FIXED_POINT = 0,
@@ -16,58 +20,80 @@ SCHRO_BEGIN_DECLS
   SCHRO_OPENGL_TEXTURE_FORMAT_INTEGER
 } SchroOpenGLTextureFormat;*/
 
-struct _SchroOpenGLTexture {
-  GLuint handles[2];
-  //SchroOpenGLTextureFormat format;
-  //unsigned int flags;
-  GLenum internal_format;
-  GLenum pixel_format;
-  GLenum type;
-  int channels;
+typedef enum _SchroOpenGLPixelbufferType {
+  SCHRO_OPENGL_PIXELBUFFER_TYPE_PUSH = 0,
+  SCHRO_OPENGL_PIXELBUFFER_TYPE_PULL = 1
+} SchroOpenGLPixelbufferType;
+
+#define SCHRO_OPENGL_PIXELBUFFER_BLOCKS 4
+
+struct _SchroOpenGLPixelbuffer {
+  SchroOpenGL *opengl;
+  SchroOpenGLPixelbufferType type;
+  int refcount;
+  int uselessness;
+
+  /* frame */
+  int width;
+  int height;
+  int stride;
+
+  /* blocks */
+  GLuint handles[SCHRO_OPENGL_PIXELBUFFER_BLOCKS];
+  int heights[SCHRO_OPENGL_PIXELBUFFER_BLOCKS];
 };
 
-struct _SchroOpenGLTransfer {
-  GLenum type;
-  int stride;
-  GLuint pixelbuffers[SCHRO_OPENGL_TRANSFER_PIXELBUFFERS];
-  int heights[SCHRO_OPENGL_TRANSFER_PIXELBUFFERS];
-};
+typedef enum _SchroOpenGLCanvasType {
+  SCHRO_OPENGL_CANVAS_TYPE_PRIMARAY = 0,
+  SCHRO_OPENGL_CANVAS_TYPE_SECONDARY = 1
+} SchroOpenGLCanvasType;
 
 struct _SchroOpenGLCanvas {
   SchroOpenGL *opengl;
+  SchroOpenGLCanvasType type;
+  int refcount;
+  int uselessness;
+
+  /* frame */
   SchroFrameFormat format;
   int width;
   int height;
-  SchroOpenGLTexture texture;
-  GLuint framebuffers[2];
-  SchroOpenGLTransfer push;
-  SchroOpenGLTransfer pull;
-};
 
-/*
-struct _SchroOpenGLCanvas {
-  SchroOpenGL *opengl;
-  SchroFrameFormat frame_format;
-  int width;
-  int height;
+  /* texture */
   GLuint texture;
   GLenum internal_format;
   GLenum pixel_format;
-  GLenum type;
+  GLenum storage_type;
   int channels;
-  GLuint framebuffer;
-};*/
 
-#define SCHRO_OPENGL_CANVAS_POOL_SIZE 10
+  /* framebuffer */
+  GLuint framebuffer;
+
+  /* secondary, only for primary canvas */
+  SchroOpenGLCanvas* secondary;
+
+  /* push, only for primary canvas */
+  GLenum push_type;
+  int push_stride;
+  SchroOpenGLPixelbuffer* push_pixelbuffer;
+
+  /* pull, only for primary canvas */
+  GLenum pull_type;
+  int pull_stride;
+  SchroOpenGLPixelbuffer* pull_pixelbuffer;
+};
+
+#define SCHRO_OPENGL_RESOURCES_LIMIT 1024
 
 // FIXME: add a mechanism to drop long time unused canvases from the pool
-struct _SchroOpenGLCanvasPool {
+struct _SchroOpenGLResources {
   SchroOpenGL *opengl;
-  SchroOpenGLCanvas *canvases[SCHRO_OPENGL_CANVAS_POOL_SIZE];
-  int size;
 
-  int total;
-  int peak;
+  SchroOpenGLCanvas *canvases[2][SCHRO_OPENGL_RESOURCES_LIMIT];
+  int canvas_count[2];
+
+  SchroOpenGLPixelbuffer *pixelbuffers[2][SCHRO_OPENGL_RESOURCES_LIMIT];
+  int pixelbuffer_count[2];
 };
 
 // FIXME: reduce storage flags to fixed point, float and integer
@@ -108,19 +134,19 @@ void schro_opengl_canvas_check_flags (void);
 void schro_opengl_canvas_print_flags (const char* indent);
 
 SchroOpenGLCanvas *schro_opengl_canvas_new (SchroOpenGL *opengl,
-    SchroFrameFormat format, int width, int height);
-void schro_opengl_canvas_free (SchroOpenGLCanvas *canvas);
+    SchroOpenGLCanvasType type, SchroFrameFormat format, int width, int height);
+void schro_opengl_canvas_unref (SchroOpenGLCanvas *canvas);
 void schro_opengl_canvas_push (SchroOpenGLCanvas *dest,
     SchroFrameData *src); // CPU -> GPU
 void schro_opengl_canvas_pull (SchroFrameData *dest,
     SchroOpenGLCanvas *src); // CPU <- GPU
 
-SchroOpenGLCanvasPool *schro_opengl_canvas_pool_new (SchroOpenGL *opengl);
-void schro_opengl_canvas_pool_free (SchroOpenGLCanvasPool* canvas_pool);
-SchroOpenGLCanvas *schro_opengl_canvas_pool_pull_or_new (SchroOpenGLCanvasPool* canvas_pool,
-    SchroOpenGL *opengl, SchroFrameFormat format, int width, int height);
-void schro_opengl_canvas_pool_push_or_free (SchroOpenGLCanvasPool* canvas_pool,
-    SchroOpenGLCanvas *canvas);
+SchroOpenGLPixelbuffer *schro_opengl_pixelbuffer_new (SchroOpenGL *opengl,
+    SchroOpenGLPixelbufferType type, int width, int height, int stride);
+void schro_opengl_pixelbuffer_unref (SchroOpenGLPixelbuffer *pixelbuffer);
+
+SchroOpenGLResources *schro_opengl_resources_new (SchroOpenGL *opengl);
+void schro_opengl_resources_free (SchroOpenGLResources* resources);
 
 SCHRO_END_DECLS
 

@@ -9,7 +9,6 @@
 #include <schroedinger/schrogpuframe.h>
 #include <schroedinger/schrocog.h>
 #include <schroedinger/schrooil.h>
-#include <schroedinger/opengl/schroopenglframe.h>
 #include <liboil/liboil.h>
 
 #include <stdlib.h>
@@ -347,12 +346,6 @@ schro_frame_unref (SchroFrame *frame)
     if (frame->free) {
       frame->free (frame, frame->priv);
     }
-
-#ifdef HAVE_OPENGL
-    if (SCHRO_FRAME_IS_OPENGL (frame)) {
-      schro_opengl_frame_cleanup (frame);
-    }
-#endif
 
     if (frame->regions[0]) {
       if (frame->domain) {

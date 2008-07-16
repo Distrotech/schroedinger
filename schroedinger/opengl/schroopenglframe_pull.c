@@ -31,9 +31,8 @@ schro_opengl_canvas_pull_convert (SchroFrameData *dest, SchroOpenGLCanvas *src,
 
   width = dest->width;
   frame_stride = dest->stride;
-  texture_stride = src->pull.stride;
-  texture_channels = SCHRO_FRAME_IS_PACKED (dest->format)
-      ? 1 : src->texture.channels;
+  texture_stride = src->pull_stride;
+  texture_channels = SCHRO_FRAME_IS_PACKED (dest->format) ? 1 : src->channels;
 
   switch (SCHRO_FRAME_FORMAT_DEPTH (dest->format)) {
     case SCHRO_FRAME_FORMAT_DEPTH_U8:
@@ -142,7 +141,6 @@ schro_opengl_frame_pull (SchroFrame *dest, SchroFrame *src)
   int i;
   int components;
   SchroOpenGLCanvas *src_canvas;
-  SchroOpenGL *opengl;
 
   SCHRO_ASSERT (dest != NULL);
   SCHRO_ASSERT (src != NULL);
@@ -152,25 +150,24 @@ schro_opengl_frame_pull (SchroFrame *dest, SchroFrame *src)
 
   components = SCHRO_FRAME_IS_PACKED (src->format) ? 1 : 3;
   // FIXME: hack to store custom data per frame component
-  src_canvas = *((SchroOpenGLCanvas **) src->components[0].data);
+  //src_canvas = *((SchroOpenGLCanvas **) src->components[0].data);
+  src_canvas = SCHRO_OPNEGL_CANVAS_FROM_FRAMEDATA (src->components + 0);
 
   SCHRO_ASSERT (src_canvas != NULL);
 
-  opengl = src_canvas->opengl;
-
-  schro_opengl_lock (opengl);
+  schro_opengl_lock_context (src_canvas->opengl);
 
   for (i = 0; i < components; ++i) {
     // FIXME: hack to store custom data per frame component
-    src_canvas = *((SchroOpenGLCanvas **) src->components[i].data);
+    //src_canvas = *((SchroOpenGLCanvas **) src->components[i].data);
+    src_canvas = SCHRO_OPNEGL_CANVAS_FROM_FRAMEDATA (src->components + i);
 
     SCHRO_ASSERT (src_canvas != NULL);
-    SCHRO_ASSERT (src_canvas->opengl == opengl);
 
     schro_opengl_canvas_pull (dest->components + i, src_canvas);
   }
 
-  schro_opengl_unlock (opengl);
+  schro_opengl_unlock_context (src_canvas->opengl);
 }
 
 void
@@ -185,27 +182,24 @@ schro_opengl_canvas_pull (SchroFrameData *dest, SchroOpenGLCanvas *src)
   SCHRO_ASSERT (dest->format == src->format);
   SCHRO_ASSERT (dest->width == src->width);
   SCHRO_ASSERT (dest->height == src->height);
-  SCHRO_ASSERT (src->texture.handles[0] != 0);
-  SCHRO_ASSERT (src->texture.handles[1] != 0);
-  SCHRO_ASSERT (src->framebuffers[0] != 0);
-  SCHRO_ASSERT (src->framebuffers[1] != 0);
 
   width = dest->width;
   height = dest->height;
 
-  schro_opengl_lock (src->opengl);
+  schro_opengl_lock_context (src->opengl);
 
   if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PULL_PIXELBUFFER)) {
-    glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, src->framebuffers[0]);
+    glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, src->framebuffer);
 
     pixelbuffer_y_offset = 0;
 
-    for (i = 0; i < SCHRO_OPENGL_TRANSFER_PIXELBUFFERS; ++i) {
-      pixelbuffer_height = src->pull.heights[i];
+    for (i = 0; i < SCHRO_OPENGL_PIXELBUFFER_BLOCKS; ++i) {
+      pixelbuffer_height = src->pull_pixelbuffer->heights[i];
 
-      glBindBufferARB (GL_PIXEL_PACK_BUFFER_ARB, src->pull.pixelbuffers[i]);
+      glBindBufferARB (GL_PIXEL_PACK_BUFFER_ARB,
+          src->pull_pixelbuffer->handles[i]);
       glReadPixels (0, pixelbuffer_y_offset, width, pixelbuffer_height,
-          src->texture.pixel_format, src->pull.type, NULL);
+          src->pixel_format, src->pull_type, NULL);
 
       pixelbuffer_y_offset += pixelbuffer_height;
 
@@ -214,10 +208,11 @@ schro_opengl_canvas_pull (SchroFrameData *dest, SchroOpenGLCanvas *src)
 
     pixelbuffer_y_offset = 0;
 
-    for (i = 0; i < SCHRO_OPENGL_TRANSFER_PIXELBUFFERS; ++i) {
-      pixelbuffer_height = src->pull.heights[i];
+    for (i = 0; i < SCHRO_OPENGL_PIXELBUFFER_BLOCKS; ++i) {
+      pixelbuffer_height = src->pull_pixelbuffer->heights[i];
 
-      glBindBufferARB (GL_PIXEL_PACK_BUFFER_ARB, src->pull.pixelbuffers[i]);
+      glBindBufferARB (GL_PIXEL_PACK_BUFFER_ARB,
+          src->pull_pixelbuffer->handles[i]);
 
       mapped_data = glMapBufferARB (GL_PIXEL_PACK_BUFFER_ARB, GL_READ_ONLY_ARB);
 
@@ -233,16 +228,16 @@ schro_opengl_canvas_pull (SchroFrameData *dest, SchroOpenGLCanvas *src)
 
     glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, 0);
   } else {
-    tmp_data = schro_opengl_get_tmp (src->opengl, src->pull.stride * height);
+    tmp_data = schro_opengl_get_tmp (src->opengl, src->pull_stride * height);
 
-    glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, src->framebuffers[0]);
-    glReadPixels (0, 0, width, height, src->texture.pixel_format,
-        src->pull.type, tmp_data);
+    glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, src->framebuffer);
+    glReadPixels (0, 0, width, height, src->pixel_format, src->pull_type,
+        tmp_data);
     glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, 0);
 
     schro_opengl_canvas_pull_convert (dest, src, tmp_data, 0, height);
   }
 
-  schro_opengl_unlock (src->opengl);
+  schro_opengl_unlock_context (src->opengl);
 }
 

@@ -264,7 +264,57 @@ struct ShaderCode {
 #define SHADER_FLAG_USE_U8  (1 << 0)
 #define SHADER_FLAG_USE_S16 (1 << 1)
 
-// FIXME: need a much more elegant way to specify the shader code
+/* FIXME: need a much more elegant way to specify the shader code, maybe design
+   a simple domain specfific language and parse it in python. a first idea is
+   this. replace var with int or float depending on the target pipeline type.
+   have options for small variations in the shader like normal and weight here.
+   have a set of predefined functions like divide_s16, write_s16 and
+   ref_weighting_s16. generate predefined read functions like read_upsampled1_u8
+   from the textures list
+
+shader:
+  SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_3b normal
+  SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_3b_WEIGHT weight
+
+uniforms:
+  vec2 offset1
+  vec2 offset2
+  vec2 offset3
+  vec2 offset4
+  vec2 origin
+  vec2 remaining
+
+textures:
+  previous
+  obmc_weight
+  upsampled1
+  upsampled2
+  upsampled3
+  upsampled4
+
+func var filter (var h0, var h1):
+  return h0 + h1
+
+func void main (void):
+  var w1 = (4 - remaining.y) * (4 - remaining.x)
+  var w2 = (4 - remaining.y) * remaining.x
+  var w3 = remaining.y * (4 - remaining.x)
+  var w4 = remaining.y * remaining.x
+  var previous = read_previous_s16 ()
+  var obmc_weight = read_obmc_weight_s16 (-origin)
+  var upsampled1 = w1 * read_upsampled1_u8 (offset1)
+  var upsampled2 = w2 * read_upsampled2_u8 (offset2)
+  var upsampled3 = w3 * read_upsampled3_u8 (offset3)
+  var upsampled4 = w4 * read_upsampled4_u8 (offset4)
+  var average = divide_s16 (upsampled1 + upsampled2 + upsampled3 + upsampled4 + 8, 16)
+
+  option normal:
+    write_s16 (previous + average * obmc_weight)
+
+  option weight:
+    write_s16 (previous + ref_weighting_s16 (average) * obmc_weight)
+
+*/
 
 #define SHADER_HEADER \
     "#version 110\n" \
@@ -1883,23 +1933,23 @@ schro_opengl_shader_library_new (SchroOpenGL *opengl)
 }
 
 void
-schro_opengl_shader_library_free (SchroOpenGLShaderLibrary *library)
+schro_opengl_shader_library_free (SchroOpenGLShaderLibrary *shader_library)
 {
   int i;
 
-  SCHRO_ASSERT (library != NULL);
+  SCHRO_ASSERT (shader_library != NULL);
 
-  schro_opengl_lock (library->opengl);
+  schro_opengl_lock_context (shader_library->opengl);
 
-  for (i = 0; i < ARRAY_SIZE (library->shaders); ++i) {
-    if (library->shaders[i]) {
-      schro_opengl_shader_free (library->shaders[i]);
+  for (i = 0; i < ARRAY_SIZE (shader_library->shaders); ++i) {
+    if (shader_library->shaders[i]) {
+      schro_opengl_shader_free (shader_library->shaders[i]);
     }
   }
 
-  schro_opengl_unlock (library->opengl);
+  schro_opengl_unlock_context (shader_library->opengl);
 
-  schro_free (library);
+  schro_free (shader_library);
 }
 
 SchroOpenGLShader *
@@ -1913,7 +1963,7 @@ schro_opengl_shader_get (SchroOpenGL *opengl, int index)
   shader_library = schro_opengl_get_shader_library (opengl);
 
   if (!shader_library->shaders[index]) {
-    schro_opengl_lock (opengl);
+    schro_opengl_lock_context (opengl);
 
     if ((SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_U8_AS_UI8) &&
         schro_opengl_shader_code_list[index].flags & SHADER_FLAG_USE_U8) ||
@@ -1930,7 +1980,7 @@ schro_opengl_shader_get (SchroOpenGL *opengl, int index)
           schro_opengl_shader_code_list[index].name);
     }
 
-    schro_opengl_unlock (opengl);
+    schro_opengl_unlock_context (opengl);
   }
 
   return shader_library->shaders[index];

@@ -14,10 +14,9 @@ typedef struct _SchroOpenGL SchroOpenGL;
 typedef struct _SchroOpenGLShader SchroOpenGLShader;
 typedef struct _SchroOpenGLShaderLibrary SchroOpenGLShaderLibrary;
 
-typedef struct _SchroOpenGLTexture SchroOpenGLTexture;
-typedef struct _SchroOpenGLTransfer SchroOpenGLTransfer;
+typedef struct _SchroOpenGLPixelbuffer SchroOpenGLPixelbuffer;
 typedef struct _SchroOpenGLCanvas SchroOpenGLCanvas;
-typedef struct _SchroOpenGLCanvasPool SchroOpenGLCanvasPool;
+typedef struct _SchroOpenGLResources SchroOpenGLResources;
 
 SCHRO_END_DECLS
 

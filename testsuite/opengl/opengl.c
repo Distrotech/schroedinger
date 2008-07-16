@@ -83,7 +83,7 @@ opengl_test_convert (SchroFrameFormat dest_format, SchroFrameFormat src_format,
 
     elapsed_cpu_convert += schro_utils_get_time () - start_cpu_convert;
 
-    schro_opengl_lock (_opengl);
+    schro_opengl_lock_context (_opengl); // FIXME: remove
 
     schro_opengl_frame_push (opengl_src_frame, cpu_src_ref_frame);
 
@@ -97,7 +97,7 @@ opengl_test_convert (SchroFrameFormat dest_format, SchroFrameFormat src_format,
 
     schro_opengl_frame_pull (cpu_dest_test_frame, opengl_dest_frame);
 
-    schro_opengl_unlock (_opengl);
+    schro_opengl_unlock_context (_opengl); // FIXME: remove
 
     ++frames;
 
@@ -239,7 +239,7 @@ opengl_test_wavelet_inverse (SchroFrameFormat format, int width, int height,
 
     schro_frame_convert (cpu_postref_frame, cpu_preref_frame);
 
-    schro_opengl_lock (_opengl);
+    schro_opengl_lock_context (_opengl); // FIXME: remove
 
     schro_opengl_frame_push (opengl_frame, cpu_postref_frame);
 
@@ -293,7 +293,7 @@ opengl_test_wavelet_inverse (SchroFrameFormat format, int width, int height,
 
     schro_opengl_frame_pull (cpu_test_frame, opengl_frame);
 
-    schro_opengl_unlock (_opengl);
+    schro_opengl_unlock_context (_opengl); // FIXME: remove
 
     ++frames;
 
@@ -449,13 +449,18 @@ opengl_test_motion_dc (int xblen, int yblen, int xbsep, int ybsep,
   printf ("==========================================================\n");
   printf ("opengl_test_motion_dc: %ix%i\n", video_format.width, video_format.height);
 
+  memset (&params, 0, sizeof (SchroParams));
+
   params.video_format = &video_format;
   params.xblen_luma = xblen;
   params.yblen_luma = yblen;
   params.xbsep_luma = xbsep;
   params.ybsep_luma = ybsep;
   params.num_refs = 1;
+  params.picture_weight_bits = 1;
+  params.picture_weight_1 = 1;
   params.picture_weight_2 = 1;
+  params.mv_precision = 0;
 
   schro_params_calculate_mc_sizes (&params);
 
@@ -584,6 +589,8 @@ opengl_test_motion_ref (int xblen, int yblen, int xbsep, int ybsep,
 
   printf ("==========================================================\n");
   printf ("opengl_test_motion_ref: %ix%i\n", video_format.width, video_format.height);
+
+  memset (&params, 0, sizeof (SchroParams));
 
   params.video_format = &video_format;
   params.xblen_luma = xblen;
@@ -916,9 +923,9 @@ main (int argc, char *argv[])
     /*opengl_test_upsample (SCHRO_FRAME_FORMAT_U8_444, 16, 16,
         OPENGL_CUSTOM_PATTERN_RANDOM);*/
 
-    //opengl_test_motion_dc (6, 6, 4, 4, OPENGL_CUSTOM_PATTERN_RANDOM);
+    opengl_test_motion_dc (6, 6, 4, 4, OPENGL_CUSTOM_PATTERN_RANDOM);
     //opengl_test_motion_dc (6, 6, 1, 1, OPENGL_CUSTOM_PATTERN_RANDOM);
-    opengl_test_motion_ref (6, 6, 4, 4, OPENGL_CUSTOM_PATTERN_RANDOM_U8, 0);
+    //opengl_test_motion_ref (6, 6, 4, 4, OPENGL_CUSTOM_PATTERN_RANDOM_U8, 0);
 
     /*opengl_test_convert (SCHRO_FRAME_FORMAT_S16_444, SCHRO_FRAME_FORMAT_S16_444,
         16, 16, 16, 16, 1, OPENGL_CUSTOM_PATTERN_RANDOM);*/

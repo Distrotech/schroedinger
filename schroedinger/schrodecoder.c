@@ -1280,17 +1280,18 @@ schro_decoder_x_combine (SchroPicture *picture)
 #endif
     } else if (picture->decoder->use_opengl) {
 #ifdef HAVE_OPENGL
-      SchroFrame *tmp_opengl_output_frame;
+      SchroFrame *opengl_frame;
 
-      tmp_opengl_output_frame = schro_opengl_frame_new (decoder->opengl,
+      opengl_frame = schro_opengl_frame_new (decoder->opengl,
           decoder->opengl_domain, picture->planar_output_frame->format,
-          picture->planar_output_frame->width, picture->planar_output_frame->height);
+          picture->planar_output_frame->width,
+          picture->planar_output_frame->height);
 
-      schro_opengl_frame_convert (tmp_opengl_output_frame, output_frame);
-      schro_opengl_frame_pull (picture->planar_output_frame, tmp_opengl_output_frame);
-      schro_frame_unref (tmp_opengl_output_frame);
-
-      schro_frame_convert (picture->output_picture, picture->planar_output_frame);
+      schro_opengl_frame_convert (opengl_frame, output_frame);
+      schro_opengl_frame_pull (picture->planar_output_frame, opengl_frame);
+      schro_frame_unref (opengl_frame);
+      schro_frame_convert (picture->output_picture,
+          picture->planar_output_frame);
 #else
       SCHRO_ASSERT(0);
 #endif
@@ -1312,15 +1313,16 @@ schro_decoder_x_combine (SchroPicture *picture)
 #endif
     } else if (picture->decoder->use_opengl) {
 #ifdef HAVE_OPENGL
-      SchroFrame *tmp_opengl_output_frame;
+      SchroFrame *opengl_frame;
 
-      tmp_opengl_output_frame = schro_opengl_frame_new (decoder->opengl,
+      opengl_frame = schro_opengl_frame_new (decoder->opengl,
           decoder->opengl_domain, picture->output_picture->format,
           picture->output_picture->width, picture->output_picture->height);
 
-      schro_opengl_frame_convert (tmp_opengl_output_frame, output_frame);
-      schro_opengl_frame_pull (picture->output_picture, tmp_opengl_output_frame);
-      schro_frame_unref (tmp_opengl_output_frame);
+      schro_opengl_frame_convert (opengl_frame, output_frame);
+      schro_opengl_frame_pull (picture->output_picture, opengl_frame);
+
+      schro_frame_unref (opengl_frame);
 #else
       SCHRO_ASSERT(0);
 #endif

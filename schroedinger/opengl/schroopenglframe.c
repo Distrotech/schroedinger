@@ -10,6 +10,14 @@
 #include <schroedinger/opengl/schroopenglwavelet.h>
 #include <stdio.h>
 
+static void
+schro_opengl_frame_free_callback (SchroFrame *frame, void *priv)
+{
+  SCHRO_ASSERT (SCHRO_FRAME_IS_OPENGL (frame));
+
+  schro_opengl_frame_cleanup (frame);
+}
+
 void
 schro_opengl_frame_setup (SchroOpenGL *opengl, SchroFrame *frame)
 {
@@ -17,7 +25,6 @@ schro_opengl_frame_setup (SchroOpenGL *opengl, SchroFrame *frame)
   int components;
   int width, height;
   SchroFrameFormat format;
-  SchroOpenGLCanvasPool *canvas_pool;
   SchroOpenGLCanvas *canvas;
 
   SCHRO_ASSERT (frame != NULL);
@@ -25,9 +32,11 @@ schro_opengl_frame_setup (SchroOpenGL *opengl, SchroFrame *frame)
 
   components = SCHRO_FRAME_IS_PACKED (frame->format) ? 1 : 3;
 
-  schro_opengl_lock (opengl);
-
-  canvas_pool = schro_opengl_get_canvas_pool (opengl);
+  /* use the free callback to do OpenGL specific cleanup. the free callback is
+     public API, but OpenGL frames are internal to the decoder, so it's safe to
+     use the free callback for them */
+  schro_frame_set_free_callback (frame,
+      (SchroFrameFreeFunc) schro_opengl_frame_free_callback, NULL);
 
   for (i = 0; i < components; ++i) {
     format = frame->components[i].format;
@@ -36,14 +45,13 @@ schro_opengl_frame_setup (SchroOpenGL *opengl, SchroFrame *frame)
 
     SCHRO_ASSERT (frame->format == format);
 
-    canvas = schro_opengl_canvas_pool_pull_or_new (canvas_pool, opengl, format,
-        width, height);
+    canvas = schro_opengl_canvas_new (opengl, SCHRO_OPENGL_CANVAS_TYPE_PRIMARAY,
+        format, width, height);
 
     // FIXME: hack to store custom data per frame component
-    *((SchroOpenGLCanvas **) frame->components[i].data) = canvas;
+    //*((SchroOpenGLCanvas **) frame->components[i].data) = canvas;
+    SCHRO_OPNEGL_CANVAS_TO_FRAMEDATA (frame->components + i, canvas);
   }
-
-  schro_opengl_unlock (opengl);
 }
 
 void
@@ -51,8 +59,6 @@ schro_opengl_frame_cleanup (SchroFrame *frame)
 {
   int i;
   int components;
-  SchroOpenGL *opengl;
-  SchroOpenGLCanvasPool *canvas_pool;
   SchroOpenGLCanvas *canvas;
 
   SCHRO_ASSERT (frame != NULL);
@@ -60,27 +66,20 @@ schro_opengl_frame_cleanup (SchroFrame *frame)
 
   components = SCHRO_FRAME_IS_PACKED (frame->format) ? 1 : 3;
   // FIXME: hack to store custom data per frame component
-  canvas = *((SchroOpenGLCanvas **) frame->components[0].data);
+  //canvas = *((SchroOpenGLCanvas **) frame->components[0].data);
+  canvas = SCHRO_OPNEGL_CANVAS_FROM_FRAMEDATA (frame->components + 0);
 
   SCHRO_ASSERT (canvas != NULL);
 
-  opengl = canvas->opengl;
-
-  schro_opengl_lock (opengl);
-
-  canvas_pool = schro_opengl_get_canvas_pool (opengl);
-
   for (i = 0; i < components; ++i) {
     // FIXME: hack to store custom data per frame component
-    canvas = *((SchroOpenGLCanvas **) frame->components[i].data);
+    //canvas = *((SchroOpenGLCanvas **) frame->components[i].data);
+    canvas = SCHRO_OPNEGL_CANVAS_FROM_FRAMEDATA (frame->components + i);
 
     SCHRO_ASSERT (canvas != NULL);
-    SCHRO_ASSERT (canvas->opengl == opengl);
 
-    schro_opengl_canvas_pool_push_or_free (canvas_pool, canvas);
+    schro_opengl_canvas_unref (canvas);
   }
-
-  schro_opengl_unlock (opengl);
 }
 
 SchroFrame *
@@ -108,8 +107,9 @@ schro_opengl_frame_clone (SchroFrame *opengl_frame)
   SCHRO_ASSERT (opengl_frame != NULL);
   SCHRO_ASSERT (SCHRO_FRAME_IS_OPENGL (opengl_frame));
 
-  // FIXME: hack to store custom data per frame component
-  canvas = *((SchroOpenGLCanvas **) opengl_frame->components[0].data);
+  // FIXME: hack to store custom data per frame compo451nent
+  //canvas = *((SchroOpenGLCanvas **) opengl_frame->components[0].data);
+  canvas = SCHRO_OPNEGL_CANVAS_FROM_FRAMEDATA (opengl_frame->components + 0);
 
   SCHRO_ASSERT (canvas != NULL);
 
@@ -139,26 +139,23 @@ schro_opengl_frame_inverse_iwt_transform (SchroFrame *frame,
     SchroParams *params)
 {
   int i;
-  int width, height;
-  int level;
-  SchroOpenGL *opengl;
+  int width, height, level;
   SchroOpenGLCanvas *canvas;
 
   // FIXME: hack to store custom data per frame component
-  canvas = *((SchroOpenGLCanvas **) frame->components[0].data);
+  //canvas = *((SchroOpenGLCanvas **) frame->components[0].data);
+  canvas = SCHRO_OPNEGL_CANVAS_FROM_FRAMEDATA (frame->components + 0);
 
   SCHRO_ASSERT (canvas != NULL);
 
-  opengl = canvas->opengl;
-
-  schro_opengl_lock (opengl);
+  schro_opengl_lock_context (canvas->opengl);
 
   for (i = 0; i < 3; ++i) {
     // FIXME: hack to store custom data per frame component
-    canvas = *((SchroOpenGLCanvas **) frame->components[i].data);
+    //canvas = *((SchroOpenGLCanvas **) frame->components[i].data);
+    canvas = SCHRO_OPNEGL_CANVAS_FROM_FRAMEDATA (frame->components + i);
 
     SCHRO_ASSERT (canvas != NULL);
-    SCHRO_ASSERT (canvas->opengl == opengl);
 
     if (i == 0) {
       width = params->iwt_luma_width;
@@ -182,7 +179,7 @@ schro_opengl_frame_inverse_iwt_transform (SchroFrame *frame,
     }
   }
 
-  schro_opengl_unlock (opengl);
+  schro_opengl_unlock_context (canvas->opengl);
 }
 
 static void
@@ -254,13 +251,14 @@ schro_opengl_upsampled_frame_upsample (SchroUpsampledFrame *upsampled_frame)
   SCHRO_ASSERT (!SCHRO_FRAME_IS_PACKED (upsampled_frame->frames[0]->format));
 
   // FIXME: hack to store custom data per frame component
-  canvases[0] = *((SchroOpenGLCanvas **) upsampled_frame->frames[0]->components[0].data);
+  //canvases[0] = *((SchroOpenGLCanvas **) upsampled_frame->frames[0]->components[0].data);
+  canvases[0] = SCHRO_OPNEGL_CANVAS_FROM_FRAMEDATA (upsampled_frame->frames[0]->components + 0);
 
   SCHRO_ASSERT (canvases[0] != NULL);
 
   opengl = canvases[0]->opengl;
 
-  schro_opengl_lock (opengl);
+  schro_opengl_lock_context (opengl);
 
   upsampled_frame->frames[1] = schro_opengl_frame_clone (upsampled_frame->frames[0]);
   upsampled_frame->frames[2] = schro_opengl_frame_clone (upsampled_frame->frames[0]);
@@ -271,16 +269,20 @@ schro_opengl_upsampled_frame_upsample (SchroUpsampledFrame *upsampled_frame)
   SCHRO_ASSERT (shader != NULL);
 
   glUseProgramObjectARB (shader->program);
-  glUniform1iARB (shader->textures[0], 0);
+  glUniform1iARB (shader->textures[0], 0); // FIXME: pre-bind on create
 
   SCHRO_OPENGL_CHECK_ERROR
 
   for (i = 0; i < 3; ++i) {
     // FIXME: hack to store custom data per frame component
-    canvases[0] = *((SchroOpenGLCanvas **) upsampled_frame->frames[0]->components[i].data);
-    canvases[1] = *((SchroOpenGLCanvas **) upsampled_frame->frames[1]->components[i].data);
-    canvases[2] = *((SchroOpenGLCanvas **) upsampled_frame->frames[2]->components[i].data);
-    canvases[3] = *((SchroOpenGLCanvas **) upsampled_frame->frames[3]->components[i].data);
+    //canvases[0] = *((SchroOpenGLCanvas **) upsampled_frame->frames[0]->components[i].data);
+    //canvases[1] = *((SchroOpenGLCanvas **) upsampled_frame->frames[1]->components[i].data);
+    //canvases[2] = *((SchroOpenGLCanvas **) upsampled_frame->frames[2]->components[i].data);
+    //canvases[3] = *((SchroOpenGLCanvas **) upsampled_frame->frames[3]->components[i].data);
+    canvases[0] = SCHRO_OPNEGL_CANVAS_FROM_FRAMEDATA (upsampled_frame->frames[0]->components + i);
+    canvases[1] = SCHRO_OPNEGL_CANVAS_FROM_FRAMEDATA (upsampled_frame->frames[1]->components + i);
+    canvases[2] = SCHRO_OPNEGL_CANVAS_FROM_FRAMEDATA (upsampled_frame->frames[2]->components + i);
+    canvases[3] = SCHRO_OPNEGL_CANVAS_FROM_FRAMEDATA (upsampled_frame->frames[3]->components + i);
 
     SCHRO_ASSERT (canvases[0] != NULL);
     SCHRO_ASSERT (canvases[1] != NULL);
@@ -302,8 +304,8 @@ schro_opengl_upsampled_frame_upsample (SchroUpsampledFrame *upsampled_frame)
     schro_opengl_setup_viewport (width, height);
 
     /* horizontal filter 0 -> 1 */
-    glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, canvases[1]->framebuffers[0]);
-    glBindTexture (GL_TEXTURE_RECTANGLE_ARB, canvases[0]->texture.handles[0]);
+    glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, canvases[1]->framebuffer);
+    glBindTexture (GL_TEXTURE_RECTANGLE_ARB, canvases[0]->texture);
 
     SCHRO_OPENGL_CHECK_ERROR
 
@@ -340,8 +342,8 @@ schro_opengl_upsampled_frame_upsample (SchroUpsampledFrame *upsampled_frame)
     #undef RENDER_QUAD_HORIZONTAL
 
     /* vertical filter 0 -> 2 */
-    glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, canvases[2]->framebuffers[0]);
-    glBindTexture (GL_TEXTURE_RECTANGLE_ARB, canvases[0]->texture.handles[0]);
+    glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, canvases[2]->framebuffer);
+    glBindTexture (GL_TEXTURE_RECTANGLE_ARB, canvases[0]->texture);
 
     SCHRO_OPENGL_CHECK_ERROR
 
@@ -378,8 +380,8 @@ schro_opengl_upsampled_frame_upsample (SchroUpsampledFrame *upsampled_frame)
     #undef RENDER_QUAD_VERTICAL
 
     /* horizontal filter 2 -> 3 */
-    glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, canvases[3]->framebuffers[0]);
-    glBindTexture (GL_TEXTURE_RECTANGLE_ARB, canvases[2]->texture.handles[0]);
+    glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, canvases[3]->framebuffer);
+    glBindTexture (GL_TEXTURE_RECTANGLE_ARB, canvases[2]->texture);
 
     SCHRO_OPENGL_CHECK_ERROR
 
@@ -422,7 +424,7 @@ schro_opengl_upsampled_frame_upsample (SchroUpsampledFrame *upsampled_frame)
 #endif
   glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, 0);
 
-  schro_opengl_unlock (opengl);
+  schro_opengl_unlock_context (opengl);
 }
 
 void

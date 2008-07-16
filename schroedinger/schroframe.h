@@ -85,7 +85,7 @@ struct _SchroFrame {
 
 struct _SchroUpsampledFrame {
   SchroFrame *frames[4];
-  void *components[3];
+  void *components[3]; /* for CUDA only */
 };
 
 #define SCHRO_FRAME_DATA_GET_LINE(fd,i) (SCHRO_OFFSET((fd)->data,(fd)->stride*(i)))
