@@ -403,7 +403,8 @@ public class Picture {
 	System.err.println("parseLowDelayTransformData()");
     }
 
-    /**
+    /** decode
+     *
      * Decodes the picture. Does nothing when error != null */
     public void decode() {
 	if(error != null) {
@@ -432,6 +433,10 @@ public class Picture {
 	    } 
 	    Wavelet.inverse(frame[c], dim.width, par.transformDepth);  
 	}
+    }
+
+    private void decodeMotionCompensate() {
+	error = new Exception("Motion Compensation is not supported");
     }
 
     private void initializeFrames() {
@@ -464,13 +469,19 @@ public class Picture {
     private void createImage() {
 	img = new BufferedImage(format.width , format.height , 
 				BufferedImage.TYPE_INT_RGB);
-	int pixels[] = new int[format.width * format.height];
-	if(!zero_residual) {
-	    decodeYUV(pixels);
+	if(error != null) {
+	    return;
 	}
+	int pixels[] = new int[format.width * format.height];
+	decodeYUV(pixels);
 	img.setRGB(0,0, format.width, format.height, pixels, 0, format.width);
     }
 
+    /** getImage returns the displayable image of the picture
+     *
+     * Returns a black image when error != null. Does no work
+     * when there already is an image created - can be called
+     * multiple times. **/
     public Image getImage() {
 	if(img == null) {
 	    createImage();

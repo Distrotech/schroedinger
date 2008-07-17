@@ -4,7 +4,7 @@ class ArithmeticContext {
     int next, stat_range, n_bits, n_symbols, ones;
 }
 
-class ArithmeticDecoder {
+public class ArithmeticDecoder {
     int code, range_size, cntr;
     byte shift;
     byte[] data;
@@ -16,16 +16,7 @@ class ArithmeticDecoder {
     private short lut[] = new short[512]; /* look up table */
 
     public ArithmeticDecoder(Buffer b) {
-	range =  new int[2];
-	range[0] = 0;
-	range[1] = 0xffff;
-	range_size = 0xffff;
-	index = b.b;
-	size = b.e;
-	data = b.d;
-	code = ((size - index) > 0 ? data[0] : 0xff) << 8;
-	code |= ((size - index) > 1 ? data[1] : 0xff);
-	offset = 2;
+	
     }
 
     

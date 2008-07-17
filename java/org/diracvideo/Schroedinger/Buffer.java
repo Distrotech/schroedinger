@@ -8,7 +8,7 @@ import java.awt.Dimension;
  * They make up for the lack of pointer arithmetic 
  * in java.
  */
-final class Buffer {
+public final class Buffer {
     public final int b,e;
     public final byte[] d;
 
@@ -21,7 +21,11 @@ final class Buffer {
     public Buffer(byte d[], int b) {
 	this(d,b, d.length - 1);
     }
-
+    
+    public Buffer(byte[] d) {
+	this(d,0, d.length - 1);
+    }
+    
     public Buffer sub(int b, int e) {
 	return new Buffer(this.d, this.b + b, this.b + e);
     }
