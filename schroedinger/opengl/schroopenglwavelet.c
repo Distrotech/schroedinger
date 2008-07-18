@@ -34,8 +34,6 @@ schro_opengl_wavelet_vertical_deinterleave (SchroFrameData *frame_data)
 
   width = frame_data->width;
   height = frame_data->height;
-  // FIXME: hack to store custom data per frame component
-  //canvas = *((SchroOpenGLCanvas **) frame_data->data);
   canvas = SCHRO_OPNEGL_CANVAS_FROM_FRAMEDATA (frame_data);
 
   SCHRO_ASSERT (canvas != NULL);
@@ -184,8 +182,6 @@ schro_opengl_wavelet_inverse_transform (SchroFrameData *frame_data,
   height = frame_data->height;
   subband_width = width / 2;
   subband_height = height / 2;
-  // FIXME: hack to store custom data per frame component
-  //canvas = *((SchroOpenGLCanvas **) frame_data->data);
   canvas = SCHRO_OPNEGL_CANVAS_FROM_FRAMEDATA (frame_data);
 
   SCHRO_ASSERT (canvas != NULL);

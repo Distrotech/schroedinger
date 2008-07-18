@@ -107,9 +107,6 @@ schro_opengl_frame_convert_with_shader (SchroFrame *dest, SchroFrame *src,
   SchroOpenGLCanvas *src_canvas = NULL;
   SchroOpenGLShader *shader;
 
-  // FIXME: hack to store custom data per frame component
-  //dest_canvas = *((SchroOpenGLCanvas **) dest->components[0].data);
-  //src_canvas = *((SchroOpenGLCanvas **) src->components[0].data);
   dest_canvas = SCHRO_OPNEGL_CANVAS_FROM_FRAMEDATA (dest->components + 0);
   src_canvas = SCHRO_OPNEGL_CANVAS_FROM_FRAMEDATA (src->components + 0);
 
@@ -124,9 +121,6 @@ schro_opengl_frame_convert_with_shader (SchroFrame *dest, SchroFrame *src,
   SCHRO_ASSERT (shader != NULL);
 
   for (i = 0; i < 3; ++i) {
-    // FIXME: hack to store custom data per frame component
-    //dest_canvas = *((SchroOpenGLCanvas **) dest->components[i].data);
-    //src_canvas = *((SchroOpenGLCanvas **) src->components[i].data);
     dest_canvas = SCHRO_OPNEGL_CANVAS_FROM_FRAMEDATA (dest->components + i);
     src_canvas = SCHRO_OPNEGL_CANVAS_FROM_FRAMEDATA (src->components + i);
 
@@ -172,9 +166,6 @@ schro_opengl_frame_unpack_with_shader (SchroFrame *dest, SchroFrame *src,
   SchroOpenGLShader *shader;
   int shader_indices[] = { shader_y_index, shader_u_index, shader_v_index };
 
-  // FIXME: hack to store custom data per frame component
-  //dest_canvas = *((SchroOpenGLCanvas **) dest->components[0].data);
-  //src_canvas = *((SchroOpenGLCanvas **) src->components[0].data);
   dest_canvas = SCHRO_OPNEGL_CANVAS_FROM_FRAMEDATA (dest->components + 0);
   src_canvas = SCHRO_OPNEGL_CANVAS_FROM_FRAMEDATA (src->components + 0);
 
@@ -185,8 +176,6 @@ schro_opengl_frame_unpack_with_shader (SchroFrame *dest, SchroFrame *src,
   schro_opengl_lock_context (src_canvas->opengl);
 
   for (i = 0; i < 3; ++i) {
-    // FIXME: hack to store custom data per frame component
-    //dest_canvas = *((SchroOpenGLCanvas **) dest->components[i].data);
     dest_canvas = SCHRO_OPNEGL_CANVAS_FROM_FRAMEDATA (dest->components + i);
 
     SCHRO_ASSERT (dest_canvas != NULL);
@@ -237,16 +226,10 @@ schro_opengl_frame_pack_with_shader (SchroFrame *dest, SchroFrame *src,
   SchroOpenGLCanvas *src_v_canvas = NULL;
   SchroOpenGLShader *shader;
 
-  // FIXME: hack to store custom data per frame component
-  //dest_canvas = *((SchroOpenGLCanvas **) dest->components[0].data);
   dest_canvas = SCHRO_OPNEGL_CANVAS_FROM_FRAMEDATA (dest->components + 0);
 
   SCHRO_ASSERT (dest_canvas != NULL);
 
-  // FIXME: hack to store custom data per frame component
-  //src_y_canvas = *((SchroOpenGLCanvas **) src->components[0].data);
-  //src_u_canvas = *((SchroOpenGLCanvas **) src->components[1].data);
-  //src_v_canvas = *((SchroOpenGLCanvas **) src->components[2].data);
   src_y_canvas = SCHRO_OPNEGL_CANVAS_FROM_FRAMEDATA (src->components + 0);
   src_u_canvas = SCHRO_OPNEGL_CANVAS_FROM_FRAMEDATA (src->components + 1);
   src_v_canvas = SCHRO_OPNEGL_CANVAS_FROM_FRAMEDATA (src->components + 2);

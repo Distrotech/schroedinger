@@ -314,7 +314,7 @@ schro_opengl_canvas_new (SchroOpenGL *opengl, SchroOpenGLCanvasType type,
 
   canvas->opengl = opengl;
   canvas->type = type;
-  canvas->refcount = 2; /* 1 ref for the caller + 1 ref for the resources */
+  canvas->refcount = 2; /* 1 ref for caller + 1 ref for resources */
   canvas->uselessness = 0;
   canvas->format = format;
   canvas->width = width;
@@ -726,7 +726,8 @@ schro_opengl_pixelbuffer_new (SchroOpenGL *opengl,
 
   /* try to reuse existing pixelbuffer */
   SCHRO_ASSERT (resources->pixelbuffer_count[type] >= 0);
-  SCHRO_ASSERT (resources->pixelbuffer_count[type] <= SCHRO_OPENGL_RESOURCES_LIMIT);
+  SCHRO_ASSERT (resources->pixelbuffer_count[type]
+      <= SCHRO_OPENGL_RESOURCES_LIMIT);
 
   for (i = 0; i < resources->pixelbuffer_count[type]; ++i) {
     pixelbuffer = resources->pixelbuffers[type][i];
@@ -748,7 +749,7 @@ schro_opengl_pixelbuffer_new (SchroOpenGL *opengl,
 
   pixelbuffer->opengl = opengl;
   pixelbuffer->type = type;
-  pixelbuffer->refcount = 2; /* 1 ref for the caller + 1 ref for the resources */
+  pixelbuffer->refcount = 2; /* 1 ref for caller + 1 ref for resources */
   pixelbuffer->uselessness = 0;
   pixelbuffer->width = width;
   pixelbuffer->height = height;
@@ -793,9 +794,11 @@ schro_opengl_pixelbuffer_new (SchroOpenGL *opengl,
   schro_opengl_lock_resources (opengl);
 
   SCHRO_ASSERT (resources->pixelbuffer_count[type] >= 0);
-  SCHRO_ASSERT (resources->pixelbuffer_count[type] < SCHRO_OPENGL_RESOURCES_LIMIT);
+  SCHRO_ASSERT (resources->pixelbuffer_count[type]
+      < SCHRO_OPENGL_RESOURCES_LIMIT);
 
-  resources->pixelbuffers[type][resources->pixelbuffer_count[type]] = pixelbuffer;
+  resources->pixelbuffers[type][resources->pixelbuffer_count[type]]
+      = pixelbuffer;
   ++resources->pixelbuffer_count[type];
 
   schro_opengl_unlock_resources (opengl);

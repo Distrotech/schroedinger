@@ -132,15 +132,22 @@ schro_decoder_new (void)
 #endif
 
 #ifdef HAVE_OPENGL
-  decoder->opengl = schro_opengl_new ();
+  const char* disable = getenv ("SCHRO_OPENGL_DISABLE");
 
-  if (schro_opengl_is_usable (decoder->opengl)) {
-    schro_async_add_exec_domain (decoder->async, SCHRO_EXEC_DOMAIN_OPENGL);
+  if (!disable || disable[0] == '0') {
+    decoder->opengl = schro_opengl_new ();
 
-    decoder->use_opengl = TRUE;
+    if (schro_opengl_is_usable (decoder->opengl)) {
+      schro_async_add_exec_domain (decoder->async, SCHRO_EXEC_DOMAIN_OPENGL);
+
+      decoder->use_opengl = TRUE;
+    } else {
+      schro_opengl_free (decoder->opengl);
+
+      decoder->opengl = NULL;
+      decoder->use_opengl = FALSE;
+    }
   } else {
-    schro_opengl_free (decoder->opengl);
-
     decoder->opengl = NULL;
     decoder->use_opengl = FALSE;
   }

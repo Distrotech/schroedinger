@@ -48,8 +48,6 @@ schro_opengl_frame_setup (SchroOpenGL *opengl, SchroFrame *frame)
     canvas = schro_opengl_canvas_new (opengl, SCHRO_OPENGL_CANVAS_TYPE_PRIMARAY,
         format, width, height);
 
-    // FIXME: hack to store custom data per frame component
-    //*((SchroOpenGLCanvas **) frame->components[i].data) = canvas;
     SCHRO_OPNEGL_CANVAS_TO_FRAMEDATA (frame->components + i, canvas);
   }
 }
@@ -65,15 +63,11 @@ schro_opengl_frame_cleanup (SchroFrame *frame)
   SCHRO_ASSERT (SCHRO_FRAME_IS_OPENGL (frame));
 
   components = SCHRO_FRAME_IS_PACKED (frame->format) ? 1 : 3;
-  // FIXME: hack to store custom data per frame component
-  //canvas = *((SchroOpenGLCanvas **) frame->components[0].data);
   canvas = SCHRO_OPNEGL_CANVAS_FROM_FRAMEDATA (frame->components + 0);
 
   SCHRO_ASSERT (canvas != NULL);
 
   for (i = 0; i < components; ++i) {
-    // FIXME: hack to store custom data per frame component
-    //canvas = *((SchroOpenGLCanvas **) frame->components[i].data);
     canvas = SCHRO_OPNEGL_CANVAS_FROM_FRAMEDATA (frame->components + i);
 
     SCHRO_ASSERT (canvas != NULL);
@@ -107,8 +101,6 @@ schro_opengl_frame_clone (SchroFrame *opengl_frame)
   SCHRO_ASSERT (opengl_frame != NULL);
   SCHRO_ASSERT (SCHRO_FRAME_IS_OPENGL (opengl_frame));
 
-  // FIXME: hack to store custom data per frame compo451nent
-  //canvas = *((SchroOpenGLCanvas **) opengl_frame->components[0].data);
   canvas = SCHRO_OPNEGL_CANVAS_FROM_FRAMEDATA (opengl_frame->components + 0);
 
   SCHRO_ASSERT (canvas != NULL);
@@ -142,8 +134,6 @@ schro_opengl_frame_inverse_iwt_transform (SchroFrame *frame,
   int width, height, level;
   SchroOpenGLCanvas *canvas;
 
-  // FIXME: hack to store custom data per frame component
-  //canvas = *((SchroOpenGLCanvas **) frame->components[0].data);
   canvas = SCHRO_OPNEGL_CANVAS_FROM_FRAMEDATA (frame->components + 0);
 
   SCHRO_ASSERT (canvas != NULL);
@@ -151,8 +141,6 @@ schro_opengl_frame_inverse_iwt_transform (SchroFrame *frame,
   schro_opengl_lock_context (canvas->opengl);
 
   for (i = 0; i < 3; ++i) {
-    // FIXME: hack to store custom data per frame component
-    //canvas = *((SchroOpenGLCanvas **) frame->components[i].data);
     canvas = SCHRO_OPNEGL_CANVAS_FROM_FRAMEDATA (frame->components + i);
 
     SCHRO_ASSERT (canvas != NULL);
@@ -250,9 +238,8 @@ schro_opengl_upsampled_frame_upsample (SchroUpsampledFrame *upsampled_frame)
   SCHRO_ASSERT (SCHRO_FRAME_IS_OPENGL (upsampled_frame->frames[0]));
   SCHRO_ASSERT (!SCHRO_FRAME_IS_PACKED (upsampled_frame->frames[0]->format));
 
-  // FIXME: hack to store custom data per frame component
-  //canvases[0] = *((SchroOpenGLCanvas **) upsampled_frame->frames[0]->components[0].data);
-  canvases[0] = SCHRO_OPNEGL_CANVAS_FROM_FRAMEDATA (upsampled_frame->frames[0]->components + 0);
+  canvases[0] = SCHRO_OPNEGL_CANVAS_FROM_FRAMEDATA
+      (upsampled_frame->frames[0]->components + 0);
 
   SCHRO_ASSERT (canvases[0] != NULL);
 
@@ -260,9 +247,12 @@ schro_opengl_upsampled_frame_upsample (SchroUpsampledFrame *upsampled_frame)
 
   schro_opengl_lock_context (opengl);
 
-  upsampled_frame->frames[1] = schro_opengl_frame_clone (upsampled_frame->frames[0]);
-  upsampled_frame->frames[2] = schro_opengl_frame_clone (upsampled_frame->frames[0]);
-  upsampled_frame->frames[3] = schro_opengl_frame_clone (upsampled_frame->frames[0]);
+  upsampled_frame->frames[1]
+      = schro_opengl_frame_clone (upsampled_frame->frames[0]);
+  upsampled_frame->frames[2]
+      = schro_opengl_frame_clone (upsampled_frame->frames[0]);
+  upsampled_frame->frames[3]
+      = schro_opengl_frame_clone (upsampled_frame->frames[0]);
 
   shader = schro_opengl_shader_get (opengl, SCHRO_OPENGL_SHADER_UPSAMPLE_U8);
 
@@ -274,15 +264,14 @@ schro_opengl_upsampled_frame_upsample (SchroUpsampledFrame *upsampled_frame)
   SCHRO_OPENGL_CHECK_ERROR
 
   for (i = 0; i < 3; ++i) {
-    // FIXME: hack to store custom data per frame component
-    //canvases[0] = *((SchroOpenGLCanvas **) upsampled_frame->frames[0]->components[i].data);
-    //canvases[1] = *((SchroOpenGLCanvas **) upsampled_frame->frames[1]->components[i].data);
-    //canvases[2] = *((SchroOpenGLCanvas **) upsampled_frame->frames[2]->components[i].data);
-    //canvases[3] = *((SchroOpenGLCanvas **) upsampled_frame->frames[3]->components[i].data);
-    canvases[0] = SCHRO_OPNEGL_CANVAS_FROM_FRAMEDATA (upsampled_frame->frames[0]->components + i);
-    canvases[1] = SCHRO_OPNEGL_CANVAS_FROM_FRAMEDATA (upsampled_frame->frames[1]->components + i);
-    canvases[2] = SCHRO_OPNEGL_CANVAS_FROM_FRAMEDATA (upsampled_frame->frames[2]->components + i);
-    canvases[3] = SCHRO_OPNEGL_CANVAS_FROM_FRAMEDATA (upsampled_frame->frames[3]->components + i);
+    canvases[0] = SCHRO_OPNEGL_CANVAS_FROM_FRAMEDATA
+        (upsampled_frame->frames[0]->components + i);
+    canvases[1] = SCHRO_OPNEGL_CANVAS_FROM_FRAMEDATA
+        (upsampled_frame->frames[1]->components + i);
+    canvases[2] = SCHRO_OPNEGL_CANVAS_FROM_FRAMEDATA
+        (upsampled_frame->frames[2]->components + i);
+    canvases[3] = SCHRO_OPNEGL_CANVAS_FROM_FRAMEDATA
+        (upsampled_frame->frames[3]->components + i);
 
     SCHRO_ASSERT (canvases[0] != NULL);
     SCHRO_ASSERT (canvases[1] != NULL);
@@ -310,7 +299,7 @@ schro_opengl_upsampled_frame_upsample (SchroUpsampledFrame *upsampled_frame)
     SCHRO_OPENGL_CHECK_ERROR
 
     #define RENDER_QUAD_HORIZONTAL(_x, _quad_width) \
-        schro_opengl_upsampled_frame_render_quad (shader, _x, 0,  _quad_width,\
+        schro_opengl_upsampled_frame_render_quad (shader, _x, 0,  _quad_width, \
             height, width, height)
 
     RENDER_QUAD_HORIZONTAL (0, 1);
@@ -348,7 +337,7 @@ schro_opengl_upsampled_frame_upsample (SchroUpsampledFrame *upsampled_frame)
     SCHRO_OPENGL_CHECK_ERROR
 
     #define RENDER_QUAD_VERTICAL(_y, _quad_height) \
-        schro_opengl_upsampled_frame_render_quad (shader, 0, _y,  width,\
+        schro_opengl_upsampled_frame_render_quad (shader, 0, _y,  width, \
             _quad_height, width, height)
 
     RENDER_QUAD_VERTICAL (0, 1);
@@ -386,7 +375,7 @@ schro_opengl_upsampled_frame_upsample (SchroUpsampledFrame *upsampled_frame)
     SCHRO_OPENGL_CHECK_ERROR
 
     #define RENDER_QUAD_HORIZONTAL(_x, _quad_width) \
-        schro_opengl_upsampled_frame_render_quad (shader, _x, 0,  _quad_width,\
+        schro_opengl_upsampled_frame_render_quad (shader, _x, 0,  _quad_width, \
             height, width, height)
 
     RENDER_QUAD_HORIZONTAL (0, 1);

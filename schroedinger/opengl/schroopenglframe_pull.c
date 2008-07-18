@@ -149,8 +149,6 @@ schro_opengl_frame_pull (SchroFrame *dest, SchroFrame *src)
   SCHRO_ASSERT (dest->format == src->format);
 
   components = SCHRO_FRAME_IS_PACKED (src->format) ? 1 : 3;
-  // FIXME: hack to store custom data per frame component
-  //src_canvas = *((SchroOpenGLCanvas **) src->components[0].data);
   src_canvas = SCHRO_OPNEGL_CANVAS_FROM_FRAMEDATA (src->components + 0);
 
   SCHRO_ASSERT (src_canvas != NULL);
@@ -158,8 +156,6 @@ schro_opengl_frame_pull (SchroFrame *dest, SchroFrame *src)
   schro_opengl_lock_context (src_canvas->opengl);
 
   for (i = 0; i < components; ++i) {
-    // FIXME: hack to store custom data per frame component
-    //src_canvas = *((SchroOpenGLCanvas **) src->components[i].data);
     src_canvas = SCHRO_OPNEGL_CANVAS_FROM_FRAMEDATA (src->components + i);
 
     SCHRO_ASSERT (src_canvas != NULL);
@@ -179,6 +175,7 @@ schro_opengl_canvas_pull (SchroFrameData *dest, SchroOpenGLCanvas *src)
   void *mapped_data = NULL;
   void *tmp_data = NULL;
 
+  SCHRO_ASSERT (src->type == SCHRO_OPENGL_CANVAS_TYPE_PRIMARAY);
   SCHRO_ASSERT (dest->format == src->format);
   SCHRO_ASSERT (dest->width == src->width);
   SCHRO_ASSERT (dest->height == src->height);

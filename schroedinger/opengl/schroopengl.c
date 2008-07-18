@@ -226,7 +226,8 @@ schro_opengl_check_essential_extensions (SchroOpenGL *opengl)
 
   #define CHECK_EXTENSION_GROUPS(_group1, _group2, _name) \
     if (!GLEW_##_group1##_##_name && !GLEW_##_group2##_##_name) { \
-      SCHRO_ERROR ("missing essential extension GL_{" #_group1 "|" #_group2 "}_" #_name); \
+      SCHRO_ERROR ("missing essential extension GL_{" #_group1 "|"  #_group2 \
+          "}_" #_name); \
       ok = FALSE; \
     }
 
@@ -236,7 +237,7 @@ schro_opengl_check_essential_extensions (SchroOpenGL *opengl)
   CHECK_EXTENSION (ARB_shader_objects)
   CHECK_EXTENSION (ARB_shading_language_100)
   CHECK_EXTENSION (ARB_fragment_shader)
-  CHECK_EXTENSION (ARB_fragment_program) /* for GL_MAX_TEXTURE_IMAGE_UNITS_ARB */
+  CHECK_EXTENSION (ARB_fragment_program) /* GL_MAX_TEXTURE_IMAGE_UNITS_ARB */
 
   #undef CHECK_EXTENSION
   #undef CHECK_EXTENSION_GROUPS
@@ -312,7 +313,7 @@ schro_opengl_new (void)
   schro_opengl_canvas_check_flags ();
 
   opengl->obmc_weight_canvas = schro_opengl_canvas_new (opengl,
-      SCHRO_OPENGL_CANVAS_TYPE_PRIMARAY, SCHRO_FRAME_FORMAT_S16_444, 32, 32);
+      SCHRO_OPENGL_CANVAS_TYPE_SECONDARY, SCHRO_FRAME_FORMAT_S16_444, 64, 64);
 
   schro_opengl_lock_context (opengl);
 
