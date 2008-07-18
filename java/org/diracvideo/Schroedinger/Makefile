@@ -1,6 +1,6 @@
 FILES= Unpack.class Wavelet.class Decoder.class \
 	Picture.class VideoFormat.class Buffer.class \
-	ArithmeticDecoder.class ColourSpace.class \
+	Arithmetic.class ColourSpace.class \
 	MotionVector.class
 
 CLASSPATH= ../../../

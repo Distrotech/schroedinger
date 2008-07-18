@@ -1,13 +1,18 @@
+import org.diracvideo.Schroedinger.*;
 import java.awt.Dimension;
 import java.awt.Point;
 
 public class GeneralTest {
     public static void main(String a[]) {
-	testLevel();
-	testDivision();
-
+	testPackage();
     }
 
+    private static void testPackage() {
+	Package pg[] = Package.getPackages();
+	for(int i = 0; i < pg.length; i++)
+	    System.out.println(pg[i]);
+    }
+    
     private static void testLevel() {
 	for(int n = 1; n < 8; n++) {
 	    System.err.format("Testing with TransformDepth = %d\n", n);

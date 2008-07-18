@@ -11,13 +11,12 @@ class ArithTest {
 
     public static void main(String a[]) {
 	File f = new File("out.arith");
-	ArithmeticDecoder d;
+	Arithmetic d;
 	try {
 	    Buffer b = readAll(f);
-	    d = new ArithmeticDecoder(b);
+	    d = new Arithmetic(b);
 	} catch(IOException e) {
 	    System.err.println("Could not open test file");
-	    System.exit(1);
 	    return;
 	}
 	testArithmeticDecoder(d);
@@ -32,7 +31,7 @@ class ArithTest {
 	return new Buffer(b);
     }
     
-    private static void testArithmeticDecoder(ArithmeticDecoder a) {
+    private static void testArithmeticDecoder(Arithmetic a) {
 	for(int i = 0; i < 100; i++) {
 	    System.err.format("%d\n", a.decodeSint(0,0,0));
 	}
