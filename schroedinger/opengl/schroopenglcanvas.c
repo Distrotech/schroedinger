@@ -305,6 +305,8 @@ schro_opengl_canvas_new (SchroOpenGL *opengl, SchroOpenGLCanvasType type,
 
       return canvas;
     }
+
+    ++canvas->uselessness;
   }
 
   schro_opengl_unlock_resources (opengl);
@@ -552,10 +554,10 @@ schro_opengl_canvas_new (SchroOpenGL *opengl, SchroOpenGLCanvasType type,
           canvas->pull_stride = ROUND_UP_4 (width * canvas->channels
               * sizeof (float));
         } else {
-          // FIXME: pulling S16 as GL_SHORT doesn't work in general, maybe
-          // it's the right mode if the internal format is an integer format
-          // but for some reason storing as I16 doesn't work either and only
-          // gives garbage pull results
+          /* FIXME: pulling S16 as GL_SHORT doesn't work in general, maybe
+             it's the right mode if the internal format is an integer format
+             but for some reason storing as I16 doesn't work either and only
+             gives garbage pull results */
           canvas->pull_type = GL_SHORT;
           canvas->pull_stride = ROUND_UP_4 (width * canvas->channels
               * sizeof (int16_t));
@@ -885,41 +887,35 @@ schro_opengl_resources_free (SchroOpenGLResources* resources)
 
   schro_opengl_lock_resources (resources->opengl);
 
-  /* primary canvas */
-  for (i = 0; i < resources->canvas_count[SCHRO_OPENGL_CANVAS_TYPE_PRIMARAY]; ++i) {
-    SCHRO_ASSERT (resources->canvases[SCHRO_OPENGL_CANVAS_TYPE_PRIMARAY][i]->refcount == 1);
-  }
+  #define UNREF_CANVASES(_type) \
+      do { \
+        for (i = 0; i < resources->canvas_count[_type]; ++i) { \
+          SCHRO_ASSERT (resources->canvases[_type][i]->refcount == 1); \
+        } \
+        while (resources->canvas_count[_type] > 0) { \
+          schro_opengl_canvas_unref (resources->canvases[_type][0]); \
+        } \
+        SCHRO_ASSERT (resources->canvas_count[_type] == 0); \
+      } while (0)
 
-  while (resources->canvas_count[SCHRO_OPENGL_CANVAS_TYPE_PRIMARAY] > 0) {
-    schro_opengl_canvas_unref (resources->canvases[SCHRO_OPENGL_CANVAS_TYPE_PRIMARAY][0]);
-  }
+  #define UNREF_PIXELBUFFERS(_type) \
+      do { \
+        for (i = 0; i < resources->pixelbuffer_count[_type]; ++i) { \
+          SCHRO_ASSERT (resources->pixelbuffers[_type][i]->refcount == 1); \
+        } \
+        while (resources->pixelbuffer_count[_type] > 0) { \
+          schro_opengl_pixelbuffer_unref (resources->pixelbuffers[_type][0]); \
+        } \
+        SCHRO_ASSERT (resources->pixelbuffer_count[_type] == 0); \
+      } while (0)
 
-  /* secondary canvas */
-  for (i = 0; i < resources->canvas_count[SCHRO_OPENGL_CANVAS_TYPE_SECONDARY]; ++i) {
-    SCHRO_ASSERT (resources->canvases[SCHRO_OPENGL_CANVAS_TYPE_SECONDARY][i]->refcount == 1);
-  }
+  UNREF_CANVASES (SCHRO_OPENGL_CANVAS_TYPE_PRIMARAY);
+  UNREF_CANVASES (SCHRO_OPENGL_CANVAS_TYPE_SECONDARY);
+  UNREF_PIXELBUFFERS (SCHRO_OPENGL_PIXELBUFFER_TYPE_PUSH);
+  UNREF_PIXELBUFFERS (SCHRO_OPENGL_PIXELBUFFER_TYPE_PULL);
 
-  while (resources->canvas_count[SCHRO_OPENGL_CANVAS_TYPE_PRIMARAY] > 0) {
-    schro_opengl_canvas_unref (resources->canvases[SCHRO_OPENGL_CANVAS_TYPE_PRIMARAY][0]);
-  }
-
-  /* push pixelbuffer */
-  for (i = 0; i < resources->canvas_count[SCHRO_OPENGL_PIXELBUFFER_TYPE_PUSH]; ++i) {
-    SCHRO_ASSERT (resources->canvases[SCHRO_OPENGL_PIXELBUFFER_TYPE_PUSH][i]->refcount == 1);
-  }
-
-  while (resources->pixelbuffer_count[SCHRO_OPENGL_PIXELBUFFER_TYPE_PUSH] > 0) {
-    schro_opengl_pixelbuffer_unref (resources->pixelbuffers[SCHRO_OPENGL_PIXELBUFFER_TYPE_PUSH][0]);
-  }
-
-  /* pull pixelbuffer */
-  for (i = 0; i < resources->canvas_count[SCHRO_OPENGL_PIXELBUFFER_TYPE_PULL]; ++i) {
-    SCHRO_ASSERT (resources->canvases[SCHRO_OPENGL_PIXELBUFFER_TYPE_PULL][i]->refcount == 1);
-  }
-
-  while (resources->pixelbuffer_count[SCHRO_OPENGL_PIXELBUFFER_TYPE_PULL] > 0) {
-    schro_opengl_pixelbuffer_unref (resources->pixelbuffers[SCHRO_OPENGL_PIXELBUFFER_TYPE_PULL][0]);
-  }
+  #undef UNREF_CANVASES
+  #undef UNREF_PIXELBUFFERS
 
   schro_opengl_unlock_resources (resources->opengl);
 
