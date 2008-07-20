@@ -19,7 +19,7 @@ lib:
 clean: cleandoc
 	@find -name "*.class" -delete
 	@find -name "*~" -delete
-	@rm -f *.drc
+	@rm -f *.drc *.sundae
 	@echo "Done"
 
 doc:

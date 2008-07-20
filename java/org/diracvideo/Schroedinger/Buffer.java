@@ -1,14 +1,10 @@
 package org.diracvideo.Schroedinger;
-import java.awt.Point;
-import java.awt.Dimension;
-/** Buffer and Block
+
+/** Buffer
  *
  * Buffer represents a one-dimensional array,
- * Block represent a two-dimensional array. 
- * They make up for the lack of pointer arithmetic 
- * in java.
  */
-public final class Buffer {
+final class Buffer {
     public final int b,e;
     public final byte[] d;
 
@@ -25,7 +21,14 @@ public final class Buffer {
     public Buffer(byte[] d) {
 	this(d,0, d.length - 1);
     }
-    
+
+    /** Get a subbuffer
+     * 
+     * Parameters are relative. This method is not actually used.
+     * 
+     * @param b begin of block 
+     * @param e end of block */
+
     public Buffer sub(int b, int e) {
 	return new Buffer(this.d, this.b + b, this.b + e);
     }

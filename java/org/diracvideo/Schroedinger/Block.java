@@ -1,3 +1,7 @@
+package org.diracvideo.Schroedinger;
+import java.awt.Point;
+import java.awt.Dimension;
+
 
 /** Block
  *
@@ -5,13 +9,12 @@
  * of elements in the data array. I would call it
  * Frame but that conflicts with java.awt.Frame. */
 
-
 final class Block {
     public final short[] d;
     public final Point p;
     public final Dimension s, o;
-    /** 
-     * Default constructor of a Block.
+    /** Default Block constructor 
+     * 
      * @param d is the data of the frame
      * @param p is the place where the frame should start
      * @param s is the dimension of the frame
@@ -64,7 +67,7 @@ final class Block {
 	return (n*o.width) + p.x;
     }
 
-    /**
+    /** The index of a point
      * @return the index for a general point in the frame **/
     public int index(int x, int y) {
 	return line(y) + Util.clamp(x,0, s.width - 1);

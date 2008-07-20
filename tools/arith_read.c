@@ -5,17 +5,31 @@
 #include <schroedinger/schrobuffer.h>
 #include <schroedinger/schroarith.h>
 
-SchroBuffer* read_buffer(char *);
+
+/* Tool to arithmetic-decode a file.
+ * There's a bug with the end of the file,
+ * so don't use it to replace bzip2 */
+
+SchroBuffer* read_buffer(char *); 
 
 int main(int argc, char **argv) {
   int i;
-  SchroBuffer *buf = read_buffer("/home/bart/src/out.arith");
+  if(argc < 2) {
+    fputs("Usage: arith_read <infile>", stderr);
+  }
+  SchroBuffer *buf = read_buffer(argv[1]);
   SchroArith *ar = schro_arith_new();
   schro_arith_decode_init(ar, buf);
-  for(i = 0; i < 100; i++) {
-    printf("%d\n", schro_arith_decode_sint(ar, 0, 0, 0));
+  while(ar->buffer->length - ar->offset > 0) {
+    char c = 0;
+    for(i = 0; i < 8; i++) {
+      c = (c << 1) | schro_arith_decode_bit(ar,0); 
+    }
+    putchar(c);
   }
+  putchar('\n');
   schro_buffer_unref(buf);
+  schro_arith_free(ar);
   return 0;
 }
 

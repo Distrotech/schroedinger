@@ -8,12 +8,18 @@ class SubBand {
     Buffer buf;
     Dimension frame, band;
     Parameters par;
+    SubBand parent;
+
     public SubBand (Buffer b, int q, Parameters p) {
 	par = p;
 	qi = q;
 	buf = b;
     }
     
+    public void setParent(SubBand p) {
+	parent = p;
+    }
+
     public void calculateSizes(int i, boolean luma) {
 	level = (i-1)/3;
 	int shift = (par.transformDepth - level);
@@ -36,20 +42,39 @@ class SubBand {
     public void decodeCoeffs(short[] out) {
 	if(buf == null)
 	    return;
-	Unpack u = new Unpack(buf);
-	if(numX * numY == 1) {
-	    decodeCodeBlock(out,u,0,0);
-	    return;
-	}
-	for(int y = 0; y < numY; y++) {
-	    for(int x = 0; x < numX; x++) {
-		if(u.decodeBool())
-		    continue;
-		if(par.codeblock_mode_index != 0)
-		    qi += u.decodeSint();
-		decodeCodeBlock(out,u,x,y);
+	if(par.no_ac) {
+	    Unpack u = new Unpack(buf);
+	    if(numX * numY == 1) {
+		decodeCodeBlock(out,u,0,0);
+		return;
 	    }
-	} 
+	    for(int y = 0; y < numY; y++) {
+		for(int x = 0; x < numX; x++) {
+		    if(u.decodeBool())
+			continue;
+		    if(par.codeblock_mode_index != 0)
+			qi += u.decodeSint();
+		    decodeCodeBlock(out,u,x,y);
+		}
+	    } 
+	} else {
+	    Arithmetic a = new Arithmetic(buf);
+	    if(numX * numY == 1) {
+		decodeCodeBlock(out, a, 0, 0);
+		return;
+	    }
+	    for(int y = 0; y < numY; y++) {
+		for(int x = 0; x < numX; x++) {
+		    if(a.decodeBool(Context.ZERO_CODEBLOCK))
+			continue;
+		    if(par.codeblock_mode_index != 0)
+			qi += a.decodeSint(Context.QUANTISER_CONT,
+					   Context.QUANTISER_VALUE,
+					   Context.QUANTISER_SIGN);
+		    decodeCodeBlock(out,a,x,y);
+		}
+	    } 
+	}
     }
 
 
@@ -71,6 +96,27 @@ class SubBand {
 	    i += frame.width * stride) {
 	    for(int j = i; j < i + blockWidth; j += stride) {
 		out[j] = u.decodeSint(qf,qo);
+	    }
+	}
+    }
+
+    /* copied from above */
+    private void decodeCodeBlock(short[] out, Arithmetic a,
+				 int blockX, int blockY) {
+	int qo = quantOffset(qi);
+	int qf = quantFactor(qi);
+	int shift = par.transformDepth - level;
+	int startX = ((band.width * blockX)/numX) << shift;
+	int startY = ((band.height * blockY)/numY) << shift;
+	int blockOffset = (frame.width * startY) + startX;
+	int endX = ((band.width * (blockX+1))/numX) << shift;
+	int endY = ((band.height * (blockY+1))/numY) << shift;
+	int blockEnd = ((endY-1)*frame.width) + endX;
+	int blockWidth = endX - startX;
+	for(int i = blockOffset + offset; i < blockEnd;
+	    i += frame.width * stride) {
+	    for(int j = i; j < i + blockWidth; j += stride) {
+
 	    }
 	}
     }
@@ -381,18 +427,23 @@ public class Picture {
     }
 
     private void parseTransformData(Unpack u) throws Exception {
+	int q,l;
+	Buffer b;
 	for(int c = 0; c < 3; c++) {
 	    for(int i = 0; i < 1+3*par.transformDepth; i++) {
 		u.align();
-		int l = u.decodeUint();
+		l = u.decodeUint();
 		if( l != 0) {
-		    int q = u.decodeUint();
-		    Buffer b = u.getSubBuffer(l);
-		    coeffs[c][i] = new SubBand(b,q,par);
-		    coeffs[c][i].calculateSizes(i, c == 0);
+		    q = u.decodeUint();
+		    b = u.getSubBuffer(l);
 		} else {
-		    coeffs[c][i] = new SubBand(null,0,par);
-		    coeffs[c][i].calculateSizes(i, c == 0);
+		    q = 0;
+		    b = null;
+		}
+		coeffs[c][i] = new SubBand(b,q,par);
+		coeffs[c][i].calculateSizes(i, c == 0);
+		if(i > 3)  {
+		    coeffs[c][i].setParent(coeffs[c][i-3]);
 		}
 	    }
 	}

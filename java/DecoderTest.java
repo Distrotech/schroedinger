@@ -47,7 +47,7 @@ class PictureDrawer extends Canvas implements Runnable {
 class DiracAcceptor implements FileFilter {
     public boolean accept(File f) {
 	String fn = f.getName();
-	if(fn.length() == fn.indexOf(".drc") + 4 &&
+	if(fn.length() == fn.lastIndexOf(".drc") + 4 &&
 	   f.isFile() && f.canRead()) {
 	    return true;
 	}

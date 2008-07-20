@@ -1,83 +1,5 @@
 package org.diracvideo.Schroedinger;
 
-class Context {
-    int prob, next;
-    public Context(int n, int p) {
-	next = n;
-	prob = p;
-    }
-
-    public static short  ZERO_CODEBLOCK = 0,
-	QUANTISER_CONT = 1,
-	QUANTISER_VALUE = 2,
-	QUANTISER_SIGN = 3,
-	ZPZN_F1 = 4,
-	ZPNN_F1 = 5,
-	ZP_F2 = 6,
-	ZP_F3 = 7,
-	ZP_F4 = 8,
-	ZP_F5 = 9,
-	ZP_F6p = 10,
-	NPZN_F1 = 11,
-	NPNN_F1 = 12,
-	NP_F2 = 13,
-	NP_F3 = 14,
-	NP_F4 = 15,
-	NP_F5 = 16,
-	NP_F6p = 17,
-	SIGN_POS = 18,
-	SIGN_NEG = 19,
-	SIGN_ZERO = 20,
-	COEFF_DATA = 21,
-	SB_F1 = 22,
-	SB_F2 = 23, 
-	SB_DATA = 24,
-	BLOCK_MODE_REF1 = 25,
-	BLOCK_MODE_REF2 = 26,
-	GLOBAL_BLOCK = 27,
-	LUMA_DC_CONT_BIN1 = 28,
-	LUMA_DC_CONT_BIN2 = 29,
-	LUMA_DC_VALUE = 30,
-	LUMA_DC_SIGN = 31,
-	CHROMA1_DC_CONT_BIN1 = 32,
-	CHROMA1_DC_CONT_BIN2 = 33,
-	CHROMA1_DC_VALUE = 34,
-	CHROMA1_DC_SIGN = 35,
-	CHROMA2_DC_CONT_BIN1 = 36,
-	CHROMA2_DC_CONT_BIN2 = 37,
-	CHROMA2_DC_VALUE = 38,
-	CHROMA2_DC_SIGN = 39,
-	MV_REF1_H_CONT_BIN1 = 40,
-	MV_REF1_H_CONT_BIN2 = 41,
-	MV_REF1_H_CONT_BIN3 = 42,
-	MV_REF1_H_CONT_BIN4 = 43,
-	MV_REF1_H_CONT_BIN5 = 44,
-	MV_REF1_H_VALUE = 45,
-	MV_REF1_H_SIGN = 46,
-	MV_REF1_V_CONT_BIN1 = 47,
-	MV_REF1_V_CONT_BIN2 = 48,
-	MV_REF1_V_CONT_BIN3 = 49,
-	MV_REF1_V_CONT_BIN4 = 50,
-	MV_REF1_V_CONT_BIN5 = 51,
-	MV_REF1_V_VALUE = 52,
-	MV_REF1_V_SIGN = 53,
-	MV_REF2_H_CONT_BIN1 = 54,
-	MV_REF2_H_CONT_BIN2 = 55,
-	MV_REF2_H_CONT_BIN3 = 56,
-	MV_REF2_H_CONT_BIN4 = 57,
-	MV_REF2_H_CONT_BIN5 = 58,
-	MV_REF2_H_VALUE = 59,
-	MV_REF2_H_SIGN = 60,
-	MV_REF2_V_CONT_BIN1 = 61,
-	MV_REF2_V_CONT_BIN2 = 62,
-	MV_REF2_V_CONT_BIN3 = 63,
-	MV_REF2_V_CONT_BIN4 = 64,
-	MV_REF2_V_CONT_BIN5 = 65, 
-	MV_REF2_V_VALUE = 66,
-	MV_REF2_V_SIGN = 67,
-	LAST = 68;
-}
-
 public class Arithmetic {
     private int offset, size, code, low, range, cntr;
     private byte shift, data[];
@@ -167,6 +89,10 @@ public class Arithmetic {
 	decodeInit();
     }
 
+    public Arithmetic(byte d[]) {
+	this(new Buffer(d));
+    }
+
     private void decodeInit() {
 	cntr = 0;
 	low = 0;
@@ -248,5 +174,10 @@ public class Arithmetic {
 	    }
 	}
 	return v;
+    }
+
+    /* an estimate of how many bits there are left */
+    public int bytesLeft() { 
+	return (size - offset);
     }
 }

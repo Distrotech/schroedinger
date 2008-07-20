@@ -3,38 +3,69 @@ import java.io.*;
 
 /** A test for the arithmetic decoder.
  *
- * I'll create a test program for the 
- * schroedinger arithmetic encoder which will 
- * create a pattern that ArithTest should decode **/
+ * Decodes a arithmetic encoded file from arith_file */
+
+class ArithAcceptor implements FileFilter {
+    public boolean accept(File f) {
+	String fn = f.getName(); 
+	if(fn.length() == fn.lastIndexOf(".sundae") + 7 &&  
+	   f.isFile() && f.canRead()) {
+	    return true;
+	}
+	return false;
+    }
+}
 
 class ArithTest {
-
     public static void main(String a[]) {
-	File f = new File("out.arith");
-	Arithmetic d;
 	try {
-	    Buffer b = readAll(f);
-	    d = new Arithmetic(b);
+	    FileInputStream in = tryOpen(a);
+	    byte d[] = readAll(in);
+	    in.close();
+	    Arithmetic ar = new Arithmetic(d);
+	    testArithmetic(ar);
 	} catch(IOException e) {
-	    System.err.println("Could not open test file");
-	    return;
+	    e.printStackTrace();
 	}
-	testArithmeticDecoder(d);
     }
 
-    private static Buffer readAll(File f) throws IOException {
-	InputStream i = new FileInputStream(f);
-	int a = i.available();
-	byte b[] = new byte[a];
-	i.read(b);
-	i.close();
-	return new Buffer(b);
+    private static FileInputStream tryOpen(String a[]) throws IOException {
+	for(int i = 0; i < a.length; i++) {
+	    File f = new File(a[i]);
+	    if (f.canRead()) {
+		return new FileInputStream(f);
+	    }
+	}
+	File[] files = new File(".").listFiles(new ArithAcceptor());
+	for(int i = 0; i < files.length; i++) {
+	    try {
+		return new FileInputStream(files[i]);
+	    } catch(IOException e) {
+		e.printStackTrace();
+	    }
+	}
+	System.err.println("No arith file was found");
+	System.exit(0);
+	return null;
     }
     
-    private static void testArithmeticDecoder(Arithmetic a) {
-	for(int i = 0; i < 100; i++) {
-	    System.err.format("%d\n", a.decodeSint(0,0,0));
+    private static byte[] readAll(FileInputStream in) throws IOException {
+	byte d[] = new byte[in.available()];
+	in.read(d);
+	return d;
+    }
+
+    private static void testArithmetic(Arithmetic a) {
+	byte d[] = new byte[a.bytesLeft()];
+	for(int i = 0; i < d.length; i++) {
+	    byte c = 0;
+	    for(int j = 0; j < 8; j++) {
+		c = (byte)((c << 1) | a.decodeBit(0));
+	    }
+	    d[i] = c;
 	}
+	String s = new String(d);
+	System.out.println(s);
     }
 }
 

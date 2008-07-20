@@ -186,49 +186,35 @@ void strip_picture(SchroPacket *p)
   struct SchroRawPicture r; 
   schro_unpack_init_with_data(&u,p->b.p, p->b.s, 1);
   r.n = schro_unpack_decode_bits(&u,32);
-  printf("Picture number: %d\n", r.n);
   if(SCHRO_PARSE_CODE_IS_INTER(p->c)) {
     r.r[0] = r.n +  schro_unpack_decode_sint(&u);
-    printf("Reference picture 1: %d\n", r.r[0]);
     if(SCHRO_PARSE_CODE_NUM_REFS(p->c) == 2) {
       r.r[1] = r.n + schro_unpack_decode_sint(&u);  
-      printf("Reference picture 1: %d\n", r.r[1]);
     }
     
   }
   if(SCHRO_PARSE_CODE_IS_REFERENCE(p->c)) {
     /* retire */
-    puts("Intra frame");
     r.r[0] = r.n + schro_unpack_decode_sint(&u); 
-    if(r.r[0]) {
-      printf("Retire: %d\n", r.r[0]);
-    } else {
-      puts("Retire: none");
-    }
   }
   if(SCHRO_PARSE_CODE_NUM_REFS(p->c) > 0) {
-    printf("Inter frame\n");
     uint32_t i;
     schro_unpack_byte_sync(&u);
     i = schro_unpack_decode_uint(&u);
     if(i == 0) { /* we need this data */
-      puts("Custom block parameters");
       r.lxl = schro_unpack_decode_uint(&u);  
       r.lyl = schro_unpack_decode_uint(&u);  
       r.lxs = schro_unpack_decode_uint(&u);  
       r.lys = schro_unpack_decode_uint(&u);  
-
     } else {
       preset_block_params(i,&r);
     }
     r.mvp = schro_unpack_decode_uint(&u);
-    printf("motion vector precision %d\n", r.mvp);
     r.g = schro_unpack_decode_bit(&u);
     if(r.g) {
-      puts("Global motion");
       skip_global_parameters(p->c, &u);
     }
-    printf("picture prediction mode %d\n",schro_unpack_decode_uint(&u));
+    schro_unpack_decode_uint(&u);
     /* reference picture weight data */
     if(schro_unpack_decode_bit(&u)) {
       schro_unpack_decode_uint(&u);
@@ -242,12 +228,9 @@ void strip_picture(SchroPacket *p)
   if(!SCHRO_PARSE_CODE_IS_INTER(p->c) ||
      schro_unpack_decode_bit(&u)) {
     r.wi = schro_unpack_decode_uint(&u);
-    printf("Wavelet index: %d\n", r.wi);
     r.wd = schro_unpack_decode_uint(&u);
-    printf("Wavelet depth: %d\n", r.wd);
     /* codeblock parameters */
     if(!SCHRO_PARSE_CODE_IS_LOW_DELAY(p->c)) {
-      puts("Codeblock parameters");
       if(schro_unpack_decode_bit(&u)) {
 	uint32_t i;
 	for(i = 0; i < r.wd; i++) {
@@ -274,7 +257,6 @@ void strip_picture(SchroPacket *p)
       }
     }
   }
-  putchar('\n');
 }
 
 int main(int argc, char **argv) {

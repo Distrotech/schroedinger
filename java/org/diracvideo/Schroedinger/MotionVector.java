@@ -6,6 +6,6 @@ package org.diracvideo.Schroedinger;
  * element.  */
 
 class MotionVector {
-    Block to,from;
+
     
 }
