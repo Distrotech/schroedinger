@@ -32,19 +32,17 @@ schro_encoder_frame_downsample (SchroEncoderFrame *frame)
       frame->downsampled_frames[3]);
 }
 
-/* Added by Andrea */
 void
 schro_encoder_frame_upsample (SchroEncoderFrame* frame)
 {
   SCHRO_ASSERT (frame);
   SCHRO_DEBUG ("upsampling frame %d", frame->frame_number);
 
-  if (frame->upsampled_frame) {
-    /* we already have the upsampled frame - why ?? */
+  if (frame->upsampled_original_frame) {
     return;
   }
-  frame->upsampled_frame = schro_upsampled_frame_new (frame->filtered_frame);
-  schro_upsampled_frame_upsample (frame->upsampled_frame);
+  frame->upsampled_original_frame = schro_upsampled_frame_new (frame->original_frame);
+  schro_upsampled_frame_upsample (frame->upsampled_original_frame);
 }
 
 static double

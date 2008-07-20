@@ -107,8 +107,8 @@ struct _SchroEncoderFrame {
   SchroFrame *original_frame;
   SchroFrame *filtered_frame;
   SchroFrame *downsampled_frames[5];
-  SchroUpsampledFrame *reconstructed_frame,
-                      *upsampled_frame; /* Added by Andrea */
+  SchroUpsampledFrame *reconstructed_frame;
+  SchroUpsampledFrame *upsampled_original_frame;
 
   SchroBuffer *sequence_header_buffer;
   SchroList *inserted_buffers;

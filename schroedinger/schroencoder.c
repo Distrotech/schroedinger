@@ -916,6 +916,7 @@ run_stage (SchroEncoderFrame *frame, SchroEncoderFrameStateEnum state)
   schro_async_run_locked (frame->encoder->async, func, frame);
 }
 
+#if 0
 /**
  * check_refs:
  * @frame: encoder frame
@@ -939,6 +940,7 @@ check_refs (SchroEncoderFrame *frame)
 
   return TRUE;
 }
+#endif
 
 static int
 schro_encoder_async_schedule (SchroEncoder *encoder, SchroExecDomain exec_domain)
@@ -2522,8 +2524,8 @@ schro_encoder_frame_unref (SchroEncoderFrame *frame)
     }
 
     /* Added by Andrea */
-    if (frame->upsampled_frame) {
-      schro_upsampled_frame_free (frame->upsampled_frame);
+    if (frame->upsampled_original_frame) {
+      schro_upsampled_frame_free (frame->upsampled_original_frame);
     }
     /* Added by Andrea */
     for (i=0;2>i;++i) {
