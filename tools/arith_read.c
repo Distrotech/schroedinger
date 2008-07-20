@@ -23,7 +23,7 @@ int main(int argc, char **argv) {
   while(ar->buffer->length - ar->offset > 0) {
     char c = 0;
     for(i = 0; i < 8; i++) {
-      c = (c << 1) | schro_arith_decode_bit(ar,0); 
+      c = (c << 1) | schro_arith_decode_bit(ar,i); 
     }
     putchar(c);
   }

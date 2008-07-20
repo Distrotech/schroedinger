@@ -10,7 +10,8 @@
 
 /* Tool to arittmetic-encode a file. */
 /* Output file extension is sundea:
-   schroedinger unique new dirac arithmetic encoder */
+ * schroedinger unique new dirac arithmetic encoder 
+ * or dynamic for dirac */
 
 void arith_encode(int, int);
 SchroBuffer* read_buffer(int); 
@@ -52,6 +53,7 @@ SchroBuffer *read_buffer(int f) {
 }
 
 void arith_encode(int in, int out) {
+  int c = 0;
   SchroUnpack u; 
   SchroBuffer *inbuf = read_buffer(in);
   SchroBuffer *outbuf = schro_buffer_new_and_alloc(inbuf->length);
@@ -60,7 +62,8 @@ void arith_encode(int in, int out) {
   schro_arith_encode_init(a, outbuf);
   while(schro_unpack_get_bits_remaining(&u) > 0) {
     int bit = schro_unpack_decode_bit(&u);
-    schro_arith_encode_bit(a, 0,bit);
+    schro_arith_encode_bit(a, c&7 ,bit);
+    c++;
   }
   schro_arith_flush(a);
   write(out, outbuf->data, a->offset + 1);

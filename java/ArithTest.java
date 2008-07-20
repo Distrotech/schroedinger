@@ -5,7 +5,7 @@ import java.io.*;
  *
  * Decodes a arithmetic encoded file from arith_file */
 
-class ArithAcceptor implements FileFilter {
+class SundaeAcceptor implements FileFilter {
     public boolean accept(File f) {
 	String fn = f.getName(); 
 	if(fn.length() == fn.lastIndexOf(".sundae") + 7 &&  
@@ -36,7 +36,7 @@ class ArithTest {
 		return new FileInputStream(f);
 	    }
 	}
-	File[] files = new File(".").listFiles(new ArithAcceptor());
+	File[] files = new File(".").listFiles(new SundaeAcceptor());
 	for(int i = 0; i < files.length; i++) {
 	    try {
 		return new FileInputStream(files[i]);
@@ -60,7 +60,7 @@ class ArithTest {
 	for(int i = 0; i < d.length; i++) {
 	    byte c = 0;
 	    for(int j = 0; j < 8; j++) {
-		c = (byte)((c << 1) | a.decodeBit(0));
+		c = (byte)((c << 1) | a.decodeBit(j));
 	    }
 	    d[i] = c;
 	}
