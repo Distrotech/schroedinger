@@ -4,15 +4,16 @@ import java.awt.Point;
 
 public class GeneralTest {
     public static void main(String a[]) {
-	testPackage();
+	testShort();
     }
 
-    private static void testPackage() {
-	Package pg[] = Package.getPackages();
-	for(int i = 0; i < pg.length; i++)
-	    System.out.println(pg[i]);
+    private static void testShort() {
+	short s = (short)(0x8000);
+	System.err.format("%d %d %d\n", s, s >> 2, s >>> 2);
+	int i = 0x8000;
+	System.err.format("%d %d %d\n", i, i >> 2, i >>> 2);
     }
-    
+
     private static void testLevel() {
 	for(int n = 1; n < 8; n++) {
 	    System.err.format("Testing with TransformDepth = %d\n", n);
