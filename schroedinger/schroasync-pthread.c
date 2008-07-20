@@ -3,6 +3,9 @@
 #include "config.h"
 #endif
 
+/* required for recursive mutex (ugh) */
+#define _GNU_SOURCE
+
 #include <schroedinger/schro.h>
 #include <schroedinger/schroasync.h>
 #include <schroedinger/schrodebug.h>
@@ -326,7 +329,7 @@ schro_thread_main (void *ptr)
       async->complete (priv);
     
       pthread_cond_signal (&async->app_cond);
-#ifdef HAVE_CUDA
+#if defined HAVE_CUDA || defined HAVE_OPENGL
       /* FIXME */
       /* This is required because we don't have a better mechanism
        * for indicating to threads in other exec domains that it is
@@ -355,7 +358,7 @@ void schro_async_signal_scheduler (SchroAsync *async)
 }
 
 void
-schro_async_add_cuda (SchroAsync *async)
+schro_async_add_exec_domain (SchroAsync *async, SchroExecDomain exec_domain)
 {
   SchroThread *thread;
   int i;
@@ -374,9 +377,10 @@ schro_async_add_cuda (SchroAsync *async)
 
   thread->async = async;
   thread->index = i;
-  thread->exec_domain = SCHRO_EXEC_DOMAIN_CUDA;
-  pthread_create (&async->threads[i].pthread, &attr,
-      schro_thread_main, async->threads + i);
+  thread->exec_domain = exec_domain;
+
+  pthread_create (&async->threads[i].pthread, &attr, schro_thread_main,
+      async->threads + i);
   pthread_mutex_lock (&async->mutex);
   pthread_mutex_unlock (&async->mutex);
 
@@ -399,6 +403,21 @@ schro_mutex_new (void)
 
   mutex = malloc(sizeof(SchroMutex));
   pthread_mutexattr_init (&mutexattr);
+  pthread_mutex_init (&mutex->mutex, &mutexattr);
+  pthread_mutexattr_destroy (&mutexattr);
+
+  return mutex;
+}
+
+SchroMutex *
+schro_mutex_new_recursive (void)
+{
+  SchroMutex *mutex;
+  pthread_mutexattr_t mutexattr;
+
+  mutex = malloc(sizeof(SchroMutex));
+  pthread_mutexattr_init (&mutexattr);
+  pthread_mutexattr_settype (&mutexattr, PTHREAD_MUTEX_RECURSIVE);
   pthread_mutex_init (&mutex->mutex, &mutexattr);
   pthread_mutexattr_destroy (&mutexattr);
 

@@ -38,9 +38,11 @@ void schro_async_lock (SchroAsync *async);
 void schro_async_unlock (SchroAsync *async);
 SchroExecDomain schro_async_get_exec_domain (void);
 
-void schro_async_add_cuda (SchroAsync *async);
+void schro_async_add_exec_domain (SchroAsync *async,
+    SchroExecDomain exec_domain);
 
 SchroMutex *schro_mutex_new (void);
+SchroMutex *schro_mutex_new_recursive (void);
 void schro_mutex_lock (SchroMutex *mutex);
 void schro_mutex_unlock (SchroMutex *mutex);
 void schro_mutex_free (SchroMutex *mutex);
