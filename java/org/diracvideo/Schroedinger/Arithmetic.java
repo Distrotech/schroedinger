@@ -195,7 +195,7 @@ public class Arithmetic {
 
     public int decodeUint(int cont, int val) {
 	int v = 1;
-	while(decodeBool(cont)) {
+	while(!decodeBool(cont)) {
 	    cont = contexts[cont].next;
 	    v = (v << 1) | decodeBit(val);
 	}
@@ -204,7 +204,7 @@ public class Arithmetic {
 
     public int decodeSint(int cont, int val, int sign) {
 	int v = decodeUint(cont, val);
-	return (v == 0 || decodeBool(sign)) ? v : -v;
+	return (v == 0 || decodeBool(sign)) ? -v : v;
     }
 
     public int decodeBit(int context) {
