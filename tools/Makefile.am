@@ -3,7 +3,7 @@ EXTRA_DIST = drc-to-png
 
 
 noinst_PROGRAMS = dump_packets dump_gop drc-cut drc-strip \
-	 parse_header arith_file
+	 parse_header arith_file arith_read
 
 AM_CFLAGS = $(SCHRO_CFLAGS) $(ERROR_CFLAGS) $(LIBOIL_CFLAGS) \
 	    -DSCHRO_ENABLE_UNSTABLE_API

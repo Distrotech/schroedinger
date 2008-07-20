@@ -216,9 +216,9 @@ public class Arithmetic {
 	int range_times_prob, lut_index;
 	range_times_prob =
 	    (range * probabilities[context]) >> 16;
-	lut_index = probabilities[context] >> 8;
 	v = (code - low >= range_times_prob);
-	probabilities[context] += lut[(v ? (1 << 8) : 0) | lut_index];
+	lut_index = probabilities[context] >> 8 | (v ? 256 : 0);;
+	probabilities[context] += lut[lut_index];
 	if(v) {
 	    low += range_times_prob;
 	    range -= range_times_prob;
