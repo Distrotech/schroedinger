@@ -4,11 +4,10 @@ import java.awt.image.*;
 
 
 class SubBand {
-    int qi, level, stride, offset, orient, numX, numY;
-    Buffer buf;
-    Dimension frame, band;
-    Parameters par;
-    SubBand parent;
+    private int qi, level, stride, offset, orient, numX, numY;
+    private Buffer buf;
+    private Dimension frame, band;
+    private Parameters par;
 
     public SubBand (Buffer b, int q, Parameters p) {
 	par = p;
@@ -16,10 +15,6 @@ class SubBand {
 	buf = b;
     }
     
-    public void setParent(SubBand p) {
-	parent = p;
-    }
-
     public void calculateSizes(int i, boolean luma) {
 	level = (i-1)/3;
 	int shift = (par.transformDepth - level);
@@ -42,10 +37,13 @@ class SubBand {
     public void decodeCoeffs(short[] out) {
 	if(buf == null)
 	    return;
+	int bounds[] = {0,0,0};
 	if(par.no_ac) {
 	    Unpack u = new Unpack(buf);
-	    if(numX * numY == 1) {
-		decodeCodeBlock(out,u,0,0);
+	    if(numX * numY == 1) {	
+		bounds[1] = out.length;
+		bounds[2] = frame.width;
+		decodeCodeBlock(out,u,bounds);
 		return;
 	    }
 	    for(int y = 0; y < numY; y++) {
@@ -54,13 +52,16 @@ class SubBand {
 			continue;
 		    if(par.codeblock_mode_index != 0)
 			qi += u.decodeSint();
-		    decodeCodeBlock(out,u,x,y);
+		    calculateBounds(bounds,x,y);
+		    decodeCodeBlock(out,u,bounds);
 		}
 	    } 
 	} else {
 	    Arithmetic a = new Arithmetic(buf);
 	    if(numX * numY == 1) {
-		decodeCodeBlock(out, a, 0, 0);
+		bounds[1] = out.length;
+		bounds[2] = frame.width;
+		decodeCodeBlock(out, a, bounds);
 		return;
 	    }
 	    for(int y = 0; y < numY; y++) {
@@ -71,7 +72,8 @@ class SubBand {
 			qi += a.decodeSint(Context.QUANTISER_CONT,
 					   Context.QUANTISER_VALUE,
 					   Context.QUANTISER_SIGN);
-		    decodeCodeBlock(out,a,x,y);
+		    calculateBounds(bounds, x, y);
+		    decodeCodeBlock(out,a,bounds);
 		}
 	    } 
 	}
@@ -79,48 +81,49 @@ class SubBand {
 
 
     private void decodeCodeBlock(short[] out, Unpack u,
-				 int blockX, int blockY) {
+				 int bounds[]) {
 	int qo = quantOffset(qi);
 	int qf = quantFactor(qi);
-	/* This is horrible, and yet, the only way
-	   that works. */
-	int shift = par.transformDepth - level;
-	int startX = ((band.width * blockX)/numX) << shift;
-	int startY = ((band.height * blockY)/numY) << shift;
-	int blockOffset = (frame.width * startY) + startX;
-	int endX = ((band.width * (blockX+1))/numX) << shift;
-	int endY = ((band.height * (blockY+1))/numY) << shift;
-	int blockEnd = ((endY-1)*frame.width) + endX;
-	int blockWidth = endX - startX;
-	for(int i = blockOffset + offset; i < blockEnd;
+	for(int i = bounds[0] + offset; i < bounds[1];
 	    i += frame.width * stride) {
-	    for(int j = i; j < i + blockWidth; j += stride) {
+	    for(int j = i; j < i + bounds[2]; j += stride) {
 		out[j] = u.decodeSint(qf,qo);
 	    }
 	}
     }
 
-    /* copied from above */
-    private void decodeCodeBlock(short[] out, Arithmetic a,
-				 int blockX, int blockY) {
-	int qo = quantOffset(qi);
-	int qf = quantFactor(qi);
+    private void calculateBounds(int bounds[], int blockX, int blockY) {
 	int shift = par.transformDepth - level;
 	int startX = ((band.width * blockX)/numX) << shift;
 	int startY = ((band.height * blockY)/numY) << shift;
-	int blockOffset = (frame.width * startY) + startX;
+	bounds[0] = (frame.width * startY) + startX;
 	int endX = ((band.width * (blockX+1))/numX) << shift;
 	int endY = ((band.height * (blockY+1))/numY) << shift;
-	int blockEnd = ((endY-1)*frame.width) + endX;
-	int blockWidth = endX - startX;
-	for(int i = blockOffset + offset; i < blockEnd;
-	    i += frame.width * stride) {
-	    for(int j = i; j < i + blockWidth; j += stride) {
+	bounds[1] = ((endY-1)*frame.width) + endX;
+	bounds[2] = endX - startX;
+    }
 
-	    }
+    private void decodeCodeBlock(short[] out, Arithmetic a, int bounds[]) {
+	int qo = quantOffset(qi);
+	int qf = quantFactor(qi);
+       	for(int i = bounds[0]+offset; i < bounds[1]; i += frame.width*stride) {
+	    decodeLineGeneric(out, a, i, bounds[2], qf, qo);
 	}
     }
-    
+
+    private void decodeLineGeneric(short out[], Arithmetic a, int lineOffset,
+				   int blockWidth, int qf, int qo) {
+	for(int i = 0; i < blockWidth; i += stride) {
+	    int cont = 0, sign = 0;
+	    int v = a.decodeUint(cont, Context.COEFF_DATA);
+	    if(v > 0) {
+		v = (v * qf + qo + 2) >> 2;
+		v = (a.decodeBool(sign) ? -v : v);
+	    }
+	    out[i+lineOffset] = (short)v;
+	}
+    }
+
     public void intraDCPredict(short out[]) {
 	int predict = 0;
 	for(int i = offset; i < out.length; i += frame.width * stride) {
@@ -442,9 +445,6 @@ public class Picture {
 		}
 		coeffs[c][i] = new SubBand(b,q,par);
 		coeffs[c][i].calculateSizes(i, c == 0);
-		if(i > 3)  {
-		    coeffs[c][i].setParent(coeffs[c][i-3]);
-		}
 	    }
 	}
     }
