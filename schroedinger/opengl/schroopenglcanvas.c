@@ -10,10 +10,10 @@
 unsigned int _schro_opengl_canvas_flags
     = 0
     //| SCHRO_OPENGL_CANVAS_STORE_BGRA /* FIXME: currently broken with packed formats in convert */
-//    | SCHRO_OPENGL_CANVAS_STORE_U8_AS_UI8
+    | SCHRO_OPENGL_CANVAS_STORE_U8_AS_UI8
     //| SCHRO_OPENGL_CANVAS_STORE_U8_AS_F16
     //| SCHRO_OPENGL_CANVAS_STORE_U8_AS_F32
-//    | SCHRO_OPENGL_CANVAS_STORE_S16_AS_UI16
+    | SCHRO_OPENGL_CANVAS_STORE_S16_AS_UI16
     //| SCHRO_OPENGL_CANVAS_STORE_S16_AS_I16 /* FIXME: doesn't yield a useable mapping in shader */
     //| SCHRO_OPENGL_CANVAS_STORE_S16_AS_U16
     //| SCHRO_OPENGL_CANVAS_STORE_S16_AS_F16 /* FIXME: currently broken in shader */

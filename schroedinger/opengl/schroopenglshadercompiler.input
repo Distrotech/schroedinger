@@ -1,0 +1,787 @@
+shader copy: ###################################################################
+  versions:
+    u8  SCHRO_OPENGL_SHADER_COPY_U8
+    s16 SCHRO_OPENGL_SHADER_COPY_S16
+
+  textures:
+    u8:
+      u8 input
+    s16:
+      s16 input
+
+  func void main (void):
+    u8:
+      write_u8 (read_input_u8 (gl_TexCoord[0].xy)) # FIXME: optimize the plain copy case
+    s16:
+      write_s16 (read_input_s16 (gl_TexCoord[0].xy)) # FIXME: optimize the plain copy case
+
+
+
+# FIXME: consider specialized float path, see old shader code
+shader convert: ################################################################
+  versions:
+    u8_s16  SCHRO_OPENGL_SHADER_CONVERT_U8_S16
+    s16_u8  SCHRO_OPENGL_SHADER_CONVERT_S16_U8
+    u8_u8   SCHRO_OPENGL_SHADER_CONVERT_U8_U8
+    s16_s16 SCHRO_OPENGL_SHADER_CONVERT_S16_S16
+
+  textures:
+    u8_s16:
+      s16 input
+    s16_u8:
+      u8 input
+    u8_u8:
+      u8 input
+    s16_s16:
+      s16 input
+# FIXME: support multiple versions per line
+#    u8_s16, s16_s16:
+#      s16 input
+#    u8_u8, s16_u8:
+#      u8 input
+
+  func void main (void):
+    u8_s16:
+      write_u8 (cast_u8_s16 (read_input_s16 (gl_TexCoord[0].xy) + 128))
+    s16_u8:
+      write_s16 (cast_s16_u8 (read_input_u8 (gl_TexCoord[0].xy)) - 128)
+    u8_u8:
+      write_u8 (read_input_u8 (gl_TexCoord[0].xy)) # FIXME: optimize the plain copy case
+    s16_s16:
+      write_s16 (read_input_s16 (gl_TexCoord[0].xy)) # FIXME: optimize the plain copy case
+
+
+
+# FIXME: consider non-scaling read/write functions
+shader convert_u8_yuyv: ########################################################
+  versions:
+    y4 SCHRO_OPENGL_SHADER_CONVERT_U8_Y4_YUYV
+    u2 SCHRO_OPENGL_SHADER_CONVERT_U8_U2_YUYV
+    v2 SCHRO_OPENGL_SHADER_CONVERT_U8_V2_YUYV
+
+  textures:
+    u8_vec4 yuyv
+
+  func void main (void):
+    y4:
+      # round x coordinate down from texel center n.5 to texel edge n.0
+      float x = floor (gl_TexCoord[0].x) / 2.0
+      float y = gl_TexCoord[0].y
+      # shift x coordinate from texel edge n.0 to texel center n.5
+      vec2 coordinate = vec2 (floor (x) + 0.5, y)
+      var4_u8 yuyv = read_yuyv_u8_vec4 (coordinate)
+      if fract (x) < 0.25:
+        write_u8 (yuyv.r)
+      else:
+        write_u8 (yuyv.b)
+# FIXME: support multiple versions per line
+#    u2, v2:
+#      var4_u8 yuyv = read_yuyv_u8_vec4 (gl_TexCoord[0].xy)
+    u2:
+      var4_u8 yuyv = read_yuyv_u8_vec4 (gl_TexCoord[0].xy)
+      write_u8 (yuyv.g)
+    v2:
+      var4_u8 yuyv = read_yuyv_u8_vec4 (gl_TexCoord[0].xy)
+      write_u8 (yuyv.a)
+
+
+
+# FIXME: consider non-scaling read/write functions
+shader convert_u8_uyvy: ########################################################
+  versions:
+    y4 SCHRO_OPENGL_SHADER_CONVERT_U8_Y4_UYVY
+    u2 SCHRO_OPENGL_SHADER_CONVERT_U8_U2_UYVY
+    v2 SCHRO_OPENGL_SHADER_CONVERT_U8_V2_UYVY
+
+  textures:
+    u8_vec4 uyvy
+
+  func void main (void):
+    y4:
+      # round x coordinate down from texel center n.5 to texel edge n.0
+      float x = floor (gl_TexCoord[0].x) / 2.0
+      float y = gl_TexCoord[0].y
+      # shift x coordinate from texel edge n.0 to texel center n.5
+      vec2 coordinate = vec2 (floor (x) + 0.5, y)
+      var4_u8 uyvy = read_uyvy_u8_vec4 (coordinate)
+      if fract (x) < 0.25:
+        write_u8 (uyvy.g)
+      else:
+        write_u8 (uyvy.a)
+# FIXME: support multiple versions per line
+#    u2, v2:
+#      var4_u8 uyvy = read_uyvy_u8_vec4 (gl_TexCoord[0].xy)
+    u2:
+      var4_u8 uyvy = read_uyvy_u8_vec4 (gl_TexCoord[0].xy)
+      write_u8 (uyvy.r)
+    v2:
+      var4_u8 uyvy = read_uyvy_u8_vec4 (gl_TexCoord[0].xy)
+      write_u8 (uyvy.b)
+
+
+
+# FIXME: consider non-scaling read/write functions
+shader convert_u8_ayuv: ########################################################
+  versions:
+    y4 SCHRO_OPENGL_SHADER_CONVERT_U8_Y4_AYUV
+    u4 SCHRO_OPENGL_SHADER_CONVERT_U8_U4_AYUV
+    v4 SCHRO_OPENGL_SHADER_CONVERT_U8_V4_AYUV
+
+  textures:
+    u8_vec4 ayuv
+
+  func void main (void):
+    var4_u8 ayuv = read_ayuv_u8_vec4 (gl_TexCoord[0].xy)
+    y4:
+      write_u8 (ayuv.g)
+    u4:
+      write_u8 (ayuv.b)
+    v4:
+      write_u8 (ayuv.a)
+
+
+
+# FIXME: consider non-scaling read/write functions
+shader convert_yuyv_u8_422: ####################################################
+  versions:
+    normal SCHRO_OPENGL_SHADER_CONVERT_YUYV_U8_422
+
+  textures:
+    u8 y4
+    u8 u2
+    u8 v2
+
+  func void main (void):
+    var4_u8 yuyv
+    # round x coordinate down from texel center n.5 to texel edge n.0
+    float x = floor (gl_TexCoord[0].x) * 2.0
+    float y = gl_TexCoord[0].y
+    # shift x coordinate from texel edge n.0 to texel center n.5
+    vec2 coordinate1 = vec2 (x + 0.5, y)
+    vec2 coordinate2 = vec2 (x + 1.5, y)
+    yuyv.r = read_y4_u8 (coordinate1)
+    yuyv.g = read_u2_u8 (gl_TexCoord[0].xy)
+    yuyv.b = read_y4_u8 (coordinate2)
+    yuyv.a = read_v2_u8 (gl_TexCoord[0].xy)
+    write_u8_vec4 (yuyv)
+
+
+
+# FIXME: consider non-scaling read/write functions
+shader convert_uyvy_u8_422: ####################################################
+  versions:
+    normal SCHRO_OPENGL_SHADER_CONVERT_UYVY_U8_422
+
+  textures:
+    u8 y4
+    u8 u2
+    u8 v2
+
+  func void main (void):
+    var4_u8 uyvy
+    # round x coordinate down from texel center n.5 to n.0 and scale up to
+    # double width
+    float x = floor (gl_TexCoord[0].x) * 2.0
+    float y = gl_TexCoord[0].y
+    # shift x coordinate from texel edge n.0 to texel center n.5
+    vec2 coordinate1 = vec2 (x + 0.5, y)
+    vec2 coordinate2 = vec2 (x + 1.5, y)
+    uyvy.r = read_u2_u8 (gl_TexCoord[0].xy)
+    uyvy.g = read_y4_u8 (coordinate1)
+    uyvy.b = read_v2_u8 (gl_TexCoord[0].xy)
+    uyvy.a = read_y4_u8 (coordinate2)
+    write_u8_vec4 (uyvy)
+
+
+
+# FIXME: consider non-scaling read/write functions
+shader convert_ayuv_u8_444: ####################################################
+  versions:
+    normal SCHRO_OPENGL_SHADER_CONVERT_AYUV_U8_444
+
+  textures:
+    u8 y4
+    u8 u4
+    u8 v4
+
+  func void main (void):
+    var4_u8 ayuv
+    ayuv.r = var_u8 (255)
+    ayuv.g = read_y4_u8 (gl_TexCoord[0].xy)
+    ayuv.b = read_u4_u8 (gl_TexCoord[0].xy)
+    ayuv.a = read_v4_u8 (gl_TexCoord[0].xy)
+    write_u8_vec4 (ayuv)
+
+
+
+# FIXME: consider specialized float path, see old shader code
+# FIXME: CPU overflows, GPU clamps, is this a problem?
+shader add_s16_u8: #############################################################
+  versions:
+    normal SCHRO_OPENGL_SHADER_ADD_S16_U8
+
+  textures:
+    s16 input1
+    u8 input2
+
+  func void main (void):
+    write_s16 (read_input1_s16 (gl_TexCoord[0].xy) + cast_s16_u8 (read_input2_u8 (gl_TexCoord[0].xy)))
+
+
+
+# FIXME: consider specialized float path, see old shader code
+# FIXME: CPU overflows, GPU clamps, is this a problem?
+shader add_s16_s16: ############################################################
+  versions:
+    normal SCHRO_OPENGL_SHADER_ADD_S16_S16
+
+  textures:
+    s16 input1
+    s16 input2
+
+  func void main (void):
+    write_s16 (read_input1_s16 (gl_TexCoord[0].xy) + read_input2_s16 (gl_TexCoord[0].xy))
+
+
+
+# FIXME: consider specialized float path, see old shader code
+# FIXME: CPU overflows, GPU clamps, is this a problem?
+shader subtract_s16_u8: ########################################################
+  versions:
+    normal SCHRO_OPENGL_SHADER_SUBTRACT_S16_U8
+
+  textures:
+    s16 input1
+    u8 input2
+
+  func void main (void):
+    write_s16 (read_input1_s16 (gl_TexCoord[0].xy) - cast_s16_u8 (read_input2_u8 (gl_TexCoord[0].xy)))
+
+
+
+# FIXME: consider specialized float path, see old shader code
+# FIXME: CPU overflows, GPU clamps, is this a problem?
+shader subtract_s16_s16: #######################################################
+  versions:
+    normal SCHRO_OPENGL_SHADER_SUBTRACT_S16_S16
+
+  textures:
+    s16 input1
+    s16 input2
+
+  func void main (void):
+    write_s16 (read_input1_s16 (gl_TexCoord[0].xy) - read_input2_s16 (gl_TexCoord[0].xy))
+
+
+
+# 1 = Deslauriers-Debuc (9,7)
+# 2 = LeGall (5,3)
+# 3 = Deslauriers-Debuc (13,7)
+# 4 = Haar 0/1
+# 5 = Fidelity
+# 6 = Daubechies (9,7)
+#
+# offset = height / 2
+#
+# +---------------+                read for...
+# |               |
+# |       L       |                L'            H'
+# |               |
+# |             o | A[2 * n - 6]   - - - - ? ?   - - - - ? ?
+# |             o | A[2 * n - 4]   - - - - ? ?   - - - - ? ?
+# |             o | A[2 * n - 2]   - - - - ? ?   o - o - ? ?
+# |          /> X | A[2 * n    ]   = = = = ? ?   X X X X ? ?
+# |         /   o | A[2 * n + 2]   - - - - ? ?   o o o - ? ?
+# |         |   o | A[2 * n + 4]   - - - - ? ?   o - o - ? ?
+# |         |   o | A[2 * n + 6]   - - - - ? ?   - - - - ? ?
+# |  offset |   o | A[2 * n + 8]   - - - - ? ?   - - - - ? ?
+# |         |     |
+# +---------|-----+                1 2 3 4 5 6   1 2 3 4 5 6
+# |         |     |
+# |         |   o | A[2 * n - 7]   - - - - ? ?   - - - - ? ?
+# |         |   o | A[2 * n - 5]   - - - - ? ?   - - - - ? ?
+# |         |   o | A[2 * n - 3]   - - o - ? ?   - - - - ? ?
+# |         \   o | A[2 * n - 1]   o o o - ? ?   - - - - ? ?
+# |          \> X | A[2 * n + 1]   X X X X ? ?   = = = = ? ?
+# |             o | A[2 * n + 3]   - - o - ? ?   - - - - ? ?
+# |             o | A[2 * n + 5]   - - - - ? ?   - - - - ? ?
+# |             o | A[2 * n + 7]   - - - - ? ?   - - - - ? ?
+# |               |
+# |       H       |
+# |               |
+# +---------------+
+
+
+
+shader iiwt_s16_filter_deslauriers_dubuc_9_7_lp: ###############################
+  versions:
+    normal SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_DESLAURIERS_DUBUC_9_7_Lp
+
+  uniforms:
+    # distance between two corresponding texels from subbands L and H in texels
+    vec2 offset1 # = vec2 (width / 2.0, 0.0) or vec2 (0.0, height / 2.0)
+    vec2 one_decrease
+
+  textures:
+    s16 input
+
+  func var_s16 filter (var_s16 h1m, var_s16 h0):
+    return divide_s16 (h1m + h0 + 2, 4)
+
+  func void main (void):
+    var_s16 l0  = read_input_s16 (gl_TexCoord[0].xy)                          # A[2 ∗ n]
+    var_s16 h1m = read_input_s16 (gl_TexCoord[0].xy + offset1 - one_decrease) # A[2 ∗ n - 1]
+    var_s16 h0  = read_input_s16 (gl_TexCoord[0].xy + offset1)                # A[2 ∗ n + 1]
+    write_s16 (l0 - filter (h1m, h0))
+
+
+
+shader iiwt_s16_filter_deslauriers_dubuc_9_7_hp: ###############################
+  versions:
+    normalz SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_DESLAURIERS_DUBUC_9_7_Hp
+
+  uniforms:
+    # distance between two corresponding texels from subbands L' and H in texels 
+    vec2 offset1 # = vec2 (width / 2.0, 0.0) or vec2 (0.0, height / 2.0)
+    vec2 one_decrease
+    vec2 one_increase
+    vec2 two_increase
+
+  textures:
+    s16 input
+
+  func var_s16 filter (var_s16 l1m, var_s16 l0, var_s16 l1p, var_s16 l2p):
+    return divide_s16 (-l1m + 9 * (l0 + l1p) - l2p + 8, 16)
+
+  func void main (void):
+    var_s16 l1m = read_input_s16 (gl_TexCoord[0].xy - offset1 - one_decrease) # A[2 ∗ n - 2]
+    var_s16 l0  = read_input_s16 (gl_TexCoord[0].xy - offset1)                # A[2 ∗ n]
+    var_s16 l1p = read_input_s16 (gl_TexCoord[0].xy - offset1 + one_increase) # A[2 ∗ n + 2]
+    var_s16 l2p = read_input_s16 (gl_TexCoord[0].xy - offset1 + two_increase) # A[2 ∗ n + 4]
+    var_s16 h0  = read_input_s16 (gl_TexCoord[0].xy)                          # A[2 ∗ n + 1]
+    write_s16 (h0 + filter (l1m, l0, l1p, l2p))
+
+
+
+shader iiwt_s16_filter_le_gall_5_3_lp: #########################################
+  versions:
+    normal SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_LE_GALL_5_3_Lp
+
+  uniforms:
+    # distance between two corresponding texels from subbands L and H in texels
+    vec2 offset1  # = vec2 (width / 2.0, 0.0) or vec2 (0.0, height / 2.0)
+    vec2 one_decrease
+
+  textures:
+    s16 input
+
+  func var_s16 filter (var_s16 h1m, var_s16 h0):
+    return divide_s16 (h1m + h0 + 2, 4)
+
+  func void main (void):
+    var_s16 l0  = read_input_s16 (gl_TexCoord[0].xy)                          # A[2 ∗ n]
+    var_s16 h1m = read_input_s16 (gl_TexCoord[0].xy + offset1 - one_decrease) # A[2 ∗ n - 1]
+    var_s16 h0  = read_input_s16 (gl_TexCoord[0].xy + offset1)                # A[2 ∗ n + 1]
+    write_s16 (l0 - filter (h1m, h0))
+
+
+
+shader iiwt_s16_filter_le_gall_5_3_hp: #########################################
+  versions:
+    normal SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_LE_GALL_5_3_Hp
+
+  uniforms:
+    # distance between two corresponding texels from subbands L and H in texels
+    vec2 offset1 # = vec2 (width / 2.0, 0.0) or vec2 (0.0, height / 2.0)
+    vec2 one_increase
+
+  textures:
+    s16 input
+
+  func var_s16 filter (var_s16 l0, var_s16 l1p):
+    return divide_s16 (l0 + l1p + 1, 2)
+
+  func void main (void):
+    var_s16 l0  = read_input_s16 (gl_TexCoord[0].xy - offset1)                # A[2 ∗ n]
+    var_s16 l1p = read_input_s16 (gl_TexCoord[0].xy - offset1 + one_increase) # A[2 ∗ n + 2]
+    var_s16 h0  = read_input_s16 (gl_TexCoord[0].xy)                          # A[2 ∗ n + 1]
+    write_s16 (h0 + filter (l0, l1p))
+
+
+
+# FIXME: more than 1 level leads to errors
+shader iiwt_s16_filter_deslauriers_dubuc_13_7_lp: ##############################
+  versions:
+    normal SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_DESLAURIERS_DUBUC_13_7_Lp
+
+  uniforms:
+    # distance between two corresponding texels from subbands L and H in texels
+    vec2 offset1 # = vec2 (width / 2.0, 0.0) or vec2 (0.0, height / 2.0)
+    vec2 two_decrease
+    vec2 one_decrease
+    vec2 one_increase
+
+  textures:
+    s16 input
+
+  func var_s16 filter (var_s16 h2m, var_s16 h1m, var_s16 h0, var_s16 h1p):
+    return divide_s16 (-h2m + 9 * (h1m + h0) - h1p + 16, 32)
+
+  func void main (void):
+    var_s16 l0  = read_input_s16 (gl_TexCoord[0].xy)                          # A[2 ∗ n]
+    var_s16 h2m = read_input_s16 (gl_TexCoord[0].xy + offset1 - two_decrease) # A[2 ∗ n - 3]
+    var_s16 h1m = read_input_s16 (gl_TexCoord[0].xy + offset1 - one_decrease) # A[2 ∗ n - 1]
+    var_s16 h0  = read_input_s16 (gl_TexCoord[0].xy + offset1)                # A[2 ∗ n + 1]
+    var_s16 h1p = read_input_s16 (gl_TexCoord[0].xy + offset1 + one_increase) # A[2 ∗ n + 3]
+    write_s16 (l0 - filter (h2m, h1m, h0, h1p))
+
+
+
+# FIXME: more than 1 level leads to errors
+shader iiwt_s16_filter_deslauriers_dubuc_13_7_hp: ##############################
+  versions:
+    normal SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_DESLAURIERS_DUBUC_13_7_Hp
+
+  uniforms:
+    # distance between two corresponding texels from subbands L and H in texels
+    vec2 offset1 # = vec2 (width / 2.0, 0.0) or vec2 (0.0, height / 2.0)
+    vec2 one_decrease
+    vec2 one_increase
+    vec2 two_increase
+
+  textures:
+    s16 input
+
+  func var_s16 filter (var_s16 l1m, var_s16 l0, var_s16 l1p, var_s16 l2p):
+    return divide_s16 (-l1m + 9 * (l0 + l1p) - l2p + 8, 16)
+
+  func void main (void):
+    var_s16 l1m = read_input_s16 (gl_TexCoord[0].xy - offset1 - one_decrease) # A[2 ∗ n - 2]
+    var_s16 l0  = read_input_s16 (gl_TexCoord[0].xy - offset1)                # A[2 ∗ n]
+    var_s16 l1p = read_input_s16 (gl_TexCoord[0].xy - offset1 + one_increase) # A[2 ∗ n + 2]
+    var_s16 l2p = read_input_s16 (gl_TexCoord[0].xy - offset1 + two_increase) # A[2 ∗ n + 4]
+    var_s16 h0  = read_input_s16 (gl_TexCoord[0].xy)                          # A[2 ∗ n + 1]
+    write_s16 (h0 + filter (l1m, l0, l1p, l2p))
+
+
+
+shader iiwt_s16_filter_haar_lp: ################################################
+  versions:
+    normal SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_HAAR_Lp
+
+  uniforms:
+    # distance between two corresponding texels from subbands L and H in texels
+    vec2 offset1 # = vec2 (width / 2.0, 0.0) or vec2 (0.0, height / 2.0)
+
+  textures:
+    s16 input
+
+  func var_s16 filter (var_s16 h0):
+    return divide_s16 (h0 + 1, 2)
+
+  func void main (void):
+    var_s16 l0 = read_input_s16 (gl_TexCoord[0].xy)           # A[2 ∗ n]
+    var_s16 h0 = read_input_s16 (gl_TexCoord[0].xy + offset1) # A[2 ∗ n + 1]
+    write_s16 (l0 - filter (h0))
+
+
+
+shader iiwt_s16_filter_haar_hp: ################################################
+  versions:
+    normal SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_HAAR_Hp
+
+  uniforms:
+    # distance between two corresponding texels from subbands L' and H in texels
+    vec2 offset1 # = vec2 (width / 2.0, 0.0) or vec2 (0.0, height / 2.0)
+
+  textures:
+    s16 input
+
+  func void main (void):
+    var_s16 l0 = read_input_s16 (gl_TexCoord[0].xy - offset1) # A[2 ∗ n]
+    var_s16 h0 = read_input_s16 (gl_TexCoord[0].xy)           # A[2 ∗ n + 1]
+    write_s16 (h0 + l0)
+
+
+
+shader iiwt_s16_vertical_deinterleave: #########################################
+  versions:
+    l SCHRO_OPENGL_SHADER_IIWT_S16_VERTICAL_DEINTERLEAVE_L
+    h SCHRO_OPENGL_SHADER_IIWT_S16_VERTICAL_DEINTERLEAVE_H
+
+  uniforms:
+    h:
+      # height of subband XL
+      vec2 offset1 # = vec2 (0.0, height / 2.0)
+
+  textures:
+    s16 input
+
+  func void main (void):
+    float x = gl_TexCoord[0].x
+    # round y coordinate down from texel center n.5 to texel edge n.0
+    l:
+      float y = floor (gl_TexCoord[0].y)
+    h:
+      float y = floor (gl_TexCoord[0].y) - offset1.y
+    # scale y coordinate to the destination coordinate and shift it from texel
+    # edge n.0 to texel center n.5
+    l:
+      vec2 coordinate = vec2 (x, y * 2.0 + 0.5)
+    h:
+      vec2 coordinate = vec2 (x, y * 2.0 + 1.5)
+    write_s16 (read_input_s16 (coordinate)) # FIXME: optimize the plain copy case
+
+
+
+shader iiwt_s16_interleave: ####################################################
+  versions:
+    vertical   SCHRO_OPENGL_SHADER_IIWT_S16_VERTICAL_INTERLEAVE
+    horizontal SCHRO_OPENGL_SHADER_IIWT_S16_HORIZONTAL_INTERLEAVE
+
+  uniforms:
+    # vertical/horizontal distance between two corresponding texels from subband
+    # XL/L' and XH/H' in texels
+    vec2 offset1 # = vec2 (0.0, height / 2.0) or vec2 (width / 2.0, 0.0)
+
+  textures:
+    s16 input
+
+  func void main (void):
+    vertical:
+      float x = gl_TexCoord[0].x
+      # round y coordinate down from texel center n.5 to texel edge n.0
+      float y = floor (gl_TexCoord[0].y)
+      if mod (y, 2.0) < 0.5:
+        y = floor (y / 2.0)
+      else:
+        y = floor (y / 2.0) + offset1.y
+      # shift y coordinate from texel edge n.0 to texel center n.5 
+      vec2 coordinate = vec2 (x, y + 0.5)
+    horizontal:
+      # round x coordinate down from texel center n.5 to texel edge n.0
+      float x = floor (gl_TexCoord[0].x)
+      float y = gl_TexCoord[0].y
+      if mod (x, 2.0) < 0.5:
+        x = floor (x / 2.0)
+      else:
+        x = floor (x / 2.0) + offset1.x
+      # shift y coordinate from texel edge n.0 to texel center n.5
+      vec2 coordinate = vec2 (x + 0.5, y)
+    write_s16 (read_input_s16 (coordinate)) # FIXME: optimize the plain copy case
+
+
+
+shader iiwt_s16_filter_shift: ##################################################
+  versions:
+    normal SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_SHIFT
+
+  textures:
+    s16 input
+
+  func void main (void):
+    write_s16 (divide_s16 (read_input_s16 (gl_TexCoord[0].xy) + 1, 2))
+
+
+
+shader upsample_u8: ############################################################
+  versions:
+    normal SCHRO_OPENGL_SHADER_UPSAMPLE_U8
+
+  uniforms:
+    vec2 three_decrease
+    vec2 two_decrease
+    vec2 one_decrease
+    vec2 one_increase
+    vec2 two_increase
+    vec2 three_increase
+    vec2 four_increase
+
+  textures:
+    u8 input
+
+  func void main (void):
+    var_s16 s3m = cast_s16_u8 (read_input_u8 (gl_TexCoord[0].xy - three_decrease)) # S[n - 3]
+    var_s16 s2m = cast_s16_u8 (read_input_u8 (gl_TexCoord[0].xy - two_decrease))   # S[n - 2]
+    var_s16 s1m = cast_s16_u8 (read_input_u8 (gl_TexCoord[0].xy - one_decrease))   # S[n - 1]
+    var_s16 s0  = cast_s16_u8 (read_input_u8 (gl_TexCoord[0].xy))                  # S[n]
+    var_s16 s1p = cast_s16_u8 (read_input_u8 (gl_TexCoord[0].xy + one_increase))   # S[n + 1]
+    var_s16 s2p = cast_s16_u8 (read_input_u8 (gl_TexCoord[0].xy + two_increase))   # S[n + 2]
+    var_s16 s3p = cast_s16_u8 (read_input_u8 (gl_TexCoord[0].xy + three_increase)) # S[n + 3]
+    var_s16 s4p = cast_s16_u8 (read_input_u8 (gl_TexCoord[0].xy + four_increase))  # S[n + 4]
+    var_s16 sum = divide_s16 (-s3m + 3 * s2m - 7 * s1m + 21 * s0 + 21 * s1p - 7 * s2p + 3 * s3p - s4p + 16, 32)
+    write_u8 (cast_u8_s16 (sum))
+
+
+
+shader obmc_weight: ############################################################
+  versions:
+    normal SCHRO_OPENGL_SHADER_OBMC_WEIGHT
+
+  uniforms:
+    vec2 size # block size # FIXME: bind as ivec2
+    vec2 offset1 # block offset # FIXME: bind as ivec2
+
+  func var_s16 ramp (var_s16 coordinate, var_s16 offset):
+    if offset == 1:
+      if coordinate == 0:
+        return 3
+      else:
+        return 5
+    else:
+      return 1 + divide_s16 (6 * coordinate + offset - 1, 2 * offset - 1)
+
+  func var_s16 obmc_weight (var_s16 coordinate, var_s16 size, var_s16 offset):
+    if offset == 0:
+      return 8
+    elif coordinate < 2 * offset:
+      return ramp (coordinate, offset)
+    elif size - 1 - coordinate < 2 * offset:
+      return ramp (size - 1 - coordinate, offset)
+    else:
+      return 8
+
+  func void main (void):
+    # round coordinate down from texel center n.5 to texel edge n.0 */
+    vec2 coordinate = floor (gl_TexCoord[0].xy)
+    var_s16 weight_x = obmc_weight (var_s16 (coordinate.x), var_s16 (size.x), var_s16 (offset1.x))
+    var_s16 weight_y = obmc_weight (var_s16 (coordinate.y), var_s16 (size.y), var_s16 (offset1.y))
+    write_s16 (weight_x * weight_y)
+
+
+
+shader obmc_clear: #############################################################
+  versions:
+    normal SCHRO_OPENGL_SHADER_OBMC_CLEAR
+
+  func void main (void):
+    write_s16 (0)
+
+
+
+shader obmc_render_dc: #########################################################
+  versions:
+    normal SCHRO_OPENGL_SHADER_OBMC_RENDER_DC
+
+  uniforms:
+    vec2 origin # block origin
+    float dc # FIXME: bind as int
+
+  textures:
+    s16 previous
+    s16 obmc_weight
+
+  func void main (void):
+    var_s16 previous = read_previous_s16 (gl_TexCoord[0].xy)
+    var_s16 obmc_weight = read_obmc_weight_s16 (gl_TexCoord[0].xy - origin)
+    write_s16 (previous + var_s16 (dc) * obmc_weight)
+
+
+
+# FIXME: combine to obmc_render_ref
+shader obmc_render_ref_prec_0: #################################################
+  versions:
+    normal SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_0
+    weight SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_0_WEIGHT
+
+  uniforms:
+    vec2 offset1
+    vec2 origin # block origin
+
+  textures:
+    s16 previous
+    s16 obmc_weight
+    u8 upsampled
+
+  func void main (void):
+    var_s16 previous = read_previous_s16 (gl_TexCoord[0].xy)
+    var_s16 obmc_weight = read_obmc_weight_s16 (gl_TexCoord[0].xy - origin)
+    var_s16 upsampled = cast_s16_u8 (read_upsampled_u8 (gl_TexCoord[0].xy + offset1))
+    normal:
+      write_s16 (previous + upsampled * obmc_weight)
+    weight:
+      write_s16 (previous + ref_weighting_s16 (upsampled) * obmc_weight)
+
+
+
+# FIXME: combine to obmc_render_ref
+shader obmc_render_ref_prec_3a: ################################################
+  versions:
+    normal SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_3a
+    weight SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_3a_WEIGHT
+
+  uniforms:
+    vec2 offset1
+    vec2 offset2
+    vec2 origin # block origin
+
+  textures:
+    s16 previous
+    s16 obmc_weight
+    u8 upsampled1
+    u8 upsampled2
+
+  func void main (void):
+    var_s16 previous = read_previous_s16 (gl_TexCoord[0].xy)
+    var_s16 obmc_weight = read_obmc_weight_s16 (gl_TexCoord[0].xy - origin)
+    var_s16 upsampled1 = cast_s16_u8 (read_upsampled1_u8 (gl_TexCoord[0].xy + offset1))
+    var_s16 upsampled2 = cast_s16_u8 (read_upsampled2_u8 (gl_TexCoord[0].xy + offset2))
+    var_s16 average = divide_s16 (upsampled1 + upsampled2 + 1, 2)
+    normal:
+      write_s16 (previous + average * obmc_weight)
+    weight:
+      write_s16 (previous + ref_weighting_s16 (average) * obmc_weight)
+
+
+
+# FIXME: combine to obmc_render_ref
+shader obmc_render_ref_prec_3b: ################################################
+  versions:
+    normal SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_3b
+    weight SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_3b_WEIGHT
+
+  uniforms:
+    vec2 offset1
+    vec2 offset2
+    vec2 offset3
+    vec2 offset4
+    vec2 origin # block origin
+    vec2 remaining # FIXME: bind as ivec2
+
+  textures:
+    s16 previous
+    s16 obmc_weight
+    u8 upsampled1
+    u8 upsampled2
+    u8 upsampled3
+    u8 upsampled4
+
+  func void main (void):
+    var_s16 w1 = (4 - var_s16 (remaining.y)) * (4 - var_s16 (remaining.x))
+    var_s16 w2 = (4 - var_s16 (remaining.y)) * var_s16 (remaining.x)
+    var_s16 w3 = var_s16 (remaining.y) * (4 - var_s16 (remaining.x))
+    var_s16 w4 = var_s16 (remaining.y) * var_s16 (remaining.x)
+    var_s16 previous = read_previous_s16 (gl_TexCoord[0].xy)
+    var_s16 obmc_weight = read_obmc_weight_s16 (gl_TexCoord[0].xy - origin)
+    var_s16 upsampled1 = cast_s16_u8 (read_upsampled1_u8 (gl_TexCoord[0].xy + offset1))
+    var_s16 upsampled2 = cast_s16_u8 (read_upsampled2_u8 (gl_TexCoord[0].xy + offset2))
+    var_s16 upsampled3 = cast_s16_u8 (read_upsampled3_u8 (gl_TexCoord[0].xy + offset3))
+    var_s16 upsampled4 = cast_s16_u8 (read_upsampled4_u8 (gl_TexCoord[0].xy + offset4))
+    var_s16 average = divide_s16 (w1 * upsampled1 + w2 * upsampled2 + w3 * upsampled3 + w4 * upsampled4 + 8, 16)
+    normal:
+      write_s16 (previous + average * obmc_weight)
+    weight:
+      write_s16 (previous + ref_weighting_s16 (average) * obmc_weight)
+
+
+
+shader obmc_shift: #############################################################
+  versions:
+    normal SCHRO_OPENGL_SHADER_OBMC_SHIFT
+
+  textures:
+    s16 input
+
+  func void main (void):
+    write_s16 (divide_s16 (read_input_s16 (gl_TexCoord[0].xy) - 8160, 64))
+

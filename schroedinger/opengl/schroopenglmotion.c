@@ -17,8 +17,6 @@ struct _SchroOpenGLMotion {
   SchroOpenGLShader *shader_dc;
   SchroOpenGLShader *shader_ref_prec0;
   SchroOpenGLShader *shader_ref_prec0_weight;
-  SchroOpenGLShader *shader_ref_prec1;
-  SchroOpenGLShader *shader_ref_prec1_weight;
   SchroOpenGLShader *shader_ref_prec3a;
   SchroOpenGLShader *shader_ref_prec3a_weight;
   SchroOpenGLShader *shader_ref_prec3b;
@@ -126,9 +124,9 @@ schro_opengl_motion_render_ref_block (SchroOpenGLMotion *opengl_motion,
       break;
     case 1: // schro_upsampled_frame_get_block_fast_prec1
       if (weight != divisor) {
-        shader = opengl_motion->shader_ref_prec1_weight;
+        shader = opengl_motion->shader_ref_prec0_weight;
       } else {
-        shader = opengl_motion->shader_ref_prec1;
+        shader = opengl_motion->shader_ref_prec0;
       }
 
       glUseProgramObjectARB (shader->program);
@@ -179,9 +177,9 @@ schro_upsampled_frame_get_block_fast_prec1 (SchroUpsampledFrame *upframe, int k,
       switch ((ry << 2) | rx) {
         case 0: // schro_upsampled_frame_get_block_fast_prec1
           if (weight != divisor) {
-            shader = opengl_motion->shader_ref_prec1_weight;
+            shader = opengl_motion->shader_ref_prec0_weight;
           } else {
-            shader = opengl_motion->shader_ref_prec1;
+            shader = opengl_motion->shader_ref_prec0;
           }
 
           glUseProgramObjectARB (shader->program);
@@ -368,10 +366,6 @@ schro_opengl_motion_render (SchroMotion *motion, SchroFrame *dest)
       SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_0);
   opengl_motion.shader_ref_prec0_weight = schro_opengl_shader_get (dest_canvas->opengl,
       SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_0_WEIGHT);
-  opengl_motion.shader_ref_prec1 = schro_opengl_shader_get (dest_canvas->opengl,
-      SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_1);
-  opengl_motion.shader_ref_prec1_weight = schro_opengl_shader_get (dest_canvas->opengl,
-      SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_1_WEIGHT);
   opengl_motion.shader_ref_prec3a = schro_opengl_shader_get (dest_canvas->opengl,
       SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_3a);
   opengl_motion.shader_ref_prec3a_weight = schro_opengl_shader_get (dest_canvas->opengl,
@@ -384,8 +378,6 @@ schro_opengl_motion_render (SchroMotion *motion, SchroFrame *dest)
   SCHRO_ASSERT (opengl_motion.shader_dc != NULL);
   SCHRO_ASSERT (opengl_motion.shader_ref_prec0 != NULL);
   SCHRO_ASSERT (opengl_motion.shader_ref_prec0_weight != NULL);
-  SCHRO_ASSERT (opengl_motion.shader_ref_prec1 != NULL);
-  SCHRO_ASSERT (opengl_motion.shader_ref_prec1_weight != NULL);
   SCHRO_ASSERT (opengl_motion.shader_ref_prec3a != NULL);
   SCHRO_ASSERT (opengl_motion.shader_ref_prec3a_weight != NULL);
   SCHRO_ASSERT (opengl_motion.shader_ref_prec3b != NULL);
