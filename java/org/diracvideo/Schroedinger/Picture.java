@@ -106,7 +106,7 @@ class SubBand {
     private void decodeCodeBlock(short[] out, Arithmetic a, int bounds[]) {
 	int qo = quantOffset(qi);
 	int qf = quantFactor(qi);
-       	for(int i = bounds[0]+offset; i < bounds[1]; i += frame.width*stride) {
+	for(int i = bounds[0]+offset; i < bounds[1]; i += frame.width*stride) {
 	    decodeLineGeneric(out, a, i, bounds[2], qf, qo);
 	}
     }
@@ -116,10 +116,21 @@ class SubBand {
 	for(int i = 0; i < blockWidth; i += stride) {
 	    int cont = 0, sign = 0;
 	    int v = a.decodeUint(cont, Context.COEFF_DATA);
+	    /* We should have a better way of doing this.
+	     * Having (x,y) coordinates might even be better
+	     * than having the indexes we deal with now. */
+	    if(orient == 1 && lineOffset >= stride*frame.width) {
+		sign = out[i + lineOffset - frame.width*stride];
+	    } else if(orient == 2 && 
+		      ((i+lineOffset) % frame.width*stride) > 0) {
+		sign = out[i + lineOffset - stride];
+	    }
+	    sign = (sign > 0 ? Context.SIGN_POS : 
+		    (sign < 0 ? Context.SIGN_NEG : Context.SIGN_ZERO));
 	    if(v > 0) {
 		v = (v * qf + qo + 2) >> 2;
 		v = (a.decodeBool(sign) ? -v : v);
-	    }
+	    } 
 	    out[i+lineOffset] = (short)v;
 	}
     }
@@ -508,7 +519,7 @@ public class Picture {
 	int yFac = (lum.height > chrom.height ? 2 : 1);
         for(int i = 0; i < format.height; i++) {
             for(int j = 0; j < format.width; j++) {
-		y = (short)(frame[0][j + i*lum.width]+120);
+		y = (short)(frame[0][j + i*lum.width]+128);
 		u = (short)(frame[1][j/xFac + (i/yFac)*chrom.width]);
 		v = (short)(frame[2][j/xFac + (i/yFac)*chrom.width]);
                 pixels[j + i*format.width] = col.convert(y,u,v);

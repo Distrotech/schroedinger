@@ -30,7 +30,7 @@ OggPayload interface, which is basically an interface to the
 OggDemux plugin.	  
    
 The plan for subband decoding:
-Sbbands should decode into a large short[] array which can
+Subbands should decode into a large short[] array which can
 be transformed into the final output picture. 
 
 Spatial partitioning:
@@ -45,3 +45,8 @@ are decoded incorrectly even in the no-spatial-partitioning case.
 Colour conversion should be much faster. This is probably doable
 by changing to integer arithmetic and by not using temporary arrays
 (or matrix multiplication).
+
+On cortado again:
+I've added SchroDec() to the list of plugins in OggDemux, and
+implemented isType(Packet) so cortado should recognize ogg dirac
+streams. 

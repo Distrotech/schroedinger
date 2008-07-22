@@ -2227,7 +2227,7 @@ out:
       value_context = SCHRO_CTX_COEFF_DATA;
 
       _schro_arith_encode_sint (arith, 0, value_context,
-          0, quant_data[j*width + i]);
+          sign_context, quant_data[j*width + i]);
     }
   }
     }

@@ -12,7 +12,7 @@ x#9    Implement short[]-to-image conversion
 x#10   Fix colorspace conversion (at least initially)
 x#11   Start arithmetic decoder
 x#12   Fix spatial partitioning and colour
-#13    Fix arithmetic unpacking of Subbands
+#13    Fix arithmetic unpacking of Subbands (sign prediction almost done)
 #20    Unroll loops in Wavelet.synthesize() and SubBand.intraDCPredict()
 
 
