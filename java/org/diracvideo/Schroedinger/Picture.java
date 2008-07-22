@@ -2,7 +2,6 @@ package org.diracvideo.Schroedinger;
 import java.awt.*;
 import java.awt.image.*;
 
-
 class SubBand {
     private int qi, level, stride, offset, orient, numX, numY;
     private Buffer buf;
@@ -113,17 +112,32 @@ class SubBand {
 
     private void decodeLineGeneric(short out[], Arithmetic a, int lineOffset,
 				   int blockWidth, int qf, int qo) {
-	for(int i = 0; i < blockWidth; i += stride) {
+	int y = (lineOffset - offset)/(stride*frame.width);
+	int x = ((lineOffset)%(frame.width))/stride;
+	int parentLine = (y/2)*(2*frame.width*stride);
+	int parentOffset = (orient == 1 ? stride :
+			    (orient == 2 ? stride*frame.width : 
+			     stride*frame.width + stride));
+	for(int i = lineOffset; i < blockWidth + lineOffset; i += stride) {
+	    boolean zparent = true, znhood = true;
+	    if(level > 0) {
+		zparent = (out[parentLine + parentOffset+(x/2)*stride*2] == 0);
+	    } 
+	    if(x > 0) znhood = (znhood && out[i-stride] == 0);
+	    if(y > 0) znhood = (znhood && out[i-stride*frame.width] == 0);
+	    if(x > 0 && y > 0) 
+		znhood = (znhood && out[i-stride-stride*frame.width] == 0);
 	    int cont = 0, sign = 0;
+	    if(zparent) {
+		cont = (znhood ? Context.ZPZN_F1 : Context.ZPNN_F1);
+	    } else {
+		cont = (znhood ? Context.NPZN_F1 : Context.NPNN_F1);
+	    }
 	    int v = a.decodeUint(cont, Context.COEFF_DATA);
-	    /* We should have a better way of doing this.
-	     * Having (x,y) coordinates might even be better
-	     * than having the indexes we deal with now. */
-	    if(orient == 1 && lineOffset >= stride*frame.width) {
-		sign = out[i + lineOffset - frame.width*stride];
-	    } else if(orient == 2 && 
-		      ((i+lineOffset) % frame.width*stride) > 0) {
-		sign = out[i + lineOffset - stride];
+	    if(orient == 1 && y > 0) {
+		sign = out[i - frame.width*stride];
+	    } else if(orient == 2 && x > 0) {
+		sign = out[i - stride];
 	    }
 	    sign = (sign > 0 ? Context.SIGN_POS : 
 		    (sign < 0 ? Context.SIGN_NEG : Context.SIGN_ZERO));
@@ -131,7 +145,8 @@ class SubBand {
 		v = (v * qf + qo + 2) >> 2;
 		v = (a.decodeBool(sign) ? -v : v);
 	    } 
-	    out[i+lineOffset] = (short)v;
+	    out[i] = (short)v;
+	    x++;
 	}
     }
 
@@ -279,7 +294,6 @@ class Parameters {
 	return sb.toString();
     }
 }    
-
 
 public class Picture {
     private Buffer buf;

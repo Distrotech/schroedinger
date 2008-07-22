@@ -2174,7 +2174,7 @@ out:
       } else {
         parent = 0;
       }
-//parent = 0;
+
 
       nhood_or = 0;
       if (j>0) {
@@ -2186,7 +2186,7 @@ out:
       if (i>0 && j>0) {
         nhood_or |= quant_data[(j-1)*width + i - 1];
       }
-//nhood_or = 0;
+
       
       previous_value = 0;
       if (SCHRO_SUBBAND_IS_HORIZONTALLY_ORIENTED(position)) {
@@ -2198,7 +2198,7 @@ out:
           previous_value = quant_data[(j-1)*width + i];
         }
       }
-//previous_value = 0;
+//    previous_value = 0;
 
       if (previous_value < 0) {
         sign_context = SCHRO_CTX_SIGN_NEG;
@@ -2209,7 +2209,8 @@ out:
           sign_context = SCHRO_CTX_SIGN_ZERO;
         }
       }
-
+      //      parent = 0;
+      //      nhood_or = 0;
       if (parent == 0) {
         if (nhood_or == 0) {
           cont_context = SCHRO_CTX_ZPZN_F1;
@@ -2226,7 +2227,7 @@ out:
 
       value_context = SCHRO_CTX_COEFF_DATA;
 
-      _schro_arith_encode_sint (arith, 0, value_context,
+      _schro_arith_encode_sint (arith, cont_context, value_context,
           sign_context, quant_data[j*width + i]);
     }
   }
