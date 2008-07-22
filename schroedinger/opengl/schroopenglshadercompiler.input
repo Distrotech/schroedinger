@@ -11,9 +11,9 @@ shader copy: ###################################################################
 
   func void main (void):
     u8:
-      write_u8 (read_input_u8 (gl_TexCoord[0].xy)) # FIXME: optimize the plain copy case
+      copy_input_u8 (gl_TexCoord[0].xy)
     s16:
-      write_s16 (read_input_s16 (gl_TexCoord[0].xy)) # FIXME: optimize the plain copy case
+      copy_input_s16 (gl_TexCoord[0].xy)
 
 
 
@@ -46,13 +46,12 @@ shader convert: ################################################################
     s16_u8:
       write_s16 (cast_s16_u8 (read_input_u8 (gl_TexCoord[0].xy)) - 128)
     u8_u8:
-      write_u8 (read_input_u8 (gl_TexCoord[0].xy)) # FIXME: optimize the plain copy case
+      copy_input_u8 (gl_TexCoord[0].xy)
     s16_s16:
-      write_s16 (read_input_s16 (gl_TexCoord[0].xy)) # FIXME: optimize the plain copy case
+      copy_input_s16 (gl_TexCoord[0].xy)
 
 
 
-# FIXME: consider non-scaling read/write functions
 shader convert_u8_yuyv: ########################################################
   versions:
     y4 SCHRO_OPENGL_SHADER_CONVERT_U8_Y4_YUYV
@@ -60,7 +59,7 @@ shader convert_u8_yuyv: ########################################################
     v2 SCHRO_OPENGL_SHADER_CONVERT_U8_V2_YUYV
 
   textures:
-    u8_vec4 yuyv
+    u8 yuyv
 
   func void main (void):
     y4:
@@ -69,24 +68,23 @@ shader convert_u8_yuyv: ########################################################
       float y = gl_TexCoord[0].y
       # shift x coordinate from texel edge n.0 to texel center n.5
       vec2 coordinate = vec2 (floor (x) + 0.5, y)
-      var4_u8 yuyv = read_yuyv_u8_vec4 (coordinate)
+      var4_u8 yuyv = read_yuyv_raw_u8_vec4 (coordinate)
       if fract (x) < 0.25:
-        write_u8 (yuyv.r)
+        write_raw_u8 (yuyv.r)
       else:
-        write_u8 (yuyv.b)
+        write_raw_u8 (yuyv.b)
 # FIXME: support multiple versions per line
 #    u2, v2:
-#      var4_u8 yuyv = read_yuyv_u8_vec4 (gl_TexCoord[0].xy)
+#      var4_u8 yuyv = read_yuyv_raw_u8_vec4 (gl_TexCoord[0].xy)
     u2:
-      var4_u8 yuyv = read_yuyv_u8_vec4 (gl_TexCoord[0].xy)
-      write_u8 (yuyv.g)
+      var4_u8 yuyv = read_yuyv_raw_u8_vec4 (gl_TexCoord[0].xy)
+      write_raw_u8 (yuyv.g)
     v2:
-      var4_u8 yuyv = read_yuyv_u8_vec4 (gl_TexCoord[0].xy)
-      write_u8 (yuyv.a)
+      var4_u8 yuyv = read_yuyv_raw_u8_vec4 (gl_TexCoord[0].xy)
+      write_raw_u8 (yuyv.a)
 
 
 
-# FIXME: consider non-scaling read/write functions
 shader convert_u8_uyvy: ########################################################
   versions:
     y4 SCHRO_OPENGL_SHADER_CONVERT_U8_Y4_UYVY
@@ -94,7 +92,7 @@ shader convert_u8_uyvy: ########################################################
     v2 SCHRO_OPENGL_SHADER_CONVERT_U8_V2_UYVY
 
   textures:
-    u8_vec4 uyvy
+    u8 uyvy
 
   func void main (void):
     y4:
@@ -103,24 +101,23 @@ shader convert_u8_uyvy: ########################################################
       float y = gl_TexCoord[0].y
       # shift x coordinate from texel edge n.0 to texel center n.5
       vec2 coordinate = vec2 (floor (x) + 0.5, y)
-      var4_u8 uyvy = read_uyvy_u8_vec4 (coordinate)
+      var4_u8 uyvy = read_uyvy_raw_u8_vec4 (coordinate)
       if fract (x) < 0.25:
-        write_u8 (uyvy.g)
+        write_raw_u8 (uyvy.g)
       else:
-        write_u8 (uyvy.a)
+        write_raw_u8 (uyvy.a)
 # FIXME: support multiple versions per line
 #    u2, v2:
-#      var4_u8 uyvy = read_uyvy_u8_vec4 (gl_TexCoord[0].xy)
+#      var4_u8 uyvy = read_uyvy_raw_u8_vec4 (gl_TexCoord[0].xy)
     u2:
-      var4_u8 uyvy = read_uyvy_u8_vec4 (gl_TexCoord[0].xy)
-      write_u8 (uyvy.r)
+      var4_u8 uyvy = read_uyvy_raw_u8_vec4 (gl_TexCoord[0].xy)
+      write_raw_u8 (uyvy.r)
     v2:
-      var4_u8 uyvy = read_uyvy_u8_vec4 (gl_TexCoord[0].xy)
-      write_u8 (uyvy.b)
+      var4_u8 uyvy = read_uyvy_raw_u8_vec4 (gl_TexCoord[0].xy)
+      write_raw_u8 (uyvy.b)
 
 
 
-# FIXME: consider non-scaling read/write functions
 shader convert_u8_ayuv: ########################################################
   versions:
     y4 SCHRO_OPENGL_SHADER_CONVERT_U8_Y4_AYUV
@@ -128,20 +125,19 @@ shader convert_u8_ayuv: ########################################################
     v4 SCHRO_OPENGL_SHADER_CONVERT_U8_V4_AYUV
 
   textures:
-    u8_vec4 ayuv
+    u8 ayuv
 
   func void main (void):
-    var4_u8 ayuv = read_ayuv_u8_vec4 (gl_TexCoord[0].xy)
+    var4_u8 ayuv = read_ayuv_raw_u8_vec4 (gl_TexCoord[0].xy)
     y4:
-      write_u8 (ayuv.g)
+      write_raw_u8 (ayuv.g)
     u4:
-      write_u8 (ayuv.b)
+      write_raw_u8 (ayuv.b)
     v4:
-      write_u8 (ayuv.a)
+      write_raw_u8 (ayuv.a)
 
 
 
-# FIXME: consider non-scaling read/write functions
 shader convert_yuyv_u8_422: ####################################################
   versions:
     normal SCHRO_OPENGL_SHADER_CONVERT_YUYV_U8_422
@@ -152,22 +148,21 @@ shader convert_yuyv_u8_422: ####################################################
     u8 v2
 
   func void main (void):
-    var4_u8 yuyv
     # round x coordinate down from texel center n.5 to texel edge n.0
     float x = floor (gl_TexCoord[0].x) * 2.0
     float y = gl_TexCoord[0].y
     # shift x coordinate from texel edge n.0 to texel center n.5
     vec2 coordinate1 = vec2 (x + 0.5, y)
     vec2 coordinate2 = vec2 (x + 1.5, y)
-    yuyv.r = read_y4_u8 (coordinate1)
-    yuyv.g = read_u2_u8 (gl_TexCoord[0].xy)
-    yuyv.b = read_y4_u8 (coordinate2)
-    yuyv.a = read_v2_u8 (gl_TexCoord[0].xy)
-    write_u8_vec4 (yuyv)
+    var4_u8 yuyv
+    yuyv.r = read_y4_raw_u8 (coordinate1)
+    yuyv.g = read_u2_raw_u8 (gl_TexCoord[0].xy)
+    yuyv.b = read_y4_raw_u8 (coordinate2)
+    yuyv.a = read_v2_raw_u8 (gl_TexCoord[0].xy)
+    write_raw_u8_vec4 (yuyv)
 
 
 
-# FIXME: consider non-scaling read/write functions
 shader convert_uyvy_u8_422: ####################################################
   versions:
     normal SCHRO_OPENGL_SHADER_CONVERT_UYVY_U8_422
@@ -186,15 +181,14 @@ shader convert_uyvy_u8_422: ####################################################
     # shift x coordinate from texel edge n.0 to texel center n.5
     vec2 coordinate1 = vec2 (x + 0.5, y)
     vec2 coordinate2 = vec2 (x + 1.5, y)
-    uyvy.r = read_u2_u8 (gl_TexCoord[0].xy)
-    uyvy.g = read_y4_u8 (coordinate1)
-    uyvy.b = read_v2_u8 (gl_TexCoord[0].xy)
-    uyvy.a = read_y4_u8 (coordinate2)
-    write_u8_vec4 (uyvy)
+    uyvy.r = read_u2_raw_u8 (gl_TexCoord[0].xy)
+    uyvy.g = read_y4_raw_u8 (coordinate1)
+    uyvy.b = read_v2_raw_u8 (gl_TexCoord[0].xy)
+    uyvy.a = read_y4_raw_u8 (coordinate2)
+    write_raw_u8_vec4 (uyvy)
 
 
 
-# FIXME: consider non-scaling read/write functions
 shader convert_ayuv_u8_444: ####################################################
   versions:
     normal SCHRO_OPENGL_SHADER_CONVERT_AYUV_U8_444
@@ -206,11 +200,22 @@ shader convert_ayuv_u8_444: ####################################################
 
   func void main (void):
     var4_u8 ayuv
+# FIXME: add support for convert_raw_u8 to convert from u8 to raw format
+#    ayuv.r = convert_raw_u8 (255)
     ayuv.r = var_u8 (255)
     ayuv.g = read_y4_u8 (gl_TexCoord[0].xy)
     ayuv.b = read_u4_u8 (gl_TexCoord[0].xy)
     ayuv.a = read_v4_u8 (gl_TexCoord[0].xy)
     write_u8_vec4 (ayuv)
+# FIXME: or add support float/integer labels and nesting
+#    float:
+#      ayuv.r = 1.0
+#    integer:
+#      ayuv.r = 255
+#    ayuv.g = read_y4_raw_u8 (gl_TexCoord[0].xy)
+#    ayuv.b = read_u4_raw_u8 (gl_TexCoord[0].xy)
+#    ayuv.a = read_v4_raw_u8 (gl_TexCoord[0].xy)
+#    write_raw_u8_vec4 (ayuv)
 
 
 
@@ -338,7 +343,7 @@ shader iiwt_s16_filter_deslauriers_dubuc_9_7_lp: ###############################
 
 shader iiwt_s16_filter_deslauriers_dubuc_9_7_hp: ###############################
   versions:
-    normalz SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_DESLAURIERS_DUBUC_9_7_Hp
+    normal SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_DESLAURIERS_DUBUC_9_7_Hp
 
   uniforms:
     # distance between two corresponding texels from subbands L' and H in texels 

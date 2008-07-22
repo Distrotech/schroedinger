@@ -24,9 +24,21 @@
     "  return texture2DRect ("_texture", coordinate).a;\n" \
     "}\n"
 
+#define SHADER_READ_RAW_U8(_texture, _postfix) \
+    "uniform sampler2DRect "_texture";\n" \
+    "float read"_postfix"_raw_u8 (vec2 coordinate) {\n" \
+    "  return texture2DRect ("_texture", coordinate).r;\n" \
+    "}\n"
+
+#define SHADER_READ_RAW_U8_INTEGER(_texture, _postfix) \
+    "uniform usampler2DRect "_texture";\n" \
+    "uint read"_postfix"_raw_u8 (vec2 coordinate) {\n" \
+    "  return texture2DRect ("_texture", coordinate).a;\n" \
+    "}\n"
+
 #define SHADER_READ_U8_VEC4(_texture, _postfix) \
-    "vec4 sampler2DRect "_texture";\n" \
-    "float read"_postfix"_u8_vec4 (vec2 coordinate) {\n" \
+    "uniform sampler2DRect "_texture";\n" \
+    "vec4 read"_postfix"_u8_vec4 (vec2 coordinate) {\n" \
     "  vec4 fp = texture2DRect ("_texture", coordinate);\n" \
     /* scale from FP [0..1] to real U8 [0..255] and apply proper rounding */ \
     "  return floor (fp * 255.0 + vec4 (0.5));\n" \
@@ -35,6 +47,18 @@
 #define SHADER_READ_U8_VEC4_INTEGER(_texture, _postfix) \
     "uniform usampler2DRect "_texture";\n" \
     "uvec4 read"_postfix"_u8_vec4 (vec2 coordinate) {\n" \
+    "  return texture2DRect ("_texture", coordinate);\n" \
+    "}\n"
+
+#define SHADER_READ_RAW_U8_VEC4(_texture, _postfix) \
+    "uniform sampler2DRect "_texture";\n" \
+    "vec4 read"_postfix"_u8_raw_vec4 (vec2 coordinate) {\n" \
+    "  return texture2DRect ("_texture", coordinate);\n" \
+    "}\n"
+
+#define SHADER_READ_RAW_U8_VEC4_INTEGER(_texture, _postfix) \
+    "uniform usampler2DRect "_texture";\n" \
+    "uvec4 read"_postfix"_raw_u8_vec4 (vec2 coordinate) {\n" \
     "  return texture2DRect ("_texture", coordinate);\n" \
     "}\n"
 
@@ -50,6 +74,17 @@
     "  fragcolor_u8 = uvec4 (u8);\n" \
     "}\n"
 
+#define SHADER_WRITE_RAW_U8 \
+    "void write_raw_u8 (float u8) {\n" \
+    "  gl_FragColor = vec4 (u8);\n" \
+    "}\n"
+
+#define SHADER_WRITE_RAW_U8_INTEGER \
+    "varying out uvec4 fragcolor_u8;\n" \
+    "void write_raw_u8 (uint u8) {\n" \
+    "  fragcolor_u8 = uvec4 (u8);\n" \
+    "}\n"
+
 #define SHADER_WRITE_U8_VEC4 \
     "void write_u8_vec4 (vec4 u8) {\n" \
     /* scale from real U8 [0..255] to FP [0..1] */ \
@@ -59,6 +94,17 @@
 #define SHADER_WRITE_U8_VEC4_INTEGER \
     "varying out uvec4 fragcolor_u8;\n" \
     "void write_u8_vec4 (uvec4 u8) {\n" \
+    "  fragcolor_u8 = u8;\n" \
+    "}\n"
+
+#define SHADER_WRITE_RAW_U8_VEC4 \
+    "void write_raw_u8_vec4 (vec4 u8) {\n" \
+    "  gl_FragColor = u8;\n" \
+    "}\n"
+
+#define SHADER_WRITE_RAW_U8_VEC4_INTEGER \
+    "varying out uvec4 fragcolor_u8;\n" \
+    "void write_raw_u8_vec4 (uvec4 u8) {\n" \
     "  fragcolor_u8 = u8;\n" \
     "}\n"
 
@@ -88,8 +134,34 @@
     "  fragcolor_s16 = ivec4 (s16 + 32768);\n" \
     "}\n"
 
+#define SHADER_COPY_U8(_texture, _postfix) \
+    "uniform sampler2DRect "_texture";\n" \
+    "void copy"_postfix"_u8 (vec2 coordinate) {\n" \
+    "  gl_FragColor (texture2DRect ("_texture", coordinate);\n" \
+    "}\n"
+
+#define SHADER_COPY_U8_INTEGER(_texture, _postfix) \
+    "uniform usampler2DRect "_texture";\n" \
+    "varying out uvec4 fragcolor_u8;\n" \
+    "void copy"_postfix"_u8 (vec2 coordinate) {\n" \
+    "  fragcolor_u8 = texture2DRect ("_texture", coordinate);\n" \
+    "}\n"
+
+#define SHADER_COPY_S16(_texture, _postfix) \
+    "uniform sampler2DRect "_texture";\n" \
+    "void copy"_postfix"_s16 (vec2 coordinate) {\n" \
+    "  gl_FragColor (texture2DRect ("_texture", coordinate);\n" \
+    "}\n"
+
+#define SHADER_COPY_S16_INTEGER(_texture, _postfix) \
+    "uniform isampler2DRect "_texture";\n" \
+    "varying out ivec4 fragcolor_s16;\n" \
+    "void copy"_postfix"_s16 (vec2 coordinate) {\n" \
+    "  fragcolor_s16 = texture2DRect ("_texture", coordinate);\n" \
+    "}\n"
+
 #define SHADER_CAST_S16_U8 \
-    "#define cast_s16_u8\n"
+    "#define cast_s16_u8(_value) (_value)\n"
 
 #define SHADER_CAST_S16_U8_INTEGER \
     "int cast_s16_u8 (uint u8) {\n" \
@@ -152,11 +224,7 @@
 struct ShaderCode {
   int index;
   const char *name;
-  unsigned int flags;
   const char *code;
   const char *code_integer;
 };
-
-#define SHADER_FLAG_USE_U8  (1 << 0)
-#define SHADER_FLAG_USE_S16 (1 << 1)
 

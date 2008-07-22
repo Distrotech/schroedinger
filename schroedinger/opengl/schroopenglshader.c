@@ -274,12 +274,9 @@ schro_opengl_shader_library_new (SchroOpenGL *opengl)
   for (i = 0; i < SCHRO_OPENGL_SHADER_COUNT; ++i) {
     SCHRO_ASSERT (schro_opengl_shader_code_list[i].index == i);
 
-    if ((SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_U8_AS_UI8) &&
-        schro_opengl_shader_code_list[i].flags & SHADER_FLAG_USE_U8) ||
-        (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_S16_AS_UI16) &&
-        schro_opengl_shader_code_list[i].flags & SHADER_FLAG_USE_S16) ||
-        (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_S16_AS_U16) &&
-        schro_opengl_shader_code_list[i].flags & SHADER_FLAG_USE_S16)) {
+    if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_U8_AS_UI8) &&
+        (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_S16_AS_UI16) ||
+        SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_S16_AS_U16))) {
       shader_library->shaders[i]
           = schro_opengl_shader_new (schro_opengl_shader_code_list[i].code_integer,
           schro_opengl_shader_code_list[i].name);

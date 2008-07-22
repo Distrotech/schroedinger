@@ -122,6 +122,12 @@ schro_opengl_canvas_check_flags (void)
     SCHRO_OPENGL_CANVAS_CLEAR_FLAG (STORE_S16_AS_F32);
   }
 
+  if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_S16_AS_I16)) {
+    SCHRO_ERROR ("storing S16 as I16 is currently broken, disabling S16 as "
+        "I16 storing");
+    SCHRO_OPENGL_CANVAS_CLEAR_FLAG (STORE_S16_AS_I16);
+  }
+
   /* store U8 */
   count = 0;
 
@@ -152,6 +158,24 @@ schro_opengl_canvas_check_flags (void)
     SCHRO_OPENGL_CANVAS_CLEAR_FLAG (STORE_S16_AS_U16);
     SCHRO_OPENGL_CANVAS_CLEAR_FLAG (STORE_S16_AS_F16);
     SCHRO_OPENGL_CANVAS_CLEAR_FLAG (STORE_S16_AS_F32);
+  }
+
+  /* store integer */
+  if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_U8_AS_UI8) &&
+      !SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_S16_AS_UI16) &&
+      !SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_S16_AS_I16)) {
+    SCHRO_ERROR ("can't store U8 in integer format and S16 in non-integer "
+        "format at the same time, disabling U8 as UI8 storing");
+    SCHRO_OPENGL_CANVAS_CLEAR_FLAG (STORE_U8_AS_UI8);
+  }
+
+  if ((SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_S16_AS_UI16) ||
+      SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_S16_AS_I16)) &&
+      !SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_U8_AS_UI8)) {
+    SCHRO_ERROR ("can't store S16 in integer format and U8 in non-integer "
+        "format at the same time, disabling S16 as UI16/I16 storing");
+    SCHRO_OPENGL_CANVAS_CLEAR_FLAG (STORE_S16_AS_UI16);
+    SCHRO_OPENGL_CANVAS_CLEAR_FLAG (STORE_S16_AS_I16);
   }
 
   /* push */
