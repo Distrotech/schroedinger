@@ -440,14 +440,16 @@ opengl_test_motion_dc (int xblen, int yblen, int xbsep, int ybsep,
   SCHRO_ASSERT (xblen <= 2 * xbsep);
   SCHRO_ASSERT (yblen <= 2 * ybsep);
 
-  schro_video_format_set_std_video_format (&video_format, SCHRO_VIDEO_FORMAT_QSIF);
+  schro_video_format_set_std_video_format (&video_format,
+      SCHRO_VIDEO_FORMAT_QSIF);
   schro_video_format_validate (&video_format);
 
   video_format.width = 32;
   video_format.height = 32;
 
   printf ("==========================================================\n");
-  printf ("opengl_test_motion_dc: %ix%i\n", video_format.width, video_format.height);
+  printf ("opengl_test_motion_dc: %ix%i, blen %ix%i, bsep %ix%i\n",
+      video_format.width, video_format.height, xblen, yblen, xbsep, ybsep);
 
   memset (&params, 0, sizeof (SchroParams));
 
@@ -483,8 +485,10 @@ opengl_test_motion_dc (int xblen, int yblen, int xbsep, int ybsep,
 
     schro_opengl_frame_push (opengl_src_frame, cpu_src_frame);
 
-    upsampled_cpu_frame = schro_upsampled_frame_new (schro_frame_ref (cpu_src_frame));
-    upsampled_opengl_frame = schro_upsampled_frame_new (schro_frame_ref (opengl_src_frame));
+    upsampled_cpu_frame
+        = schro_upsampled_frame_new (schro_frame_ref (cpu_src_frame));
+    upsampled_opengl_frame
+        = schro_upsampled_frame_new (schro_frame_ref (opengl_src_frame));
 
     schro_upsampled_frame_upsample (upsampled_cpu_frame);
     schro_opengl_upsampled_frame_upsample (upsampled_opengl_frame);
@@ -560,6 +564,7 @@ opengl_test_motion_dc (int xblen, int yblen, int xbsep, int ybsep,
 
 void
 opengl_test_motion_ref (int xblen, int yblen, int xbsep, int ybsep,
+    int weight_bits, int weight_1, int weight_2, int mv_precision,
     int custom_pattern, int ref)
 {
   SchroVideoFormat video_format;
@@ -580,15 +585,18 @@ opengl_test_motion_ref (int xblen, int yblen, int xbsep, int ybsep,
 
   SCHRO_ASSERT (xblen <= 2 * xbsep);
   SCHRO_ASSERT (yblen <= 2 * ybsep);
+  SCHRO_ASSERT (ref == 0 || ref == 1);
 
-  schro_video_format_set_std_video_format (&video_format, SCHRO_VIDEO_FORMAT_QSIF);
+  schro_video_format_set_std_video_format (&video_format,
+      SCHRO_VIDEO_FORMAT_QSIF);
   schro_video_format_validate (&video_format);
 
   video_format.width = 32;
   video_format.height = 32;
 
   printf ("==========================================================\n");
-  printf ("opengl_test_motion_ref: %ix%i\n", video_format.width, video_format.height);
+  printf ("opengl_test_motion_ref: %ix%i, blen %ix%i, bsep %ix%i\n",
+      video_format.width, video_format.height, xblen, yblen, xbsep, ybsep);
 
   memset (&params, 0, sizeof (SchroParams));
 
@@ -598,10 +606,10 @@ opengl_test_motion_ref (int xblen, int yblen, int xbsep, int ybsep,
   params.xbsep_luma = xbsep;
   params.ybsep_luma = ybsep;
   params.num_refs = 1;
-  params.picture_weight_bits = 3;
-  params.picture_weight_1 = 4;
-  params.picture_weight_2 = 1;
-  params.mv_precision = 1;
+  params.picture_weight_bits = weight_bits;
+  params.picture_weight_1 = weight_1;
+  params.picture_weight_2 = weight_2;
+  params.mv_precision = mv_precision;
 
   schro_params_calculate_mc_sizes (&params);
 
@@ -624,8 +632,10 @@ opengl_test_motion_ref (int xblen, int yblen, int xbsep, int ybsep,
 
     schro_opengl_frame_push (opengl_src_frame, cpu_src_frame);
 
-    upsampled_cpu_frame = schro_upsampled_frame_new (schro_frame_ref (cpu_src_frame));
-    upsampled_opengl_frame = schro_upsampled_frame_new (schro_frame_ref (opengl_src_frame));
+    upsampled_cpu_frame
+        = schro_upsampled_frame_new (schro_frame_ref (cpu_src_frame));
+    upsampled_opengl_frame
+        = schro_upsampled_frame_new (schro_frame_ref (opengl_src_frame));
 
     schro_upsampled_frame_upsample (upsampled_cpu_frame);
     schro_opengl_upsampled_frame_upsample (upsampled_opengl_frame);
@@ -639,9 +649,9 @@ opengl_test_motion_ref (int xblen, int yblen, int xbsep, int ybsep,
           motion_vectors[v * params.x_num_blocks + u].pred_mode = 1;
           motion_vectors[v * params.x_num_blocks + u].using_global = FALSE;
           motion_vectors[v * params.x_num_blocks + u].dx[0] = 3;
-          motion_vectors[v * params.x_num_blocks + u].dy[0] = 1;
-          motion_vectors[v * params.x_num_blocks + u].dx[1] = 0;
-          motion_vectors[v * params.x_num_blocks + u].dy[1] = 0;
+          motion_vectors[v * params.x_num_blocks + u].dy[0] = -1;
+          motion_vectors[v * params.x_num_blocks + u].dx[1] = 2;
+          motion_vectors[v * params.x_num_blocks + u].dy[1] = 2;
         } else {
           motion_vectors[v * params.x_num_blocks + u].pred_mode = 1;
           motion_vectors[v * params.x_num_blocks + u].using_global = FALSE;
@@ -656,13 +666,13 @@ opengl_test_motion_ref (int xblen, int yblen, int xbsep, int ybsep,
     memset (&motion_cpu, 0, sizeof (SchroMotion));
     memset (&motion_opengl, 0, sizeof (SchroMotion));
 
-    motion_cpu.src1 = upsampled_cpu_frame;
-    motion_cpu.src2 = NULL;
+    motion_cpu.src1 = ref == 0 ? upsampled_cpu_frame : NULL;
+    motion_cpu.src2 = ref == 1 ? upsampled_cpu_frame : NULL;
     motion_cpu.motion_vectors = motion_vectors;
     motion_cpu.params = &params;
 
-    motion_opengl.src1 = upsampled_opengl_frame;
-    motion_opengl.src2 = NULL;
+    motion_opengl.src1 = ref == 0 ? upsampled_opengl_frame : NULL;
+    motion_opengl.src2 = ref == 1 ? upsampled_opengl_frame : NULL;
     motion_opengl.motion_vectors = motion_vectors;
     motion_opengl.params = &params;
 
@@ -810,6 +820,34 @@ struct ConvertTest opengl_test_convert_list[] = {
       1080, 1, OPENGL_CUSTOM_PATTERN_RANDOM }
 };
 
+struct MotionRefTest {
+  int xblen;
+  int yblen;
+  int xbsep;
+  int ybsep;
+  int weight_bits;
+  int weight_1;
+  int weight_2;
+  int mv_precision;
+  int custom_pattern;
+  int ref;
+};
+
+struct MotionRefTest opengl_test_motion_ref_list[] = {
+  { 6, 6, 4, 4, 1, 1, 1, 0, OPENGL_CUSTOM_PATTERN_RANDOM_U8, 0 },
+  { 6, 6, 4, 4, 1, 1, 1, 1, OPENGL_CUSTOM_PATTERN_RANDOM_U8, 0 },
+  { 6, 6, 4, 4, 1, 1, 1, 2, OPENGL_CUSTOM_PATTERN_RANDOM_U8, 0 },
+  { 6, 6, 4, 4, 1, 1, 1, 3, OPENGL_CUSTOM_PATTERN_RANDOM_U8, 0 },
+  { 6, 6, 4, 4, 2, 1, 1, 0, OPENGL_CUSTOM_PATTERN_RANDOM_U8, 0 },
+  { 6, 6, 4, 4, 2, 1, 1, 1, OPENGL_CUSTOM_PATTERN_RANDOM_U8, 0 },
+  { 6, 6, 4, 4, 2, 1, 1, 2, OPENGL_CUSTOM_PATTERN_RANDOM_U8, 0 },
+  { 6, 6, 4, 4, 2, 1, 1, 3, OPENGL_CUSTOM_PATTERN_RANDOM_U8, 0 },
+  { 6, 6, 4, 4, 4, 3, 1, 0, OPENGL_CUSTOM_PATTERN_RANDOM_U8, 0 },
+  { 6, 6, 4, 4, 4, 3, 1, 1, OPENGL_CUSTOM_PATTERN_RANDOM_U8, 0 },
+  { 6, 6, 4, 4, 4, 3, 1, 2, OPENGL_CUSTOM_PATTERN_RANDOM_U8, 0 },
+  { 6, 6, 4, 4, 4, 3, 1, 3, OPENGL_CUSTOM_PATTERN_RANDOM_U8, 0 },
+};
+
 void opengl_test_push_pull (SchroFrameFormat format, int width, int height,
     int todo, int custom_pattern);
 void opengl_test_push_pull_run (void);
@@ -918,14 +956,27 @@ main (int argc, char *argv[])
         OPENGL_CUSTOM_PATTERN_RANDOM);*/
     /*opengl_test_convert (SCHRO_FRAME_FORMAT_S16_444, SCHRO_FRAME_FORMAT_U8_444,
         16, 16, 16, 16, 1, OPENGL_CUSTOM_PATTERN_RANDOM);*/
-    opengl_test_convert (SCHRO_FRAME_FORMAT_U8_444, SCHRO_FRAME_FORMAT_S16_444,
-        16, 16, 16, 16, 1, OPENGL_CUSTOM_PATTERN_RANDOM);
+    /*opengl_test_convert (SCHRO_FRAME_FORMAT_U8_444, SCHRO_FRAME_FORMAT_S16_444,
+        16, 16, 16, 16, 1, OPENGL_CUSTOM_PATTERN_RANDOM);*/
     /*opengl_test_upsample (SCHRO_FRAME_FORMAT_U8_444, 16, 16,
         OPENGL_CUSTOM_PATTERN_RANDOM);*/
 
     //opengl_test_motion_dc (6, 6, 4, 4, OPENGL_CUSTOM_PATTERN_RANDOM);
-    //opengl_test_motion_dc (6, 6, 1, 1, OPENGL_CUSTOM_PATTERN_RANDOM);
-    //opengl_test_motion_ref (6, 6, 4, 4, OPENGL_CUSTOM_PATTERN_RANDOM_U8, 0);
+    opengl_test_motion_ref (6, 6, 4, 4, 4, 3, 1, 3, OPENGL_CUSTOM_PATTERN_RANDOM_U8, 0);
+    //opengl_test_motion_ref (6, 6, 4, 4, OPENGL_CUSTOM_PATTERN_CONST_MAX_U8, 0);
+
+    /*for (i = 0; i < ARRAY_SIZE (opengl_test_motion_ref_list); ++i) {
+      opengl_test_motion_ref (opengl_test_motion_ref_list[i].xblen,
+          opengl_test_motion_ref_list[i].yblen,
+          opengl_test_motion_ref_list[i].xbsep,
+          opengl_test_motion_ref_list[i].ybsep,
+          opengl_test_motion_ref_list[i].weight_bits,
+          opengl_test_motion_ref_list[i].weight_1,
+          opengl_test_motion_ref_list[i].weight_2,
+          opengl_test_motion_ref_list[i].mv_precision,
+          opengl_test_motion_ref_list[i].custom_pattern,
+          opengl_test_motion_ref_list[i].ref);
+    }*/
 
     /*opengl_test_convert (SCHRO_FRAME_FORMAT_S16_444, SCHRO_FRAME_FORMAT_S16_444,
         16, 16, 16, 16, 1, OPENGL_CUSTOM_PATTERN_RANDOM);*/
@@ -984,6 +1035,20 @@ main (int argc, char *argv[])
         OPENGL_CUSTOM_PATTERN_CONST_MIDDLE);
     opengl_test_upsample (SCHRO_FRAME_FORMAT_U8_444, 16, 16,
         OPENGL_CUSTOM_PATTERN_CONST_MAX);
+
+    /* motion ref */
+    /*for (i = 0; i < ARRAY_SIZE (opengl_test_motion_ref_list); ++i) {
+      opengl_test_motion_ref (opengl_test_motion_ref_list[i].xblen,
+          opengl_test_motion_ref_list[i].yblen,
+          opengl_test_motion_ref_list[i].xbsep,
+          opengl_test_motion_ref_list[i].ybsep,
+          opengl_test_motion_ref_list[i].weight_bits,
+          opengl_test_motion_ref_list[i].weight_1,
+          opengl_test_motion_ref_list[i].weight_2,
+          opengl_test_motion_ref_list[i].mv_precision,
+          opengl_test_motion_ref_list[i].custom_pattern,
+          opengl_test_motion_ref_list[i].ref);
+    }*/
   }
 
   schro_opengl_free (local_opengl);

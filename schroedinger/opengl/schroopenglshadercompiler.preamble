@@ -306,7 +306,8 @@
 
 #define SHADER_DIVIDE_S16_INTEGER \
     "int divide_s16 (int value, int divisor) {\n" \
-    "  return value < 0 ? (value - (divisor - ((-value) % divisor))) / divisor\n" \
+    "  return value < 0\n" \
+    "      ? (value - (divisor - ((-value) % divisor))) / divisor\n" \
     "      : value / divisor;\n" \
     "}\n"
 
@@ -321,20 +322,56 @@
 
 
 
+#define SHADER_CROSSFOOT_S16 \
+    "float crossfoot_s16 (vec4 value) {\n" \
+    "  return value.r + value.g + value.b + value.a;\n" \
+    "}\n"
+
+#define SHADER_CROSSFOOT_S16_INTEGER \
+    "int crossfoot_s16 (ivec4 value) {\n" \
+    "  return value.r + value.g + value.b + value.a;\n" \
+    "}\n"
+
+
+
 #define SHADER_REF_WEIGHTING_S16 \
-    "uniform float weight;\n" /* ref1_weight + ref2_weight */ \
-    "uniform float addend;\n" /* 1 << (ref_weight_precision - 1) */ \
-    "uniform float divisor;\n" /* 1 << ref_weight_precision */ \
+    "uniform float ref_weight1;\n" /* ref1_weight + ref2_weight */ \
+    "uniform float ref_addend;\n" /* 1 << (ref_weight_precision - 1) */ \
+    "uniform float ref_divisor;\n" /* 1 << ref_weight_precision */ \
     "float ref_weighting_s16 (float value) {\n" \
-    "  return divide_s16 (value * weight + addend, divisor);\n" \
+    "  return divide_s16 (value * ref_weight1 + ref_addend, ref_divisor);\n" \
     "}\n"
 
 #define SHADER_REF_WEIGHTING_S16_INTEGER \
-    "uniform float weight;\n" /* ref1_weight + ref2_weight */ /* FIXME: bind as int */ \
-    "uniform float addend;\n" /* 1 << (ref_weight_precision - 1) */ /* FIXME: bind as int */ \
-    "uniform float divisor;\n" /* 1 << ref_weight_precision */ /* FIXME: bind as int */ \
+    "uniform float ref_weight1;\n" /* ref1_weight + ref2_weight */ /* FIXME: bind as int */ \
+    "uniform float ref_addend;\n" /* 1 << (ref_weight_precision - 1) */ /* FIXME: bind as int */ \
+    "uniform float ref_divisor;\n" /* 1 << ref_weight_precision */ /* FIXME: bind as int */ \
     "int ref_weighting_s16 (int value) {\n" \
-    "  return divide_s16 (value * int (weight) + int (addend), int (divisor));\n" \
+    "  return divide_s16 (value * int (ref_weight1) + int (ref_addend),\n" \
+    "      int (ref_divisor));\n" \
+    "}\n"
+
+
+
+#define SHADER_BIREF_WEIGHTING_S16 \
+    "uniform float ref_weight1;\n" /* ref1_weight  */ \
+    "uniform float ref_weight2;\n" /* ref2_weight */ \
+    "uniform float ref_addend;\n" /* 1 << (ref_weight_precision - 1) */ \
+    "uniform float ref_divisor;\n" /* 1 << ref_weight_precision */ \
+    "float biref_weighting_s16 (float value1, float value2) {\n" \
+    "  return divide_s16 (value1 * ref_weight1 + value2 * ref_weight2\n" \
+    "      + ref_addend, divisor);\n" \
+    "}\n"
+
+#define SHADER_BIREF_WEIGHTING_S16_INTEGER \
+    "uniform float ref_weight1;\n" /* ref1_weight */ /* FIXME: bind as int */ \
+    "uniform float ref_weight2;\n" /* ref2_weight */ /* FIXME: bind as int */ \
+    "uniform float ref_addend;\n" /* 1 << (ref_weight_precision - 1) */ /* FIXME: bind as int */ \
+    "uniform float ref_divisor;\n" /* 1 << ref_weight_precision */ /* FIXME: bind as int */ \
+    "int biref_weighting_s16 (int value1, int value2) {\n" \
+    "  return divide_s16 (value1 * int (ref_weight1)\n" \
+    "      + value2 * int (ref_weight2) + int (ref_addend),\n" \
+    "      int (ref_divisor));\n" \
     "}\n"
 
 

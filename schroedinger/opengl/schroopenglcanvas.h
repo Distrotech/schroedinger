@@ -14,12 +14,6 @@ SCHRO_BEGIN_DECLS
 #define SCHRO_OPNEGL_CANVAS_TO_FRAMEDATA(_framedata, _canvas) \
     *((SchroOpenGLCanvas **) (_framedata)->data) = _canvas
 
-/*typedef enum _SchroOpenGLTextureFormat {
-  SCHRO_OPENGL_TEXTURE_FORMAT_FIXED_POINT = 0,
-  SCHRO_OPENGL_TEXTURE_FORMAT_FLOAT,
-  SCHRO_OPENGL_TEXTURE_FORMAT_INTEGER
-} SchroOpenGLTextureFormat;*/
-
 typedef enum _SchroOpenGLPixelbufferType {
   SCHRO_OPENGL_PIXELBUFFER_TYPE_PUSH = 0,
   SCHRO_OPENGL_PIXELBUFFER_TYPE_PULL = 1

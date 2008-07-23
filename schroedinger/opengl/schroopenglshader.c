@@ -194,6 +194,19 @@ schro_opengl_shader_new (const char* code, const char* name)
         } \
       } while (0)
 
+  UNIFORM_LOCATION_SAMPLER (texture1,  textures[0]);
+  UNIFORM_LOCATION_SAMPLER (texture2,  textures[1]);
+  UNIFORM_LOCATION_SAMPLER (texture3,  textures[2]);
+  UNIFORM_LOCATION_SAMPLER (texture4,  textures[3]);
+  UNIFORM_LOCATION_SAMPLER (texture5,  textures[4]);
+  UNIFORM_LOCATION_SAMPLER (texture6,  textures[5]);
+  UNIFORM_LOCATION_SAMPLER (texture7,  textures[6]);
+  UNIFORM_LOCATION_SAMPLER (texture8,  textures[7]);
+  UNIFORM_LOCATION_SAMPLER (texture9,  textures[8]);
+  UNIFORM_LOCATION_SAMPLER (texture10, textures[9]);
+
+  #undef UNIFORM_LOCATION
+
   #define UNIFORM_LOCATION(_type, _name, _member) \
       do { \
         if (strstr (code, "uniform "#_type" "#_name";")) { \
@@ -203,34 +216,33 @@ schro_opengl_shader_new (const char* code, const char* name)
         } \
       } while (0)
 
-  UNIFORM_LOCATION_SAMPLER (texture1, textures[0]);
-  UNIFORM_LOCATION_SAMPLER (texture2, textures[1]);
-  UNIFORM_LOCATION_SAMPLER (texture3, textures[2]);
-  UNIFORM_LOCATION_SAMPLER (texture4, textures[3]);
-  UNIFORM_LOCATION_SAMPLER (texture5, textures[4]);
-  UNIFORM_LOCATION_SAMPLER (texture6, textures[5]);
-  UNIFORM_LOCATION (vec2, offset1, offsets[0]);
-  UNIFORM_LOCATION (vec2, offset2, offsets[1]);
-  UNIFORM_LOCATION (vec2, offset3, offsets[2]);
-  UNIFORM_LOCATION (vec2, offset4, offsets[3]);
-  UNIFORM_LOCATION (vec2, origin, origin);
-  UNIFORM_LOCATION (vec2, size, size);
-  UNIFORM_LOCATION (vec2, remaining, remaining);
-  UNIFORM_LOCATION (vec2, four_decrease, four_decrease);
-  UNIFORM_LOCATION (vec2, three_decrease, three_decrease);
-  UNIFORM_LOCATION (vec2, two_decrease, two_decrease);
-  UNIFORM_LOCATION (vec2, one_decrease, one_decrease);
-  UNIFORM_LOCATION (vec2, one_increase, one_increase);
-  UNIFORM_LOCATION (vec2, two_increase, two_increase);
-  UNIFORM_LOCATION (vec2, three_increase, three_increase);
-  UNIFORM_LOCATION (vec2, four_increase, four_increase);
-  UNIFORM_LOCATION (float, dc, dc);
-  UNIFORM_LOCATION (float, weight, weight);
-  UNIFORM_LOCATION (float, addend, addend);
-  UNIFORM_LOCATION (float, divisor, divisor);
+  UNIFORM_LOCATION (vec2,  offset1,        offsets[0]);
+  UNIFORM_LOCATION (vec2,  offset2,        offsets[1]);
+  UNIFORM_LOCATION (vec2,  offset3,        offsets[2]);
+  UNIFORM_LOCATION (vec2,  offset4,        offsets[3]);
+  UNIFORM_LOCATION (vec2,  offset5,        offsets[4]);
+  UNIFORM_LOCATION (vec2,  offset6,        offsets[5]);
+  UNIFORM_LOCATION (vec2,  offset7,        offsets[6]);
+  UNIFORM_LOCATION (vec2,  offset8,        offsets[7]);
+  UNIFORM_LOCATION (vec2,  origin,         origin);
+  UNIFORM_LOCATION (vec2,  size,           size);
+  UNIFORM_LOCATION (vec2,  remaining1,     remainings[0]);
+  UNIFORM_LOCATION (vec2,  remaining2,     remainings[1]);
+  UNIFORM_LOCATION (vec2,  four_decrease,  four_decrease);
+  UNIFORM_LOCATION (vec2,  three_decrease, three_decrease);
+  UNIFORM_LOCATION (vec2,  two_decrease,   two_decrease);
+  UNIFORM_LOCATION (vec2,  one_decrease,   one_decrease);
+  UNIFORM_LOCATION (vec2,  one_increase,   one_increase);
+  UNIFORM_LOCATION (vec2,  two_increase,   two_increase);
+  UNIFORM_LOCATION (vec2,  three_increase, three_increase);
+  UNIFORM_LOCATION (vec2,  four_increase,  four_increase);
+  UNIFORM_LOCATION (float, dc,             dc);
+  UNIFORM_LOCATION (float, ref_weight1,    ref_weights[0]);
+  UNIFORM_LOCATION (float, ref_weight2,    ref_weights[1]);
+  UNIFORM_LOCATION (float, ref_addend,     ref_addend);
+  UNIFORM_LOCATION (float, ref_divisor,    ref_divisor);
 
   #undef UNIFORM_LOCATION_SAMPLER
-  #undef UNIFORM_LOCATION
 
   if (GLEW_EXT_gpu_shader4) {
     if (strstr (code, "varying out uvec4 fragcolor_u8;")) {

@@ -14,6 +14,12 @@ SCHRO_BEGIN_DECLS
 #define SCHRO_OPENGL_CHECK_FRAMEBUFFER \
     schro_opengl_check_framebuffer (__FILE__, __LINE__, __FUNCTION__);
 
+/*typedef enum _SchroOpenGLPipelineType {
+  SCHRO_OPENGL_PIPELINE_TYPE_FIXED_POINT = 0,
+  //SCHRO_OPENGL_PIPELINE_TYPE_FLOAT, // FIXME: investigate this
+  SCHRO_OPENGL_PIPELINE_TYPE_INTEGER
+} SchroOpenGLPipelineType;*/ // FIXME
+
 void schro_opengl_init (void);
 
 SchroOpenGL *schro_opengl_new (void);
@@ -31,6 +37,7 @@ void schro_opengl_set_visible (SchroOpenGL *opengl, int visible);
 void schro_opengl_setup_viewport (int width, int height);
 void schro_opengl_render_quad (int x, int y, int width, int height);
 
+//SchroOpenGLPipelineType *schro_opengl_get_pipeline_type (SchroOpenGL *opengl); // FIXME
 void *schro_opengl_get_tmp (SchroOpenGL *opengl, int size);
 SchroOpenGLShaderLibrary *schro_opengl_get_shader_library (SchroOpenGL *opengl);
 SchroOpenGLResources *schro_opengl_get_resources (SchroOpenGL *opengl);

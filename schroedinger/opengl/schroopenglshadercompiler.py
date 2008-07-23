@@ -143,21 +143,25 @@ class Shader:
     self.functions = []
     self.used_builtins = []
     self.available_builtins = { \
-        "write_u8"           : "SHADER_WRITE_U8", \
-        "write_u8_raw"       : "SHADER_WRITE_U8_RAW", \
-        "write_vec4_u8"      : "SHADER_WRITE_VEC4_U8", \
-        "write_vec4_u8_raw"  : "SHADER_WRITE_VEC4_U8_RAW", \
-        "write_s16"          : "SHADER_WRITE_S16", \
-        "write_s16_raw"      : "SHADER_WRITE_S16_RAW", \
-        "write_vec4_s16"     : "SHADER_WRITE_VEC4_S16", \
-        "write_vec4_s16_raw" : "SHADER_WRITE_VEC4_S16_RAW", \
-        "divide_s16"         : "SHADER_DIVIDE_S16", \
-        "cast_s16_u8"        : "SHADER_CAST_S16_U8", \
-        "cast_u8_s16"        : "SHADER_CAST_U8_S16", \
-        "convert_raw_u8"     : "SHADER_CONVERT_RAW_U8", \
-        "convert_raw_s16"    : "SHADER_CONVERT_RAW_S16", \
-        "ref_weighting_s16"  : "SHADER_REF_WEIGHTING_S16" }
-    self.builtin_dependencies = { "ref_weighting_s16" : "divide_s16" }
+        "write_u8"            : "SHADER_WRITE_U8", \
+        "write_u8_raw"        : "SHADER_WRITE_U8_RAW", \
+        "write_vec4_u8"       : "SHADER_WRITE_VEC4_U8", \
+        "write_vec4_u8_raw"   : "SHADER_WRITE_VEC4_U8_RAW", \
+        "write_s16"           : "SHADER_WRITE_S16", \
+        "write_s16_raw"       : "SHADER_WRITE_S16_RAW", \
+        "write_vec4_s16"      : "SHADER_WRITE_VEC4_S16", \
+        "write_vec4_s16_raw"  : "SHADER_WRITE_VEC4_S16_RAW", \
+        "cast_s16_u8"         : "SHADER_CAST_S16_U8", \
+        "cast_u8_s16"         : "SHADER_CAST_U8_S16", \
+        "convert_raw_u8"      : "SHADER_CONVERT_RAW_U8", \
+        "convert_raw_s16"     : "SHADER_CONVERT_RAW_S16", \
+        "divide_s16"          : "SHADER_DIVIDE_S16", \
+        "crossfoot_s16"       : "SHADER_CROSSFOOT_S16", \
+        "ref_weighting_s16"   : "SHADER_REF_WEIGHTING_S16", \
+        "biref_weighting_s16" : "SHADER_BIREF_WEIGHTING_S16" }
+    self.builtin_dependencies = { \
+        "ref_weighting_s16"   : "divide_s16", \
+        "biref_weighting_s16" : "divide_s16" }
     self.read_calls = {} # keyed by texture key
     self.type_mappings = { \
         "integer" : { \
@@ -165,7 +169,7 @@ class Shader:
           "var_s16"  : "int", \
           "var4_u8"  : "uvec4", \
           "var4_s16" : "ivec4" }, \
-        "float" : { \
+        "float"   : { \
           "var_u8"   : "float", \
           "var_s16"  : "float", \
           "var4_u8"  : "vec4", \
@@ -211,18 +215,21 @@ class Shader:
       children = children[1:]
 
       # check for builtin dependencies
-      additional_builtins = []
+      self.used_builtins.sort ()
+
+      used_builtins = []
 
       for builtin in self.used_builtins:
         if builtin in self.builtin_dependencies.keys ():
-          additional_builtin = self.builtin_dependencies[builtin]
+          builtin_dependency = self.builtin_dependencies[builtin]
 
-          if additional_builtin not in additional_builtins and \
-            additional_builtin not in self.used_builtins:
-            additional_builtins += [additional_builtin]
+          if builtin_dependency not in used_builtins:
+            used_builtins += [builtin_dependency]
 
-      self.used_builtins += additional_builtins
-      self.used_builtins.sort ()
+        if builtin not in used_builtins:
+          used_builtins += [builtin]
+
+      self.used_builtins = used_builtins
 
   def parse_uniform (self, line):
     if line.has_version (["default", self.version]):
