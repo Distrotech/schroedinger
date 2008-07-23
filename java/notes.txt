@@ -50,3 +50,12 @@ On cortado again:
 I've added SchroDec() to the list of plugins in OggDemux, and
 implemented isType(Packet) so cortado should recognize ogg dirac
 streams. 
+
+
+<ds> one thing that might not be clear from the SchroMotion code -- after the stream is parsed, all motion rendering is done at the block level
+ yes, mv-precision=0
+<brrt> ok
+<ds> also look at motion-block-size and motion-block-overlap
+ size: 0,1,2,3 is default,small,medium,large
+ overlap: 0,1,2,3 is default,none,about half, and full
+ "medium" translates into 8x8 for SD, 12x12 for HD720, etc.

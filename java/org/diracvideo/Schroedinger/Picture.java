@@ -305,7 +305,8 @@ public class Picture {
     private Picture[] refs = {null,null};
     private boolean zero_residual = false;
     private SubBand[][] coeffs;
-    private short[][] frame;
+    private Block[] frame;
+    private Motion motion;
     private BufferedImage img;
     private Buffer[] motion_buffers;
     public Decoder.Status status = Decoder.Status.OK;
@@ -499,29 +500,37 @@ public class Picture {
     
     private void decodeWaveletTransform() {
 	for(int c = 0; c < 3; c++) {
-	    Dimension dim = (c == 0) ? par.iwtLumaSize : par.iwtChromaSize;
-	    coeffs[c][0].decodeCoeffs(frame[c]);
-	    coeffs[c][0].intraDCPredict(frame[c]);
+	    short out[] = frame[c].d;
+	    coeffs[c][0].decodeCoeffs(out);
+	    coeffs[c][0].intraDCPredict(out);
 	    for(int i = 0; i < par.transformDepth; i++) {
-		coeffs[c][3*i+1].decodeCoeffs(frame[c]);
-		coeffs[c][3*i+2].decodeCoeffs(frame[c]);
-		coeffs[c][3*i+3].decodeCoeffs(frame[c]);
+		coeffs[c][3*i+1].decodeCoeffs(out);
+		coeffs[c][3*i+2].decodeCoeffs(out);
+		coeffs[c][3*i+3].decodeCoeffs(out);
 	    } 
-	    Wavelet.inverse(frame[c], dim.width, par.transformDepth);  
+	    Wavelet.inverse(frame[c], par.transformDepth);  
 	}
     }
 
     private void decodeMotionCompensate() {
-	error = new Exception("Motion Compensation is not supported");
+	motion = new Motion();
+	for(int y = 0; y < par.y_num_blocks; y += 4)
+	    for(int x = 0; x < par.x_num_blocks; x += 4)
+		decodeMacroBlock(x,y);
+	motion.render(frame[0]);
+	motion.render(frame[1]);
+	motion.render(frame[2]);
+    }
+
+    private void decodeMacroBlock(int x, int y) {
+
     }
 
     private void initializeFrames() {
-	Dimension lum = par.iwtLumaSize;
-	Dimension chrom = par.iwtChromaSize;
-	frame = new short[3][];
-	frame[0] = new short[lum.width * lum.height];
-	frame[1] = new short[chrom.width * chrom.height];
-	frame[2] = new short[chrom.width * chrom.height];
+	frame = new Block[3];
+	frame[0] = new Block(par.iwtLumaSize);
+	frame[1] = new Block(par.iwtChromaSize);
+	frame[2] = new Block(par.iwtChromaSize);
     }
 
     private void decodeYUV(int pixels[]) {
@@ -529,13 +538,14 @@ public class Picture {
 	Dimension chrom = par.iwtChromaSize;
 	ColourSpace col = format.colour;
 	short y,u,v;
+	short Y[] = frame[0].d, U[] = frame[1].d, V[] = frame[2].d;
 	int xFac = (lum.width > chrom.width ? 2 : 1);
 	int yFac = (lum.height > chrom.height ? 2 : 1);
         for(int i = 0; i < format.height; i++) {
             for(int j = 0; j < format.width; j++) {
-		y = (short)(frame[0][j + i*lum.width]+128);
-		u = (short)(frame[1][j/xFac + (i/yFac)*chrom.width]);
-		v = (short)(frame[2][j/xFac + (i/yFac)*chrom.width]);
+		y = (short)(Y[j + i*lum.width]+128);
+		u = (short)(U[j/xFac + (i/yFac)*chrom.width]);
+		v = (short)(V[j/xFac + (i/yFac)*chrom.width]);
                 pixels[j + i*format.width] = col.convert(y,u,v);
             }
 	} 

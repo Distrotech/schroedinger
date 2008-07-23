@@ -35,6 +35,10 @@ public class Wavelet {
 	    }
 	}
     }
+
+    public static void inverse(Block block, int depth) {
+	inverse(block.d, block.s.width, depth);
+    }
     /** synthesize:
      *
      * @param d   short[] data array
