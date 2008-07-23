@@ -918,12 +918,12 @@ main (int argc, char *argv[])
         OPENGL_CUSTOM_PATTERN_RANDOM);*/
     /*opengl_test_convert (SCHRO_FRAME_FORMAT_S16_444, SCHRO_FRAME_FORMAT_U8_444,
         16, 16, 16, 16, 1, OPENGL_CUSTOM_PATTERN_RANDOM);*/
-    /*opengl_test_convert (SCHRO_FRAME_FORMAT_U8_444, SCHRO_FRAME_FORMAT_S16_444,
-        16, 16, 16, 16, 1, OPENGL_CUSTOM_PATTERN_RANDOM);*/
+    opengl_test_convert (SCHRO_FRAME_FORMAT_U8_444, SCHRO_FRAME_FORMAT_S16_444,
+        16, 16, 16, 16, 1, OPENGL_CUSTOM_PATTERN_RANDOM);
     /*opengl_test_upsample (SCHRO_FRAME_FORMAT_U8_444, 16, 16,
         OPENGL_CUSTOM_PATTERN_RANDOM);*/
 
-    opengl_test_motion_dc (6, 6, 4, 4, OPENGL_CUSTOM_PATTERN_RANDOM);
+    //opengl_test_motion_dc (6, 6, 4, 4, OPENGL_CUSTOM_PATTERN_RANDOM);
     //opengl_test_motion_dc (6, 6, 1, 1, OPENGL_CUSTOM_PATTERN_RANDOM);
     //opengl_test_motion_ref (6, 6, 4, 4, OPENGL_CUSTOM_PATTERN_RANDOM_U8, 0);
 

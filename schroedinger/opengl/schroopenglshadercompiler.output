@@ -12,11 +12,14 @@
     "#extension GL_EXT_gpu_shader4 : require\n" \
     "#define uint unsigned int\n"
 
+
+
 #define SHADER_READ_U8(_texture, _postfix) \
     "uniform sampler2DRect "_texture";\n" \
     "float read"_postfix"_u8 (vec2 coordinate) {\n" \
     "  float fp = texture2DRect ("_texture", coordinate).r;\n" \
-    /* scale from FP [0..1] to real U8 [0..255] and apply proper rounding */ \
+    /* scale from FP range [0..1] to U8 [0..255] range and apply proper
+       rounding */ \
     "  return floor (fp * 255.0 + 0.5);\n" \
     "}\n"
 
@@ -26,47 +29,50 @@
     "  return texture2DRect ("_texture", coordinate).a;\n" \
     "}\n"
 
-#define SHADER_READ_RAW_U8(_texture, _postfix) \
+#define SHADER_READ_U8_RAW(_texture, _postfix) \
     "uniform sampler2DRect "_texture";\n" \
-    "float read"_postfix"_raw_u8 (vec2 coordinate) {\n" \
+    "float read"_postfix"_u8_raw (vec2 coordinate) {\n" \
     "  return texture2DRect ("_texture", coordinate).r;\n" \
     "}\n"
 
-#define SHADER_READ_RAW_U8_INTEGER(_texture, _postfix) \
+#define SHADER_READ_U8_RAW_INTEGER(_texture, _postfix) \
     "uniform usampler2DRect "_texture";\n" \
-    "uint read"_postfix"_raw_u8 (vec2 coordinate) {\n" \
+    "uint read"_postfix"_u8_raw (vec2 coordinate) {\n" \
     "  return texture2DRect ("_texture", coordinate).a;\n" \
     "}\n"
 
-#define SHADER_READ_U8_VEC4(_texture, _postfix) \
+#define SHADER_READ_VEC4_U8(_texture, _postfix) \
     "uniform sampler2DRect "_texture";\n" \
-    "vec4 read"_postfix"_u8_vec4 (vec2 coordinate) {\n" \
+    "vec4 read"_postfix"_vec4_u8 (vec2 coordinate) {\n" \
     "  vec4 fp = texture2DRect ("_texture", coordinate);\n" \
-    /* scale from FP [0..1] to real U8 [0..255] and apply proper rounding */ \
+    /* scale from FP range [0..1] to U8 range [0..255] and apply proper
+       rounding */ \
     "  return floor (fp * 255.0 + vec4 (0.5));\n" \
     "}\n"
 
-#define SHADER_READ_U8_VEC4_INTEGER(_texture, _postfix) \
+#define SHADER_READ_VEC4_U8_INTEGER(_texture, _postfix) \
     "uniform usampler2DRect "_texture";\n" \
-    "uvec4 read"_postfix"_u8_vec4 (vec2 coordinate) {\n" \
+    "uvec4 read"_postfix"_vec4_u8 (vec2 coordinate) {\n" \
     "  return texture2DRect ("_texture", coordinate);\n" \
     "}\n"
 
-#define SHADER_READ_RAW_U8_VEC4(_texture, _postfix) \
+#define SHADER_READ_VEC4_U8_RAW(_texture, _postfix) \
     "uniform sampler2DRect "_texture";\n" \
-    "vec4 read"_postfix"_u8_raw_vec4 (vec2 coordinate) {\n" \
+    "vec4 read"_postfix"_vec4_u8_raw (vec2 coordinate) {\n" \
     "  return texture2DRect ("_texture", coordinate);\n" \
     "}\n"
 
-#define SHADER_READ_RAW_U8_VEC4_INTEGER(_texture, _postfix) \
+#define SHADER_READ_VEC4_U8_RAW_INTEGER(_texture, _postfix) \
     "uniform usampler2DRect "_texture";\n" \
-    "uvec4 read"_postfix"_raw_u8_vec4 (vec2 coordinate) {\n" \
+    "uvec4 read"_postfix"_vec4_u8_raw (vec2 coordinate) {\n" \
     "  return texture2DRect ("_texture", coordinate);\n" \
     "}\n"
+
+
 
 #define SHADER_WRITE_U8 \
     "void write_u8 (float u8) {\n" \
-    /* scale from real U8 [0..255] to FP [0..1] */ \
+    /* scale from U8 range [0..255] to FP range [0..1] */ \
     "  gl_FragColor = vec4 (u8 / 255.0);\n" \
     "}\n"
 
@@ -76,70 +82,152 @@
     "  fragcolor_u8 = uvec4 (u8);\n" \
     "}\n"
 
-#define SHADER_WRITE_RAW_U8 \
-    "void write_raw_u8 (float u8) {\n" \
+#define SHADER_WRITE_U8_RAW \
+    "void write_u8_raw (float u8) {\n" \
     "  gl_FragColor = vec4 (u8);\n" \
     "}\n"
 
-#define SHADER_WRITE_RAW_U8_INTEGER \
+#define SHADER_WRITE_U8_RAW_INTEGER \
     "varying out uvec4 fragcolor_u8;\n" \
-    "void write_raw_u8 (uint u8) {\n" \
+    "void write_u8_raw (uint u8) {\n" \
     "  fragcolor_u8 = uvec4 (u8);\n" \
     "}\n"
 
-#define SHADER_WRITE_U8_VEC4 \
-    "void write_u8_vec4 (vec4 u8) {\n" \
-    /* scale from real U8 [0..255] to FP [0..1] */ \
+#define SHADER_WRITE_VEC4_U8 \
+    "void write_vec4_u8 (vec4 u8) {\n" \
+    /* scale from U8 range [0..255] to FP range [0..1] */ \
     "  gl_FragColor = u8 / 255.0;\n" \
     "}\n"
 
-#define SHADER_WRITE_U8_VEC4_INTEGER \
+#define SHADER_WRITE_VEC4_U8_INTEGER \
     "varying out uvec4 fragcolor_u8;\n" \
-    "void write_u8_vec4 (uvec4 u8) {\n" \
+    "void write_vec4_u8 (uvec4 u8) {\n" \
     "  fragcolor_u8 = u8;\n" \
     "}\n"
 
-#define SHADER_WRITE_RAW_U8_VEC4 \
-    "void write_raw_u8_vec4 (vec4 u8) {\n" \
+#define SHADER_WRITE_VEC4_U8_RAW \
+    "void write_vec4_u8_raw (vec4 u8) {\n" \
     "  gl_FragColor = u8;\n" \
     "}\n"
 
-#define SHADER_WRITE_RAW_U8_VEC4_INTEGER \
+#define SHADER_WRITE_VEC4_U8_RAW_INTEGER \
     "varying out uvec4 fragcolor_u8;\n" \
-    "void write_raw_u8_vec4 (uvec4 u8) {\n" \
+    "void write_vec4_u8_raw (uvec4 u8) {\n" \
     "  fragcolor_u8 = u8;\n" \
     "}\n"
+
+
 
 #define SHADER_READ_S16(_texture, _postfix) \
     "uniform sampler2DRect "_texture";\n" \
     "float read"_postfix"_s16 (vec2 coordinate) {\n" \
+    "  float fp = texture2DRect ("_texture", coordinate).r;\n" \
     /* scale and bias from FP range [0..1] to S16 range [-32768..32767] */ \
-    "  return floor (texture2DRect ("_texture", coordinate).r\n" \
-    "      * 65535.0 + 0.5) - 32768.0;\n" \
+    "  return floor (fp * 65535.0 + 0.5) - 32768.0;\n" \
     "}\n"
 
 #define SHADER_READ_S16_INTEGER(_texture, _postfix) \
     "uniform isampler2DRect "_texture";\n" \
     "int read"_postfix"_s16 (vec2 coordinate) {\n" \
+    /* bias from U16 range [0..65535] to S16 range [-32768..32767] */ \
     "  return texture2DRect ("_texture", coordinate).a - 32768;\n" \
     "}\n"
 
+#define SHADER_READ_S16_RAW(_texture, _postfix) \
+    "uniform sampler2DRect "_texture";\n" \
+    "float read"_postfix"_s16_raw (vec2 coordinate) {\n" \
+    "  return texture2DRect ("_texture", coordinate).r;\n" \
+    "}\n"
+
+#define SHADER_READ_S16_RAW_INTEGER(_texture, _postfix) \
+    "uniform isampler2DRect "_texture";\n" \
+    "int read"_postfix"_s16_raw (vec2 coordinate) {\n" \
+    "  return texture2DRect ("_texture", coordinate).a;\n" \
+    "}\n"
+
+#define SHADER_READ_VEC4_S16(_texture, _postfix) \
+    "uniform sampler2DRect "_texture";\n" \
+    "vec4 read"_postfix"_vec4_s16 (vec2 coordinate) {\n" \
+    "  vec4 fp = texture2DRect ("_texture", coordinate);\n" \
+    /* scale and bias from FP range [0..1] to S16 range [-32768..32767] */ \
+    "  return floor (fp * 65535.0 + vec4 (0.5)) - vec4 (32768.0);\n" \
+    "}\n"
+
+#define SHADER_READ_VEC4_S16_INTEGER(_texture, _postfix) \
+    "uniform isampler2DRect "_texture";\n" \
+    "ivec4 read"_postfix"_vec4_s16 (vec2 coordinate) {\n" \
+    /* bias from U16 range [0..65535] to S16 range [-32768..32767] */ \
+    "  return texture2DRect ("_texture", coordinate) - vec4 (32768.0);\n" \
+    "}\n"
+
+#define SHADER_READ_VEC4_S16_RAW(_texture, _postfix) \
+    "uniform sampler2DRect "_texture";\n" \
+    "vec4 read"_postfix"_vec4_s16_raw (vec2 coordinate) {\n" \
+    "  return texture2DRect ("_texture", coordinate);\n" \
+    "}\n"
+
+#define SHADER_READ_VEC4_S16_RAW_INTEGER(_texture, _postfix) \
+    "uniform isampler2DRect "_texture";\n" \
+    "ivec4 read"_postfix"_vec4_s16_raw (vec2 coordinate) {\n" \
+    "  return texture2DRect ("_texture", coordinate);\n" \
+    "}\n"
+
+
+
 #define SHADER_WRITE_S16 \
     "void write_s16 (float s16) {\n" \
-    /* scale and bias from S16 range [-32768..32767] to FP range [0..1] */ \
+    /* bias and scale from S16 range [-32768..32767] to FP range [0..1] */ \
     "  gl_FragColor = vec4 ((s16 + 32768.0) / 65535.0);\n" \
     "}\n"
 
 #define SHADER_WRITE_S16_INTEGER \
     "varying out ivec4 fragcolor_s16;\n" \
     "void write_s16 (int s16) {\n" \
+    /* bias from S16 range [-32768..32767] to U16 range [0..65535] */ \
     "  fragcolor_s16 = ivec4 (s16 + 32768);\n" \
     "}\n"
+
+#define SHADER_WRITE_S16_RAW \
+    "void write_s16_raw (float s16) {\n" \
+    "  gl_FragColor = vec4 (s16);\n" \
+    "}\n"
+
+#define SHADER_WRITE_S16_RAW_INTEGER \
+    "varying out ivec4 fragcolor_s16;\n" \
+    "void write_s16_raw (int s16) {\n" \
+    "  fragcolor_s16 = ivec4 (s16);\n" \
+    "}\n"
+
+#define SHADER_WRITE_VEC4_S16 \
+    "void write_vec4_s16 (vec4 s16) {\n" \
+    /* bias and scale from S16 range [-32768..32767] to FP range [0..1] */ \
+    "  gl_FragColor = (s16 + vec4 (32768.0)) / 65535.0;\n" \
+    "}\n"
+
+#define SHADER_WRITE_VEC4_S16_INTEGER \
+    "varying out ivec4 fragcolor_s16;\n" \
+    "void write_vec4_s16 (ivec4 s16) {\n" \
+    /* bias from S16 range [-32768..32767] to U16 range [0..65535] */ \
+    "  fragcolor_s16 = s16 + ivec4 (32768);\n" \
+    "}\n"
+
+#define SHADER_WRITE_VEC4_S16_RAW \
+    "void write_vec4_s16_raw (vec4 s16) {\n" \
+    "  gl_FragColor = s16;\n" \
+    "}\n"
+
+#define SHADER_WRITE_VEC4_S16_RAW_INTEGER \
+    "varying out ivec4 fragcolor_s16;\n" \
+    "void write_vec4_s16_raw (ivec4 s16) {\n" \
+    "  fragcolor_s16 = s16;\n" \
+    "}\n"
+
+
 
 #define SHADER_COPY_U8(_texture, _postfix) \
     "uniform sampler2DRect "_texture";\n" \
     "void copy"_postfix"_u8 (vec2 coordinate) {\n" \
-    "  gl_FragColor (texture2DRect ("_texture", coordinate);\n" \
+    "  gl_FragColor = texture2DRect ("_texture", coordinate);\n" \
     "}\n"
 
 #define SHADER_COPY_U8_INTEGER(_texture, _postfix) \
@@ -152,7 +240,7 @@
 #define SHADER_COPY_S16(_texture, _postfix) \
     "uniform sampler2DRect "_texture";\n" \
     "void copy"_postfix"_s16 (vec2 coordinate) {\n" \
-    "  gl_FragColor (texture2DRect ("_texture", coordinate);\n" \
+    "  gl_FragColor = texture2DRect ("_texture", coordinate);\n" \
     "}\n"
 
 #define SHADER_COPY_S16_INTEGER(_texture, _postfix) \
@@ -162,8 +250,12 @@
     "  fragcolor_s16 = texture2DRect ("_texture", coordinate);\n" \
     "}\n"
 
+
+
 #define SHADER_CAST_S16_U8 \
-    "#define cast_s16_u8(_value) (_value)\n"
+    "float cast_s16_u8 (float u8) {\n" \
+    "  return u8;\n" \
+    "}\n"
 
 #define SHADER_CAST_S16_U8_INTEGER \
     "int cast_s16_u8 (uint u8) {\n" \
@@ -171,19 +263,41 @@
     "}\n"
 
 #define SHADER_CAST_U8_S16 \
-    "const float cast_u8_s16_min   =  32767.0          / 65535.0;\n" \
-    "const float cast_u8_s16_max   = (32767.0 + 255.0) / 65535.0;\n" \
-    "const float cast_u8_s16_scale =    255.0          / 65535.0;\n" \
-    "const float cast_u8_s16_bias  = (32767.0 - 127.0) / 65535.0;\n" \
     "float cast_u8_s16 (float s16) {\n" \
-    "  return clamp (s16, cast_u8_s16_min, cast_u8_s16_max)\n" \
-    "      * cast_u8_s16_scale + cast_u8_s16_bias;\n" \
+    "  return clamp (s16, 0.0, 255.0);\n" \
     "}\n"
 
 #define SHADER_CAST_U8_S16_INTEGER \
     "uint cast_u8_s16 (int s16) {\n" \
     "  return uint (clamp (s16, 0, 255));\n" \
     "}\n"
+
+
+
+#define SHADER_CONVERT_RAW_U8 \
+    "float convert_raw_u8 (float u8) {\n" \
+    /* scale from U8 range [0..255] to FP range [0..1] */ \
+    "  return u8 / 255.0;\n" \
+    "}\n"
+
+#define SHADER_CONVERT_RAW_U8_INTEGER \
+    "uint convert_raw_u8 (uint u8) {\n" \
+    "  return u8;\n" \
+    "}\n"
+
+#define SHADER_CONVERT_RAW_S16 \
+    "float convert_raw_s16 (float s16) {\n" \
+    /* bias and scale from S16 range [-32768..32767] to FP range [0..1] */ \
+    "  return (s16 + 32768.0) / 65535.0;\n" \
+    "}\n"
+
+#define SHADER_CONVERT_RAW_S16_INTEGER \
+    "int convert_raw_s16 (int s16) {\n" \
+    /* bias from S16 range [-32768..32767] to U16 range [0..65535] */ \
+    "  return s16 + 32768;\n" \
+    "}\n"
+
+
 
 #define SHADER_DIVIDE_S16 \
     "float divide_s16 (float value, float divisor) {\n" \
@@ -207,6 +321,8 @@
 
 #endif
 
+
+
 #define SHADER_REF_WEIGHTING_S16 \
     "uniform float weight;\n" /* ref1_weight + ref2_weight */ \
     "uniform float addend;\n" /* 1 << (ref_weight_precision - 1) */ \
@@ -222,6 +338,8 @@
     "int ref_weighting_s16 (int value) {\n" \
     "  return divide_s16 (value * int (weight) + int (addend), int (divisor));\n" \
     "}\n"
+
+
 
 struct ShaderCode {
   int index;
@@ -314,274 +432,276 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
   { SCHRO_OPENGL_SHADER_CONVERT_U8_Y4_YUYV,
       "convert_u8_yuyv/y4",
       SHADER_HEADER
-      SHADER_READ_RAW_U8_VEC4 ("texture1", "_yuyv")
-      SHADER_WRITE_RAW_U8
+      SHADER_READ_VEC4_U8_RAW ("texture1", "_yuyv")
+      SHADER_WRITE_U8_RAW
       "void main (void) {\n"
       "  float x = floor (gl_TexCoord[0].x) / 2.0;\n"
       "  float y = gl_TexCoord[0].y;\n"
       "  vec2 coordinate = vec2 (floor (x) + 0.5, y);\n"
-      "  vec4 yuyv = read_yuyv_raw_u8_vec4 (coordinate);\n"
+      "  vec4 yuyv = read_yuyv_vec4_u8_raw (coordinate);\n"
       "  if (fract (x) < 0.25) {\n"
-      "    write_raw_u8 (yuyv.r);\n"
+      "    write_u8_raw (yuyv.r);\n"
       "  } else {\n"
-      "    write_raw_u8 (yuyv.b);\n"
+      "    write_u8_raw (yuyv.b);\n"
       "  }\n"
       "}\n",
       SHADER_HEADER_INTEGER
-      SHADER_READ_RAW_U8_VEC4_INTEGER ("texture1", "_yuyv")
-      SHADER_WRITE_RAW_U8_INTEGER
+      SHADER_READ_VEC4_U8_RAW_INTEGER ("texture1", "_yuyv")
+      SHADER_WRITE_U8_RAW_INTEGER
       "void main (void) {\n"
       "  float x = floor (gl_TexCoord[0].x) / 2.0;\n"
       "  float y = gl_TexCoord[0].y;\n"
       "  vec2 coordinate = vec2 (floor (x) + 0.5, y);\n"
-      "  uvec4 yuyv = read_yuyv_raw_u8_vec4 (coordinate);\n"
+      "  uvec4 yuyv = read_yuyv_vec4_u8_raw (coordinate);\n"
       "  if (fract (x) < 0.25) {\n"
-      "    write_raw_u8 (yuyv.r);\n"
+      "    write_u8_raw (yuyv.r);\n"
       "  } else {\n"
-      "    write_raw_u8 (yuyv.b);\n"
+      "    write_u8_raw (yuyv.b);\n"
       "  }\n"
       "}\n" },
   { SCHRO_OPENGL_SHADER_CONVERT_U8_U2_YUYV,
       "convert_u8_yuyv/u2",
       SHADER_HEADER
-      SHADER_READ_RAW_U8_VEC4 ("texture1", "_yuyv")
-      SHADER_WRITE_RAW_U8
+      SHADER_READ_VEC4_U8_RAW ("texture1", "_yuyv")
+      SHADER_WRITE_U8_RAW
       "void main (void) {\n"
-      "  vec4 yuyv = read_yuyv_raw_u8_vec4 (gl_TexCoord[0].xy);\n"
-      "  write_raw_u8 (yuyv.g);\n"
+      "  vec4 yuyv = read_yuyv_vec4_u8_raw (gl_TexCoord[0].xy);\n"
+      "  write_u8_raw (yuyv.g);\n"
       "}\n",
       SHADER_HEADER_INTEGER
-      SHADER_READ_RAW_U8_VEC4_INTEGER ("texture1", "_yuyv")
-      SHADER_WRITE_RAW_U8_INTEGER
+      SHADER_READ_VEC4_U8_RAW_INTEGER ("texture1", "_yuyv")
+      SHADER_WRITE_U8_RAW_INTEGER
       "void main (void) {\n"
-      "  uvec4 yuyv = read_yuyv_raw_u8_vec4 (gl_TexCoord[0].xy);\n"
-      "  write_raw_u8 (yuyv.g);\n"
+      "  uvec4 yuyv = read_yuyv_vec4_u8_raw (gl_TexCoord[0].xy);\n"
+      "  write_u8_raw (yuyv.g);\n"
       "}\n" },
   { SCHRO_OPENGL_SHADER_CONVERT_U8_V2_YUYV,
       "convert_u8_yuyv/v2",
       SHADER_HEADER
-      SHADER_READ_RAW_U8_VEC4 ("texture1", "_yuyv")
-      SHADER_WRITE_RAW_U8
+      SHADER_READ_VEC4_U8_RAW ("texture1", "_yuyv")
+      SHADER_WRITE_U8_RAW
       "void main (void) {\n"
-      "  vec4 yuyv = read_yuyv_raw_u8_vec4 (gl_TexCoord[0].xy);\n"
-      "  write_raw_u8 (yuyv.a);\n"
+      "  vec4 yuyv = read_yuyv_vec4_u8_raw (gl_TexCoord[0].xy);\n"
+      "  write_u8_raw (yuyv.a);\n"
       "}\n",
       SHADER_HEADER_INTEGER
-      SHADER_READ_RAW_U8_VEC4_INTEGER ("texture1", "_yuyv")
-      SHADER_WRITE_RAW_U8_INTEGER
+      SHADER_READ_VEC4_U8_RAW_INTEGER ("texture1", "_yuyv")
+      SHADER_WRITE_U8_RAW_INTEGER
       "void main (void) {\n"
-      "  uvec4 yuyv = read_yuyv_raw_u8_vec4 (gl_TexCoord[0].xy);\n"
-      "  write_raw_u8 (yuyv.a);\n"
+      "  uvec4 yuyv = read_yuyv_vec4_u8_raw (gl_TexCoord[0].xy);\n"
+      "  write_u8_raw (yuyv.a);\n"
       "}\n" },
   { SCHRO_OPENGL_SHADER_CONVERT_U8_Y4_UYVY,
       "convert_u8_uyvy/y4",
       SHADER_HEADER
-      SHADER_READ_RAW_U8_VEC4 ("texture1", "_uyvy")
-      SHADER_WRITE_RAW_U8
+      SHADER_READ_VEC4_U8_RAW ("texture1", "_uyvy")
+      SHADER_WRITE_U8_RAW
       "void main (void) {\n"
       "  float x = floor (gl_TexCoord[0].x) / 2.0;\n"
       "  float y = gl_TexCoord[0].y;\n"
       "  vec2 coordinate = vec2 (floor (x) + 0.5, y);\n"
-      "  vec4 uyvy = read_uyvy_raw_u8_vec4 (coordinate);\n"
+      "  vec4 uyvy = read_uyvy_vec4_u8_raw (coordinate);\n"
       "  if (fract (x) < 0.25) {\n"
-      "    write_raw_u8 (uyvy.g);\n"
+      "    write_u8_raw (uyvy.g);\n"
       "  } else {\n"
-      "    write_raw_u8 (uyvy.a);\n"
+      "    write_u8_raw (uyvy.a);\n"
       "  }\n"
       "}\n",
       SHADER_HEADER_INTEGER
-      SHADER_READ_RAW_U8_VEC4_INTEGER ("texture1", "_uyvy")
-      SHADER_WRITE_RAW_U8_INTEGER
+      SHADER_READ_VEC4_U8_RAW_INTEGER ("texture1", "_uyvy")
+      SHADER_WRITE_U8_RAW_INTEGER
       "void main (void) {\n"
       "  float x = floor (gl_TexCoord[0].x) / 2.0;\n"
       "  float y = gl_TexCoord[0].y;\n"
       "  vec2 coordinate = vec2 (floor (x) + 0.5, y);\n"
-      "  uvec4 uyvy = read_uyvy_raw_u8_vec4 (coordinate);\n"
+      "  uvec4 uyvy = read_uyvy_vec4_u8_raw (coordinate);\n"
       "  if (fract (x) < 0.25) {\n"
-      "    write_raw_u8 (uyvy.g);\n"
+      "    write_u8_raw (uyvy.g);\n"
       "  } else {\n"
-      "    write_raw_u8 (uyvy.a);\n"
+      "    write_u8_raw (uyvy.a);\n"
       "  }\n"
       "}\n" },
   { SCHRO_OPENGL_SHADER_CONVERT_U8_U2_UYVY,
       "convert_u8_uyvy/u2",
       SHADER_HEADER
-      SHADER_READ_RAW_U8_VEC4 ("texture1", "_uyvy")
-      SHADER_WRITE_RAW_U8
+      SHADER_READ_VEC4_U8_RAW ("texture1", "_uyvy")
+      SHADER_WRITE_U8_RAW
       "void main (void) {\n"
-      "  vec4 uyvy = read_uyvy_raw_u8_vec4 (gl_TexCoord[0].xy);\n"
-      "  write_raw_u8 (uyvy.r);\n"
+      "  vec4 uyvy = read_uyvy_vec4_u8_raw (gl_TexCoord[0].xy);\n"
+      "  write_u8_raw (uyvy.r);\n"
       "}\n",
       SHADER_HEADER_INTEGER
-      SHADER_READ_RAW_U8_VEC4_INTEGER ("texture1", "_uyvy")
-      SHADER_WRITE_RAW_U8_INTEGER
+      SHADER_READ_VEC4_U8_RAW_INTEGER ("texture1", "_uyvy")
+      SHADER_WRITE_U8_RAW_INTEGER
       "void main (void) {\n"
-      "  uvec4 uyvy = read_uyvy_raw_u8_vec4 (gl_TexCoord[0].xy);\n"
-      "  write_raw_u8 (uyvy.r);\n"
+      "  uvec4 uyvy = read_uyvy_vec4_u8_raw (gl_TexCoord[0].xy);\n"
+      "  write_u8_raw (uyvy.r);\n"
       "}\n" },
   { SCHRO_OPENGL_SHADER_CONVERT_U8_V2_UYVY,
       "convert_u8_uyvy/v2",
       SHADER_HEADER
-      SHADER_READ_RAW_U8_VEC4 ("texture1", "_uyvy")
-      SHADER_WRITE_RAW_U8
+      SHADER_READ_VEC4_U8_RAW ("texture1", "_uyvy")
+      SHADER_WRITE_U8_RAW
       "void main (void) {\n"
-      "  vec4 uyvy = read_uyvy_raw_u8_vec4 (gl_TexCoord[0].xy);\n"
-      "  write_raw_u8 (uyvy.b);\n"
+      "  vec4 uyvy = read_uyvy_vec4_u8_raw (gl_TexCoord[0].xy);\n"
+      "  write_u8_raw (uyvy.b);\n"
       "}\n",
       SHADER_HEADER_INTEGER
-      SHADER_READ_RAW_U8_VEC4_INTEGER ("texture1", "_uyvy")
-      SHADER_WRITE_RAW_U8_INTEGER
+      SHADER_READ_VEC4_U8_RAW_INTEGER ("texture1", "_uyvy")
+      SHADER_WRITE_U8_RAW_INTEGER
       "void main (void) {\n"
-      "  uvec4 uyvy = read_uyvy_raw_u8_vec4 (gl_TexCoord[0].xy);\n"
-      "  write_raw_u8 (uyvy.b);\n"
+      "  uvec4 uyvy = read_uyvy_vec4_u8_raw (gl_TexCoord[0].xy);\n"
+      "  write_u8_raw (uyvy.b);\n"
       "}\n" },
   { SCHRO_OPENGL_SHADER_CONVERT_U8_Y4_AYUV,
       "convert_u8_ayuv/y4",
       SHADER_HEADER
-      SHADER_READ_RAW_U8_VEC4 ("texture1", "_ayuv")
-      SHADER_WRITE_RAW_U8
+      SHADER_READ_VEC4_U8_RAW ("texture1", "_ayuv")
+      SHADER_WRITE_U8_RAW
       "void main (void) {\n"
-      "  vec4 ayuv = read_ayuv_raw_u8_vec4 (gl_TexCoord[0].xy);\n"
-      "  write_raw_u8 (ayuv.g);\n"
+      "  vec4 ayuv = read_ayuv_vec4_u8_raw (gl_TexCoord[0].xy);\n"
+      "  write_u8_raw (ayuv.g);\n"
       "}\n",
       SHADER_HEADER_INTEGER
-      SHADER_READ_RAW_U8_VEC4_INTEGER ("texture1", "_ayuv")
-      SHADER_WRITE_RAW_U8_INTEGER
+      SHADER_READ_VEC4_U8_RAW_INTEGER ("texture1", "_ayuv")
+      SHADER_WRITE_U8_RAW_INTEGER
       "void main (void) {\n"
-      "  uvec4 ayuv = read_ayuv_raw_u8_vec4 (gl_TexCoord[0].xy);\n"
-      "  write_raw_u8 (ayuv.g);\n"
+      "  uvec4 ayuv = read_ayuv_vec4_u8_raw (gl_TexCoord[0].xy);\n"
+      "  write_u8_raw (ayuv.g);\n"
       "}\n" },
   { SCHRO_OPENGL_SHADER_CONVERT_U8_U4_AYUV,
       "convert_u8_ayuv/u4",
       SHADER_HEADER
-      SHADER_READ_RAW_U8_VEC4 ("texture1", "_ayuv")
-      SHADER_WRITE_RAW_U8
+      SHADER_READ_VEC4_U8_RAW ("texture1", "_ayuv")
+      SHADER_WRITE_U8_RAW
       "void main (void) {\n"
-      "  vec4 ayuv = read_ayuv_raw_u8_vec4 (gl_TexCoord[0].xy);\n"
-      "  write_raw_u8 (ayuv.b);\n"
+      "  vec4 ayuv = read_ayuv_vec4_u8_raw (gl_TexCoord[0].xy);\n"
+      "  write_u8_raw (ayuv.b);\n"
       "}\n",
       SHADER_HEADER_INTEGER
-      SHADER_READ_RAW_U8_VEC4_INTEGER ("texture1", "_ayuv")
-      SHADER_WRITE_RAW_U8_INTEGER
+      SHADER_READ_VEC4_U8_RAW_INTEGER ("texture1", "_ayuv")
+      SHADER_WRITE_U8_RAW_INTEGER
       "void main (void) {\n"
-      "  uvec4 ayuv = read_ayuv_raw_u8_vec4 (gl_TexCoord[0].xy);\n"
-      "  write_raw_u8 (ayuv.b);\n"
+      "  uvec4 ayuv = read_ayuv_vec4_u8_raw (gl_TexCoord[0].xy);\n"
+      "  write_u8_raw (ayuv.b);\n"
       "}\n" },
   { SCHRO_OPENGL_SHADER_CONVERT_U8_V4_AYUV,
       "convert_u8_ayuv/v4",
       SHADER_HEADER
-      SHADER_READ_RAW_U8_VEC4 ("texture1", "_ayuv")
-      SHADER_WRITE_RAW_U8
+      SHADER_READ_VEC4_U8_RAW ("texture1", "_ayuv")
+      SHADER_WRITE_U8_RAW
       "void main (void) {\n"
-      "  vec4 ayuv = read_ayuv_raw_u8_vec4 (gl_TexCoord[0].xy);\n"
-      "  write_raw_u8 (ayuv.a);\n"
+      "  vec4 ayuv = read_ayuv_vec4_u8_raw (gl_TexCoord[0].xy);\n"
+      "  write_u8_raw (ayuv.a);\n"
       "}\n",
       SHADER_HEADER_INTEGER
-      SHADER_READ_RAW_U8_VEC4_INTEGER ("texture1", "_ayuv")
-      SHADER_WRITE_RAW_U8_INTEGER
+      SHADER_READ_VEC4_U8_RAW_INTEGER ("texture1", "_ayuv")
+      SHADER_WRITE_U8_RAW_INTEGER
       "void main (void) {\n"
-      "  uvec4 ayuv = read_ayuv_raw_u8_vec4 (gl_TexCoord[0].xy);\n"
-      "  write_raw_u8 (ayuv.a);\n"
+      "  uvec4 ayuv = read_ayuv_vec4_u8_raw (gl_TexCoord[0].xy);\n"
+      "  write_u8_raw (ayuv.a);\n"
       "}\n" },
   { SCHRO_OPENGL_SHADER_CONVERT_YUYV_U8_422,
       "convert_yuyv_u8_422/normal",
       SHADER_HEADER
-      SHADER_READ_RAW_U8 ("texture1", "_y4")
-      SHADER_READ_RAW_U8 ("texture2", "_u2")
-      SHADER_READ_RAW_U8 ("texture3", "_v2")
-      SHADER_WRITE_RAW_U8_VEC4
+      SHADER_READ_U8_RAW ("texture1", "_y4")
+      SHADER_READ_U8_RAW ("texture2", "_u2")
+      SHADER_READ_U8_RAW ("texture3", "_v2")
+      SHADER_WRITE_VEC4_U8_RAW
       "void main (void) {\n"
       "  float x = floor (gl_TexCoord[0].x) * 2.0;\n"
       "  float y = gl_TexCoord[0].y;\n"
       "  vec2 coordinate1 = vec2 (x + 0.5, y);\n"
       "  vec2 coordinate2 = vec2 (x + 1.5, y);\n"
       "  vec4 yuyv;\n"
-      "  yuyv.r = read_y4_raw_u8 (coordinate1);\n"
-      "  yuyv.g = read_u2_raw_u8 (gl_TexCoord[0].xy);\n"
-      "  yuyv.b = read_y4_raw_u8 (coordinate2);\n"
-      "  yuyv.a = read_v2_raw_u8 (gl_TexCoord[0].xy);\n"
-      "  write_raw_u8_vec4 (yuyv);\n"
+      "  yuyv.r = read_y4_u8_raw (coordinate1);\n"
+      "  yuyv.g = read_u2_u8_raw (gl_TexCoord[0].xy);\n"
+      "  yuyv.b = read_y4_u8_raw (coordinate2);\n"
+      "  yuyv.a = read_v2_u8_raw (gl_TexCoord[0].xy);\n"
+      "  write_vec4_u8_raw (yuyv);\n"
       "}\n",
       SHADER_HEADER_INTEGER
-      SHADER_READ_RAW_U8_INTEGER ("texture1", "_y4")
-      SHADER_READ_RAW_U8_INTEGER ("texture2", "_u2")
-      SHADER_READ_RAW_U8_INTEGER ("texture3", "_v2")
-      SHADER_WRITE_RAW_U8_VEC4_INTEGER
+      SHADER_READ_U8_RAW_INTEGER ("texture1", "_y4")
+      SHADER_READ_U8_RAW_INTEGER ("texture2", "_u2")
+      SHADER_READ_U8_RAW_INTEGER ("texture3", "_v2")
+      SHADER_WRITE_VEC4_U8_RAW_INTEGER
       "void main (void) {\n"
       "  float x = floor (gl_TexCoord[0].x) * 2.0;\n"
       "  float y = gl_TexCoord[0].y;\n"
       "  vec2 coordinate1 = vec2 (x + 0.5, y);\n"
       "  vec2 coordinate2 = vec2 (x + 1.5, y);\n"
       "  uvec4 yuyv;\n"
-      "  yuyv.r = read_y4_raw_u8 (coordinate1);\n"
-      "  yuyv.g = read_u2_raw_u8 (gl_TexCoord[0].xy);\n"
-      "  yuyv.b = read_y4_raw_u8 (coordinate2);\n"
-      "  yuyv.a = read_v2_raw_u8 (gl_TexCoord[0].xy);\n"
-      "  write_raw_u8_vec4 (yuyv);\n"
+      "  yuyv.r = read_y4_u8_raw (coordinate1);\n"
+      "  yuyv.g = read_u2_u8_raw (gl_TexCoord[0].xy);\n"
+      "  yuyv.b = read_y4_u8_raw (coordinate2);\n"
+      "  yuyv.a = read_v2_u8_raw (gl_TexCoord[0].xy);\n"
+      "  write_vec4_u8_raw (yuyv);\n"
       "}\n" },
   { SCHRO_OPENGL_SHADER_CONVERT_UYVY_U8_422,
       "convert_uyvy_u8_422/normal",
       SHADER_HEADER
-      SHADER_READ_RAW_U8 ("texture1", "_y4")
-      SHADER_READ_RAW_U8 ("texture2", "_u2")
-      SHADER_READ_RAW_U8 ("texture3", "_v2")
-      SHADER_WRITE_RAW_U8_VEC4
+      SHADER_READ_U8_RAW ("texture1", "_y4")
+      SHADER_READ_U8_RAW ("texture2", "_u2")
+      SHADER_READ_U8_RAW ("texture3", "_v2")
+      SHADER_WRITE_VEC4_U8_RAW
       "void main (void) {\n"
       "  vec4 uyvy;\n"
       "  float x = floor (gl_TexCoord[0].x) * 2.0;\n"
       "  float y = gl_TexCoord[0].y;\n"
       "  vec2 coordinate1 = vec2 (x + 0.5, y);\n"
       "  vec2 coordinate2 = vec2 (x + 1.5, y);\n"
-      "  uyvy.r = read_u2_raw_u8 (gl_TexCoord[0].xy);\n"
-      "  uyvy.g = read_y4_raw_u8 (coordinate1);\n"
-      "  uyvy.b = read_v2_raw_u8 (gl_TexCoord[0].xy);\n"
-      "  uyvy.a = read_y4_raw_u8 (coordinate2);\n"
-      "  write_raw_u8_vec4 (uyvy);\n"
+      "  uyvy.r = read_u2_u8_raw (gl_TexCoord[0].xy);\n"
+      "  uyvy.g = read_y4_u8_raw (coordinate1);\n"
+      "  uyvy.b = read_v2_u8_raw (gl_TexCoord[0].xy);\n"
+      "  uyvy.a = read_y4_u8_raw (coordinate2);\n"
+      "  write_vec4_u8_raw (uyvy);\n"
       "}\n",
       SHADER_HEADER_INTEGER
-      SHADER_READ_RAW_U8_INTEGER ("texture1", "_y4")
-      SHADER_READ_RAW_U8_INTEGER ("texture2", "_u2")
-      SHADER_READ_RAW_U8_INTEGER ("texture3", "_v2")
-      SHADER_WRITE_RAW_U8_VEC4_INTEGER
+      SHADER_READ_U8_RAW_INTEGER ("texture1", "_y4")
+      SHADER_READ_U8_RAW_INTEGER ("texture2", "_u2")
+      SHADER_READ_U8_RAW_INTEGER ("texture3", "_v2")
+      SHADER_WRITE_VEC4_U8_RAW_INTEGER
       "void main (void) {\n"
       "  uvec4 uyvy;\n"
       "  float x = floor (gl_TexCoord[0].x) * 2.0;\n"
       "  float y = gl_TexCoord[0].y;\n"
       "  vec2 coordinate1 = vec2 (x + 0.5, y);\n"
       "  vec2 coordinate2 = vec2 (x + 1.5, y);\n"
-      "  uyvy.r = read_u2_raw_u8 (gl_TexCoord[0].xy);\n"
-      "  uyvy.g = read_y4_raw_u8 (coordinate1);\n"
-      "  uyvy.b = read_v2_raw_u8 (gl_TexCoord[0].xy);\n"
-      "  uyvy.a = read_y4_raw_u8 (coordinate2);\n"
-      "  write_raw_u8_vec4 (uyvy);\n"
+      "  uyvy.r = read_u2_u8_raw (gl_TexCoord[0].xy);\n"
+      "  uyvy.g = read_y4_u8_raw (coordinate1);\n"
+      "  uyvy.b = read_v2_u8_raw (gl_TexCoord[0].xy);\n"
+      "  uyvy.a = read_y4_u8_raw (coordinate2);\n"
+      "  write_vec4_u8_raw (uyvy);\n"
       "}\n" },
   { SCHRO_OPENGL_SHADER_CONVERT_AYUV_U8_444,
       "convert_ayuv_u8_444/normal",
       SHADER_HEADER
-      SHADER_READ_U8 ("texture1", "_y4")
-      SHADER_READ_U8 ("texture2", "_u4")
-      SHADER_READ_U8 ("texture3", "_v4")
-      SHADER_WRITE_U8_VEC4
+      SHADER_READ_U8_RAW ("texture1", "_y4")
+      SHADER_READ_U8_RAW ("texture2", "_u4")
+      SHADER_READ_U8_RAW ("texture3", "_v4")
+      SHADER_CONVERT_RAW_U8
+      SHADER_WRITE_VEC4_U8_RAW
       "void main (void) {\n"
       "  vec4 ayuv;\n"
-      "  ayuv.r = float (255.0);\n"
-      "  ayuv.g = read_y4_u8 (gl_TexCoord[0].xy);\n"
-      "  ayuv.b = read_u4_u8 (gl_TexCoord[0].xy);\n"
-      "  ayuv.a = read_v4_u8 (gl_TexCoord[0].xy);\n"
-      "  write_u8_vec4 (ayuv);\n"
+      "  ayuv.r = convert_raw_u8 (float (255.0));\n"
+      "  ayuv.g = read_y4_u8_raw (gl_TexCoord[0].xy);\n"
+      "  ayuv.b = read_u4_u8_raw (gl_TexCoord[0].xy);\n"
+      "  ayuv.a = read_v4_u8_raw (gl_TexCoord[0].xy);\n"
+      "  write_vec4_u8_raw (ayuv);\n"
       "}\n",
       SHADER_HEADER_INTEGER
-      SHADER_READ_U8_INTEGER ("texture1", "_y4")
-      SHADER_READ_U8_INTEGER ("texture2", "_u4")
-      SHADER_READ_U8_INTEGER ("texture3", "_v4")
-      SHADER_WRITE_U8_VEC4_INTEGER
+      SHADER_READ_U8_RAW_INTEGER ("texture1", "_y4")
+      SHADER_READ_U8_RAW_INTEGER ("texture2", "_u4")
+      SHADER_READ_U8_RAW_INTEGER ("texture3", "_v4")
+      SHADER_CONVERT_RAW_U8_INTEGER
+      SHADER_WRITE_VEC4_U8_RAW_INTEGER
       "void main (void) {\n"
       "  uvec4 ayuv;\n"
-      "  ayuv.r = uint (255);\n"
-      "  ayuv.g = read_y4_u8 (gl_TexCoord[0].xy);\n"
-      "  ayuv.b = read_u4_u8 (gl_TexCoord[0].xy);\n"
-      "  ayuv.a = read_v4_u8 (gl_TexCoord[0].xy);\n"
-      "  write_u8_vec4 (ayuv);\n"
+      "  ayuv.r = convert_raw_u8 (uint (255));\n"
+      "  ayuv.g = read_y4_u8_raw (gl_TexCoord[0].xy);\n"
+      "  ayuv.b = read_u4_u8_raw (gl_TexCoord[0].xy);\n"
+      "  ayuv.a = read_v4_u8_raw (gl_TexCoord[0].xy);\n"
+      "  write_vec4_u8_raw (ayuv);\n"
       "}\n" },
   { SCHRO_OPENGL_SHADER_ADD_S16_U8,
       "add_s16_u8/normal",
@@ -918,50 +1038,45 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
   { SCHRO_OPENGL_SHADER_IIWT_S16_VERTICAL_DEINTERLEAVE_L,
       "iiwt_s16_vertical_deinterleave/l",
       SHADER_HEADER
-      SHADER_READ_S16 ("texture1", "_input")
-      SHADER_WRITE_S16
+      SHADER_COPY_S16 ("texture1", "_input")
       "void main (void) {\n"
       "  float x = gl_TexCoord[0].x;\n"
       "  float y = floor (gl_TexCoord[0].y);\n"
       "  vec2 coordinate = vec2 (x, y * 2.0 + 0.5);\n"
-      "  write_s16 (read_input_s16 (coordinate));\n"
+      "  copy_input_s16 (coordinate);\n"
       "}\n",
       SHADER_HEADER_INTEGER
-      SHADER_READ_S16_INTEGER ("texture1", "_input")
-      SHADER_WRITE_S16_INTEGER
+      SHADER_COPY_S16_INTEGER ("texture1", "_input")
       "void main (void) {\n"
       "  float x = gl_TexCoord[0].x;\n"
       "  float y = floor (gl_TexCoord[0].y);\n"
       "  vec2 coordinate = vec2 (x, y * 2.0 + 0.5);\n"
-      "  write_s16 (read_input_s16 (coordinate));\n"
+      "  copy_input_s16 (coordinate);\n"
       "}\n" },
   { SCHRO_OPENGL_SHADER_IIWT_S16_VERTICAL_DEINTERLEAVE_H,
       "iiwt_s16_vertical_deinterleave/h",
       SHADER_HEADER
-      SHADER_READ_S16 ("texture1", "_input")
-      SHADER_WRITE_S16
+      SHADER_COPY_S16 ("texture1", "_input")
       "uniform vec2 offset1;\n"
       "void main (void) {\n"
       "  float x = gl_TexCoord[0].x;\n"
       "  float y = floor (gl_TexCoord[0].y) - offset1.y;\n"
       "  vec2 coordinate = vec2 (x, y * 2.0 + 1.5);\n"
-      "  write_s16 (read_input_s16 (coordinate));\n"
+      "  copy_input_s16 (coordinate);\n"
       "}\n",
       SHADER_HEADER_INTEGER
-      SHADER_READ_S16_INTEGER ("texture1", "_input")
-      SHADER_WRITE_S16_INTEGER
+      SHADER_COPY_S16_INTEGER ("texture1", "_input")
       "uniform vec2 offset1;\n"
       "void main (void) {\n"
       "  float x = gl_TexCoord[0].x;\n"
       "  float y = floor (gl_TexCoord[0].y) - offset1.y;\n"
       "  vec2 coordinate = vec2 (x, y * 2.0 + 1.5);\n"
-      "  write_s16 (read_input_s16 (coordinate));\n"
+      "  copy_input_s16 (coordinate);\n"
       "}\n" },
   { SCHRO_OPENGL_SHADER_IIWT_S16_VERTICAL_INTERLEAVE,
       "iiwt_s16_interleave/vertical",
       SHADER_HEADER
-      SHADER_READ_S16 ("texture1", "_input")
-      SHADER_WRITE_S16
+      SHADER_COPY_S16 ("texture1", "_input")
       "uniform vec2 offset1;\n"
       "void main (void) {\n"
       "  float x = gl_TexCoord[0].x;\n"
@@ -972,11 +1087,10 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
       "    y = floor (y / 2.0) + offset1.y;\n"
       "  }\n"
       "  vec2 coordinate = vec2 (x, y + 0.5);\n"
-      "  write_s16 (read_input_s16 (coordinate));\n"
+      "  copy_input_s16 (coordinate);\n"
       "}\n",
       SHADER_HEADER_INTEGER
-      SHADER_READ_S16_INTEGER ("texture1", "_input")
-      SHADER_WRITE_S16_INTEGER
+      SHADER_COPY_S16_INTEGER ("texture1", "_input")
       "uniform vec2 offset1;\n"
       "void main (void) {\n"
       "  float x = gl_TexCoord[0].x;\n"
@@ -987,13 +1101,12 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
       "    y = floor (y / 2.0) + offset1.y;\n"
       "  }\n"
       "  vec2 coordinate = vec2 (x, y + 0.5);\n"
-      "  write_s16 (read_input_s16 (coordinate));\n"
+      "  copy_input_s16 (coordinate);\n"
       "}\n" },
   { SCHRO_OPENGL_SHADER_IIWT_S16_HORIZONTAL_INTERLEAVE,
       "iiwt_s16_interleave/horizontal",
       SHADER_HEADER
-      SHADER_READ_S16 ("texture1", "_input")
-      SHADER_WRITE_S16
+      SHADER_COPY_S16 ("texture1", "_input")
       "uniform vec2 offset1;\n"
       "void main (void) {\n"
       "  float x = floor (gl_TexCoord[0].x);\n"
@@ -1004,11 +1117,10 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
       "    x = floor (x / 2.0) + offset1.x;\n"
       "  }\n"
       "  vec2 coordinate = vec2 (x + 0.5, y);\n"
-      "  write_s16 (read_input_s16 (coordinate));\n"
+      "  copy_input_s16 (coordinate);\n"
       "}\n",
       SHADER_HEADER_INTEGER
-      SHADER_READ_S16_INTEGER ("texture1", "_input")
-      SHADER_WRITE_S16_INTEGER
+      SHADER_COPY_S16_INTEGER ("texture1", "_input")
       "uniform vec2 offset1;\n"
       "void main (void) {\n"
       "  float x = floor (gl_TexCoord[0].x);\n"
@@ -1019,7 +1131,7 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
       "    x = floor (x / 2.0) + offset1.x;\n"
       "  }\n"
       "  vec2 coordinate = vec2 (x + 0.5, y);\n"
-      "  write_s16 (read_input_s16 (coordinate));\n"
+      "  copy_input_s16 (coordinate);\n"
       "}\n" },
   { SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_SHIFT,
       "iiwt_s16_filter_shift/normal",

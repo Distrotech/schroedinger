@@ -10,11 +10,14 @@
     "#extension GL_EXT_gpu_shader4 : require\n" \
     "#define uint unsigned int\n"
 
+
+
 #define SHADER_READ_U8(_texture, _postfix) \
     "uniform sampler2DRect "_texture";\n" \
     "float read"_postfix"_u8 (vec2 coordinate) {\n" \
     "  float fp = texture2DRect ("_texture", coordinate).r;\n" \
-    /* scale from FP [0..1] to real U8 [0..255] and apply proper rounding */ \
+    /* scale from FP range [0..1] to U8 [0..255] range and apply proper
+       rounding */ \
     "  return floor (fp * 255.0 + 0.5);\n" \
     "}\n"
 
@@ -24,47 +27,50 @@
     "  return texture2DRect ("_texture", coordinate).a;\n" \
     "}\n"
 
-#define SHADER_READ_RAW_U8(_texture, _postfix) \
+#define SHADER_READ_U8_RAW(_texture, _postfix) \
     "uniform sampler2DRect "_texture";\n" \
-    "float read"_postfix"_raw_u8 (vec2 coordinate) {\n" \
+    "float read"_postfix"_u8_raw (vec2 coordinate) {\n" \
     "  return texture2DRect ("_texture", coordinate).r;\n" \
     "}\n"
 
-#define SHADER_READ_RAW_U8_INTEGER(_texture, _postfix) \
+#define SHADER_READ_U8_RAW_INTEGER(_texture, _postfix) \
     "uniform usampler2DRect "_texture";\n" \
-    "uint read"_postfix"_raw_u8 (vec2 coordinate) {\n" \
+    "uint read"_postfix"_u8_raw (vec2 coordinate) {\n" \
     "  return texture2DRect ("_texture", coordinate).a;\n" \
     "}\n"
 
-#define SHADER_READ_U8_VEC4(_texture, _postfix) \
+#define SHADER_READ_VEC4_U8(_texture, _postfix) \
     "uniform sampler2DRect "_texture";\n" \
-    "vec4 read"_postfix"_u8_vec4 (vec2 coordinate) {\n" \
+    "vec4 read"_postfix"_vec4_u8 (vec2 coordinate) {\n" \
     "  vec4 fp = texture2DRect ("_texture", coordinate);\n" \
-    /* scale from FP [0..1] to real U8 [0..255] and apply proper rounding */ \
+    /* scale from FP range [0..1] to U8 range [0..255] and apply proper
+       rounding */ \
     "  return floor (fp * 255.0 + vec4 (0.5));\n" \
     "}\n"
 
-#define SHADER_READ_U8_VEC4_INTEGER(_texture, _postfix) \
+#define SHADER_READ_VEC4_U8_INTEGER(_texture, _postfix) \
     "uniform usampler2DRect "_texture";\n" \
-    "uvec4 read"_postfix"_u8_vec4 (vec2 coordinate) {\n" \
+    "uvec4 read"_postfix"_vec4_u8 (vec2 coordinate) {\n" \
     "  return texture2DRect ("_texture", coordinate);\n" \
     "}\n"
 
-#define SHADER_READ_RAW_U8_VEC4(_texture, _postfix) \
+#define SHADER_READ_VEC4_U8_RAW(_texture, _postfix) \
     "uniform sampler2DRect "_texture";\n" \
-    "vec4 read"_postfix"_u8_raw_vec4 (vec2 coordinate) {\n" \
+    "vec4 read"_postfix"_vec4_u8_raw (vec2 coordinate) {\n" \
     "  return texture2DRect ("_texture", coordinate);\n" \
     "}\n"
 
-#define SHADER_READ_RAW_U8_VEC4_INTEGER(_texture, _postfix) \
+#define SHADER_READ_VEC4_U8_RAW_INTEGER(_texture, _postfix) \
     "uniform usampler2DRect "_texture";\n" \
-    "uvec4 read"_postfix"_raw_u8_vec4 (vec2 coordinate) {\n" \
+    "uvec4 read"_postfix"_vec4_u8_raw (vec2 coordinate) {\n" \
     "  return texture2DRect ("_texture", coordinate);\n" \
     "}\n"
+
+
 
 #define SHADER_WRITE_U8 \
     "void write_u8 (float u8) {\n" \
-    /* scale from real U8 [0..255] to FP [0..1] */ \
+    /* scale from U8 range [0..255] to FP range [0..1] */ \
     "  gl_FragColor = vec4 (u8 / 255.0);\n" \
     "}\n"
 
@@ -74,70 +80,152 @@
     "  fragcolor_u8 = uvec4 (u8);\n" \
     "}\n"
 
-#define SHADER_WRITE_RAW_U8 \
-    "void write_raw_u8 (float u8) {\n" \
+#define SHADER_WRITE_U8_RAW \
+    "void write_u8_raw (float u8) {\n" \
     "  gl_FragColor = vec4 (u8);\n" \
     "}\n"
 
-#define SHADER_WRITE_RAW_U8_INTEGER \
+#define SHADER_WRITE_U8_RAW_INTEGER \
     "varying out uvec4 fragcolor_u8;\n" \
-    "void write_raw_u8 (uint u8) {\n" \
+    "void write_u8_raw (uint u8) {\n" \
     "  fragcolor_u8 = uvec4 (u8);\n" \
     "}\n"
 
-#define SHADER_WRITE_U8_VEC4 \
-    "void write_u8_vec4 (vec4 u8) {\n" \
-    /* scale from real U8 [0..255] to FP [0..1] */ \
+#define SHADER_WRITE_VEC4_U8 \
+    "void write_vec4_u8 (vec4 u8) {\n" \
+    /* scale from U8 range [0..255] to FP range [0..1] */ \
     "  gl_FragColor = u8 / 255.0;\n" \
     "}\n"
 
-#define SHADER_WRITE_U8_VEC4_INTEGER \
+#define SHADER_WRITE_VEC4_U8_INTEGER \
     "varying out uvec4 fragcolor_u8;\n" \
-    "void write_u8_vec4 (uvec4 u8) {\n" \
+    "void write_vec4_u8 (uvec4 u8) {\n" \
     "  fragcolor_u8 = u8;\n" \
     "}\n"
 
-#define SHADER_WRITE_RAW_U8_VEC4 \
-    "void write_raw_u8_vec4 (vec4 u8) {\n" \
+#define SHADER_WRITE_VEC4_U8_RAW \
+    "void write_vec4_u8_raw (vec4 u8) {\n" \
     "  gl_FragColor = u8;\n" \
     "}\n"
 
-#define SHADER_WRITE_RAW_U8_VEC4_INTEGER \
+#define SHADER_WRITE_VEC4_U8_RAW_INTEGER \
     "varying out uvec4 fragcolor_u8;\n" \
-    "void write_raw_u8_vec4 (uvec4 u8) {\n" \
+    "void write_vec4_u8_raw (uvec4 u8) {\n" \
     "  fragcolor_u8 = u8;\n" \
     "}\n"
+
+
 
 #define SHADER_READ_S16(_texture, _postfix) \
     "uniform sampler2DRect "_texture";\n" \
     "float read"_postfix"_s16 (vec2 coordinate) {\n" \
+    "  float fp = texture2DRect ("_texture", coordinate).r;\n" \
     /* scale and bias from FP range [0..1] to S16 range [-32768..32767] */ \
-    "  return floor (texture2DRect ("_texture", coordinate).r\n" \
-    "      * 65535.0 + 0.5) - 32768.0;\n" \
+    "  return floor (fp * 65535.0 + 0.5) - 32768.0;\n" \
     "}\n"
 
 #define SHADER_READ_S16_INTEGER(_texture, _postfix) \
     "uniform isampler2DRect "_texture";\n" \
     "int read"_postfix"_s16 (vec2 coordinate) {\n" \
+    /* bias from U16 range [0..65535] to S16 range [-32768..32767] */ \
     "  return texture2DRect ("_texture", coordinate).a - 32768;\n" \
     "}\n"
 
+#define SHADER_READ_S16_RAW(_texture, _postfix) \
+    "uniform sampler2DRect "_texture";\n" \
+    "float read"_postfix"_s16_raw (vec2 coordinate) {\n" \
+    "  return texture2DRect ("_texture", coordinate).r;\n" \
+    "}\n"
+
+#define SHADER_READ_S16_RAW_INTEGER(_texture, _postfix) \
+    "uniform isampler2DRect "_texture";\n" \
+    "int read"_postfix"_s16_raw (vec2 coordinate) {\n" \
+    "  return texture2DRect ("_texture", coordinate).a;\n" \
+    "}\n"
+
+#define SHADER_READ_VEC4_S16(_texture, _postfix) \
+    "uniform sampler2DRect "_texture";\n" \
+    "vec4 read"_postfix"_vec4_s16 (vec2 coordinate) {\n" \
+    "  vec4 fp = texture2DRect ("_texture", coordinate);\n" \
+    /* scale and bias from FP range [0..1] to S16 range [-32768..32767] */ \
+    "  return floor (fp * 65535.0 + vec4 (0.5)) - vec4 (32768.0);\n" \
+    "}\n"
+
+#define SHADER_READ_VEC4_S16_INTEGER(_texture, _postfix) \
+    "uniform isampler2DRect "_texture";\n" \
+    "ivec4 read"_postfix"_vec4_s16 (vec2 coordinate) {\n" \
+    /* bias from U16 range [0..65535] to S16 range [-32768..32767] */ \
+    "  return texture2DRect ("_texture", coordinate) - vec4 (32768.0);\n" \
+    "}\n"
+
+#define SHADER_READ_VEC4_S16_RAW(_texture, _postfix) \
+    "uniform sampler2DRect "_texture";\n" \
+    "vec4 read"_postfix"_vec4_s16_raw (vec2 coordinate) {\n" \
+    "  return texture2DRect ("_texture", coordinate);\n" \
+    "}\n"
+
+#define SHADER_READ_VEC4_S16_RAW_INTEGER(_texture, _postfix) \
+    "uniform isampler2DRect "_texture";\n" \
+    "ivec4 read"_postfix"_vec4_s16_raw (vec2 coordinate) {\n" \
+    "  return texture2DRect ("_texture", coordinate);\n" \
+    "}\n"
+
+
+
 #define SHADER_WRITE_S16 \
     "void write_s16 (float s16) {\n" \
-    /* scale and bias from S16 range [-32768..32767] to FP range [0..1] */ \
+    /* bias and scale from S16 range [-32768..32767] to FP range [0..1] */ \
     "  gl_FragColor = vec4 ((s16 + 32768.0) / 65535.0);\n" \
     "}\n"
 
 #define SHADER_WRITE_S16_INTEGER \
     "varying out ivec4 fragcolor_s16;\n" \
     "void write_s16 (int s16) {\n" \
+    /* bias from S16 range [-32768..32767] to U16 range [0..65535] */ \
     "  fragcolor_s16 = ivec4 (s16 + 32768);\n" \
     "}\n"
+
+#define SHADER_WRITE_S16_RAW \
+    "void write_s16_raw (float s16) {\n" \
+    "  gl_FragColor = vec4 (s16);\n" \
+    "}\n"
+
+#define SHADER_WRITE_S16_RAW_INTEGER \
+    "varying out ivec4 fragcolor_s16;\n" \
+    "void write_s16_raw (int s16) {\n" \
+    "  fragcolor_s16 = ivec4 (s16);\n" \
+    "}\n"
+
+#define SHADER_WRITE_VEC4_S16 \
+    "void write_vec4_s16 (vec4 s16) {\n" \
+    /* bias and scale from S16 range [-32768..32767] to FP range [0..1] */ \
+    "  gl_FragColor = (s16 + vec4 (32768.0)) / 65535.0;\n" \
+    "}\n"
+
+#define SHADER_WRITE_VEC4_S16_INTEGER \
+    "varying out ivec4 fragcolor_s16;\n" \
+    "void write_vec4_s16 (ivec4 s16) {\n" \
+    /* bias from S16 range [-32768..32767] to U16 range [0..65535] */ \
+    "  fragcolor_s16 = s16 + ivec4 (32768);\n" \
+    "}\n"
+
+#define SHADER_WRITE_VEC4_S16_RAW \
+    "void write_vec4_s16_raw (vec4 s16) {\n" \
+    "  gl_FragColor = s16;\n" \
+    "}\n"
+
+#define SHADER_WRITE_VEC4_S16_RAW_INTEGER \
+    "varying out ivec4 fragcolor_s16;\n" \
+    "void write_vec4_s16_raw (ivec4 s16) {\n" \
+    "  fragcolor_s16 = s16;\n" \
+    "}\n"
+
+
 
 #define SHADER_COPY_U8(_texture, _postfix) \
     "uniform sampler2DRect "_texture";\n" \
     "void copy"_postfix"_u8 (vec2 coordinate) {\n" \
-    "  gl_FragColor (texture2DRect ("_texture", coordinate);\n" \
+    "  gl_FragColor = texture2DRect ("_texture", coordinate);\n" \
     "}\n"
 
 #define SHADER_COPY_U8_INTEGER(_texture, _postfix) \
@@ -150,7 +238,7 @@
 #define SHADER_COPY_S16(_texture, _postfix) \
     "uniform sampler2DRect "_texture";\n" \
     "void copy"_postfix"_s16 (vec2 coordinate) {\n" \
-    "  gl_FragColor (texture2DRect ("_texture", coordinate);\n" \
+    "  gl_FragColor = texture2DRect ("_texture", coordinate);\n" \
     "}\n"
 
 #define SHADER_COPY_S16_INTEGER(_texture, _postfix) \
@@ -160,8 +248,12 @@
     "  fragcolor_s16 = texture2DRect ("_texture", coordinate);\n" \
     "}\n"
 
+
+
 #define SHADER_CAST_S16_U8 \
-    "#define cast_s16_u8(_value) (_value)\n"
+    "float cast_s16_u8 (float u8) {\n" \
+    "  return u8;\n" \
+    "}\n"
 
 #define SHADER_CAST_S16_U8_INTEGER \
     "int cast_s16_u8 (uint u8) {\n" \
@@ -169,19 +261,41 @@
     "}\n"
 
 #define SHADER_CAST_U8_S16 \
-    "const float cast_u8_s16_min   =  32767.0          / 65535.0;\n" \
-    "const float cast_u8_s16_max   = (32767.0 + 255.0) / 65535.0;\n" \
-    "const float cast_u8_s16_scale =    255.0          / 65535.0;\n" \
-    "const float cast_u8_s16_bias  = (32767.0 - 127.0) / 65535.0;\n" \
     "float cast_u8_s16 (float s16) {\n" \
-    "  return clamp (s16, cast_u8_s16_min, cast_u8_s16_max)\n" \
-    "      * cast_u8_s16_scale + cast_u8_s16_bias;\n" \
+    "  return clamp (s16, 0.0, 255.0);\n" \
     "}\n"
 
 #define SHADER_CAST_U8_S16_INTEGER \
     "uint cast_u8_s16 (int s16) {\n" \
     "  return uint (clamp (s16, 0, 255));\n" \
     "}\n"
+
+
+
+#define SHADER_CONVERT_RAW_U8 \
+    "float convert_raw_u8 (float u8) {\n" \
+    /* scale from U8 range [0..255] to FP range [0..1] */ \
+    "  return u8 / 255.0;\n" \
+    "}\n"
+
+#define SHADER_CONVERT_RAW_U8_INTEGER \
+    "uint convert_raw_u8 (uint u8) {\n" \
+    "  return u8;\n" \
+    "}\n"
+
+#define SHADER_CONVERT_RAW_S16 \
+    "float convert_raw_s16 (float s16) {\n" \
+    /* bias and scale from S16 range [-32768..32767] to FP range [0..1] */ \
+    "  return (s16 + 32768.0) / 65535.0;\n" \
+    "}\n"
+
+#define SHADER_CONVERT_RAW_S16_INTEGER \
+    "int convert_raw_s16 (int s16) {\n" \
+    /* bias from S16 range [-32768..32767] to U16 range [0..65535] */ \
+    "  return s16 + 32768;\n" \
+    "}\n"
+
+
 
 #define SHADER_DIVIDE_S16 \
     "float divide_s16 (float value, float divisor) {\n" \
@@ -205,6 +319,8 @@
 
 #endif
 
+
+
 #define SHADER_REF_WEIGHTING_S16 \
     "uniform float weight;\n" /* ref1_weight + ref2_weight */ \
     "uniform float addend;\n" /* 1 << (ref_weight_precision - 1) */ \
@@ -220,6 +336,8 @@
     "int ref_weighting_s16 (int value) {\n" \
     "  return divide_s16 (value * int (weight) + int (addend), int (divisor));\n" \
     "}\n"
+
+
 
 struct ShaderCode {
   int index;

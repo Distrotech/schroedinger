@@ -26,19 +26,10 @@ shader convert: ################################################################
     s16_s16 SCHRO_OPENGL_SHADER_CONVERT_S16_S16
 
   textures:
-    u8_s16:
+    u8_s16, s16_s16:
       s16 input
-    s16_u8:
+    u8_u8, s16_u8:
       u8 input
-    u8_u8:
-      u8 input
-    s16_s16:
-      s16 input
-# FIXME: support multiple versions per line
-#    u8_s16, s16_s16:
-#      s16 input
-#    u8_u8, s16_u8:
-#      u8 input
 
   func void main (void):
     u8_s16:
@@ -68,20 +59,17 @@ shader convert_u8_yuyv: ########################################################
       float y = gl_TexCoord[0].y
       # shift x coordinate from texel edge n.0 to texel center n.5
       vec2 coordinate = vec2 (floor (x) + 0.5, y)
-      var4_u8 yuyv = read_yuyv_raw_u8_vec4 (coordinate)
+      var4_u8 yuyv = read_yuyv_vec4_u8_raw (coordinate)
       if fract (x) < 0.25:
-        write_raw_u8 (yuyv.r)
+        write_u8_raw (yuyv.r)
       else:
-        write_raw_u8 (yuyv.b)
-# FIXME: support multiple versions per line
-#    u2, v2:
-#      var4_u8 yuyv = read_yuyv_raw_u8_vec4 (gl_TexCoord[0].xy)
+        write_u8_raw (yuyv.b)
+    u2, v2:
+      var4_u8 yuyv = read_yuyv_vec4_u8_raw (gl_TexCoord[0].xy)
     u2:
-      var4_u8 yuyv = read_yuyv_raw_u8_vec4 (gl_TexCoord[0].xy)
-      write_raw_u8 (yuyv.g)
+      write_u8_raw (yuyv.g)
     v2:
-      var4_u8 yuyv = read_yuyv_raw_u8_vec4 (gl_TexCoord[0].xy)
-      write_raw_u8 (yuyv.a)
+      write_u8_raw (yuyv.a)
 
 
 
@@ -101,20 +89,17 @@ shader convert_u8_uyvy: ########################################################
       float y = gl_TexCoord[0].y
       # shift x coordinate from texel edge n.0 to texel center n.5
       vec2 coordinate = vec2 (floor (x) + 0.5, y)
-      var4_u8 uyvy = read_uyvy_raw_u8_vec4 (coordinate)
+      var4_u8 uyvy = read_uyvy_vec4_u8_raw (coordinate)
       if fract (x) < 0.25:
-        write_raw_u8 (uyvy.g)
+        write_u8_raw (uyvy.g)
       else:
-        write_raw_u8 (uyvy.a)
-# FIXME: support multiple versions per line
-#    u2, v2:
-#      var4_u8 uyvy = read_uyvy_raw_u8_vec4 (gl_TexCoord[0].xy)
+        write_u8_raw (uyvy.a)
+    u2, v2:
+      var4_u8 uyvy = read_uyvy_vec4_u8_raw (gl_TexCoord[0].xy)
     u2:
-      var4_u8 uyvy = read_uyvy_raw_u8_vec4 (gl_TexCoord[0].xy)
-      write_raw_u8 (uyvy.r)
+      write_u8_raw (uyvy.r)
     v2:
-      var4_u8 uyvy = read_uyvy_raw_u8_vec4 (gl_TexCoord[0].xy)
-      write_raw_u8 (uyvy.b)
+      write_u8_raw (uyvy.b)
 
 
 
@@ -128,13 +113,13 @@ shader convert_u8_ayuv: ########################################################
     u8 ayuv
 
   func void main (void):
-    var4_u8 ayuv = read_ayuv_raw_u8_vec4 (gl_TexCoord[0].xy)
+    var4_u8 ayuv = read_ayuv_vec4_u8_raw (gl_TexCoord[0].xy)
     y4:
-      write_raw_u8 (ayuv.g)
+      write_u8_raw (ayuv.g)
     u4:
-      write_raw_u8 (ayuv.b)
+      write_u8_raw (ayuv.b)
     v4:
-      write_raw_u8 (ayuv.a)
+      write_u8_raw (ayuv.a)
 
 
 
@@ -155,11 +140,11 @@ shader convert_yuyv_u8_422: ####################################################
     vec2 coordinate1 = vec2 (x + 0.5, y)
     vec2 coordinate2 = vec2 (x + 1.5, y)
     var4_u8 yuyv
-    yuyv.r = read_y4_raw_u8 (coordinate1)
-    yuyv.g = read_u2_raw_u8 (gl_TexCoord[0].xy)
-    yuyv.b = read_y4_raw_u8 (coordinate2)
-    yuyv.a = read_v2_raw_u8 (gl_TexCoord[0].xy)
-    write_raw_u8_vec4 (yuyv)
+    yuyv.r = read_y4_u8_raw (coordinate1)
+    yuyv.g = read_u2_u8_raw (gl_TexCoord[0].xy)
+    yuyv.b = read_y4_u8_raw (coordinate2)
+    yuyv.a = read_v2_u8_raw (gl_TexCoord[0].xy)
+    write_vec4_u8_raw (yuyv)
 
 
 
@@ -181,11 +166,11 @@ shader convert_uyvy_u8_422: ####################################################
     # shift x coordinate from texel edge n.0 to texel center n.5
     vec2 coordinate1 = vec2 (x + 0.5, y)
     vec2 coordinate2 = vec2 (x + 1.5, y)
-    uyvy.r = read_u2_raw_u8 (gl_TexCoord[0].xy)
-    uyvy.g = read_y4_raw_u8 (coordinate1)
-    uyvy.b = read_v2_raw_u8 (gl_TexCoord[0].xy)
-    uyvy.a = read_y4_raw_u8 (coordinate2)
-    write_raw_u8_vec4 (uyvy)
+    uyvy.r = read_u2_u8_raw (gl_TexCoord[0].xy)
+    uyvy.g = read_y4_u8_raw (coordinate1)
+    uyvy.b = read_v2_u8_raw (gl_TexCoord[0].xy)
+    uyvy.a = read_y4_u8_raw (coordinate2)
+    write_vec4_u8_raw (uyvy)
 
 
 
@@ -200,22 +185,11 @@ shader convert_ayuv_u8_444: ####################################################
 
   func void main (void):
     var4_u8 ayuv
-# FIXME: add support for convert_raw_u8 to convert from u8 to raw format
-#    ayuv.r = convert_raw_u8 (255)
-    ayuv.r = var_u8 (255)
-    ayuv.g = read_y4_u8 (gl_TexCoord[0].xy)
-    ayuv.b = read_u4_u8 (gl_TexCoord[0].xy)
-    ayuv.a = read_v4_u8 (gl_TexCoord[0].xy)
-    write_u8_vec4 (ayuv)
-# FIXME: or add support float/integer labels and nesting
-#    float:
-#      ayuv.r = 1.0
-#    integer:
-#      ayuv.r = 255
-#    ayuv.g = read_y4_raw_u8 (gl_TexCoord[0].xy)
-#    ayuv.b = read_u4_raw_u8 (gl_TexCoord[0].xy)
-#    ayuv.a = read_v4_raw_u8 (gl_TexCoord[0].xy)
-#    write_raw_u8_vec4 (ayuv)
+    ayuv.r = convert_raw_u8 (var_u8 (255))
+    ayuv.g = read_y4_u8_raw (gl_TexCoord[0].xy)
+    ayuv.b = read_u4_u8_raw (gl_TexCoord[0].xy)
+    ayuv.a = read_v4_u8_raw (gl_TexCoord[0].xy)
+    write_vec4_u8_raw (ayuv)
 
 
 
@@ -535,7 +509,7 @@ shader iiwt_s16_vertical_deinterleave: #########################################
       vec2 coordinate = vec2 (x, y * 2.0 + 0.5)
     h:
       vec2 coordinate = vec2 (x, y * 2.0 + 1.5)
-    write_s16 (read_input_s16 (coordinate)) # FIXME: optimize the plain copy case
+    copy_input_s16 (coordinate)
 
 
 
@@ -573,7 +547,7 @@ shader iiwt_s16_interleave: ####################################################
         x = floor (x / 2.0) + offset1.x
       # shift y coordinate from texel edge n.0 to texel center n.5
       vec2 coordinate = vec2 (x + 0.5, y)
-    write_s16 (read_input_s16 (coordinate)) # FIXME: optimize the plain copy case
+    copy_input_s16 (coordinate)
 
 
 

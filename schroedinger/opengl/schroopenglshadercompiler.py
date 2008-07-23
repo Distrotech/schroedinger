@@ -11,12 +11,44 @@ def error (message):
 
 
 
-class Line:
+def intersection (a, b):
+  c = []
+
+  for item in a:
+    if item in b:
+      c += [item]
+
+  return c
+
+
+
+class Item:
+  def __init__ (self):
+    self.versions = ["default"]
+
+  def add_versions (self, versions):
+    if "default" in self.versions:
+      self.versions.remove ("default")
+
+    self.versions += versions
+
+  def has_version (self, versions):
+    #for version in self.versions:
+    #  if version in versions:
+    #    return True
+
+    #return False
+    return len (intersection (versions, self.versions)) > 0
+
+
+
+class Line (Item):
   def __init__ (self, number, string):
+    Item.__init__(self)
+
     self.number = number
     self.level = 0
     self.content = ""
-    self.version = "default"
     
     match = re.search ("^([ ]*)([^ ].*)$", string)
 
@@ -36,8 +68,8 @@ class Line:
       string += "  " 
       level = level - 1
 
-    string += "(Line: " + repr (self.level) + ", " + repr (self.content) \
-        + ", " + repr (self.version) + ")"
+    string += "(Line: " + repr (self.number) + ", " + repr (self.level) + ", " \
+        + repr (self.content) + ", " + repr (self.versions) + ")"
 
     return string
 
@@ -45,12 +77,12 @@ class Line:
     self.level = self.level - 1
 
 
-
-class Block:
+class Block (Item):
   def __init__ (self):
+    Item.__init__(self)
+
     self.header = None
     self.children = []
-    self.version = "default"
 
   def __repr__ (self):
     string = ""
@@ -60,7 +92,7 @@ class Block:
       string += "  " 
       level = level - 1
       
-    string += "(Block: " + repr (self.version) + " " \
+    string += "(Block: " + repr (self.versions) + " " \
         + repr (self.header).lstrip () + "\n"
 
     for child in self.children:
@@ -110,21 +142,34 @@ class Shader:
     self.texture_order = []
     self.functions = []
     self.used_builtins = []
-    self.available_builtins = { "write_u8" : "SHADER_WRITE_U8", \
-        "write_raw_u8" : "SHADER_WRITE_RAW_U8", \
-        "write_u8_vec4" : "SHADER_WRITE_U8_VEC4", \
-        "write_raw_u8_vec4" : "SHADER_WRITE_RAW_U8_VEC4", \
-        "write_s16" : "SHADER_WRITE_S16", \
-        "divide_s16" : "SHADER_DIVIDE_S16", \
-        "cast_s16_u8" : "SHADER_CAST_S16_U8", \
-        "cast_u8_s16" : "SHADER_CAST_U8_S16", \
-        "ref_weighting_s16" : "SHADER_REF_WEIGHTING_S16" }
+    self.available_builtins = { \
+        "write_u8"           : "SHADER_WRITE_U8", \
+        "write_u8_raw"       : "SHADER_WRITE_U8_RAW", \
+        "write_vec4_u8"      : "SHADER_WRITE_VEC4_U8", \
+        "write_vec4_u8_raw"  : "SHADER_WRITE_VEC4_U8_RAW", \
+        "write_s16"          : "SHADER_WRITE_S16", \
+        "write_s16_raw"      : "SHADER_WRITE_S16_RAW", \
+        "write_vec4_s16"     : "SHADER_WRITE_VEC4_S16", \
+        "write_vec4_s16_raw" : "SHADER_WRITE_VEC4_S16_RAW", \
+        "divide_s16"         : "SHADER_DIVIDE_S16", \
+        "cast_s16_u8"        : "SHADER_CAST_S16_U8", \
+        "cast_u8_s16"        : "SHADER_CAST_U8_S16", \
+        "convert_raw_u8"     : "SHADER_CONVERT_RAW_U8", \
+        "convert_raw_s16"    : "SHADER_CONVERT_RAW_S16", \
+        "ref_weighting_s16"  : "SHADER_REF_WEIGHTING_S16" }
     self.builtin_dependencies = { "ref_weighting_s16" : "divide_s16" }
     self.read_calls = {} # keyed by texture key
-    self.type_mappings = { "integer" : { "var_u8" : "uint", "var_s16" : "int",
-        "var4_u8" : "uvec4", "var4_s16" : "ivec4" }, "float" : \
-        { "var_u8" : "float", "var_s16" : "float", "var4_u8" : "vec4", \
-        "var4_s16" : "vec4" } }
+    self.type_mappings = { \
+        "integer" : { \
+          "var_u8"   : "uint", \
+          "var_s16"  : "int", \
+          "var4_u8"  : "uvec4", \
+          "var4_s16" : "ivec4" }, \
+        "float" : { \
+          "var_u8"   : "float", \
+          "var_s16"  : "float", \
+          "var4_u8"  : "vec4", \
+          "var4_s16" : "vec4" } }
 
   def __str__ (self):
     string = "  { " + self.define + ",\n      \"" + self.bunch + "/" \
@@ -180,7 +225,7 @@ class Shader:
       self.used_builtins.sort ()
 
   def parse_uniform (self, line):
-    if line.version in ["default", self.version]:
+    if line.has_version (["default", self.version]):
       match = re.search ("^[a-z0-9]+[ ]+[a-z0-9_]+$", line.content)
 
       if match is None:
@@ -190,7 +235,7 @@ class Shader:
       self.uniforms += [line]
 
   def parse_texture (self, line):
-    if line.version in ["default", self.version]:
+    if line.has_version (["default", self.version]):
       match = re.search ("^(u8|s16)[ ]+([a-z0-9_]+)$", line.content)
 
       if match == None:
@@ -205,14 +250,14 @@ class Shader:
   def parse_builtins (self, block):
     for child in block.children:
       if isinstance (child, Line):
-        if child.version in ["default", self.version]:
+        if child.has_version (["default", self.version]):
           for builtin in self.available_builtins.keys ():
             if re.search ("([^a-zA-Z0-9_]|^)" + builtin + "([^a-zA-Z0-9_]|$)", \
                 child.content) is not None and \
                 builtin not in self.used_builtins:
               self.used_builtins += [builtin]
       elif isinstance (child, Block):
-        if child.version in ["default", self.version]:
+        if child.has_version (["default", self.version]):
           self.parse_builtins (child)
       else:
         error ("internal type error")
@@ -220,20 +265,17 @@ class Shader:
   def parse_read_calls (self, block):
     for child in block.children:
       if isinstance (child, Line):
-        if child.version in ["default", self.version]:
+        if child.has_version (["default", self.version]):
           string = child.content
           read_call_re = re.compile ("(?:[^a-zA-Z0-9_]|^)" \
-              "read_([a-z0-9_]+?)(_raw|)_(u8|s16)(_vec4|)(?:[^a-zA-Z0-9_]|$)")
+              "read_([a-z0-9_]+?)(_vec4|)_(u8|s16)(_raw|)(?:[^a-zA-Z0-9_]|$)")
           match = read_call_re.search (string)
 
           while match is not None:
             define = "SHADER_READ"
 
-            if match.group (2) == "_raw":
-              if match.group (3) == "s16":
-                error ("reading raw S16 is not implemneted yet")
-              else:
-                define += "_RAW"
+            if match.group (2) == "_vec4":
+              define += "_VEC4"
 
             if match.group (3) == "u8":
               define += "_U8"
@@ -242,16 +284,14 @@ class Shader:
             else:
               error ("internal match error")
 
-            if match.group (4) == "_vec4":
-              if match.group (3) == "s16":
-                error ("reading S16 as vec4 is not implemneted yet")
-              else:
-                define += "_VEC4"
+            if match.group (4) == "_raw":
+              define += "_RAW"
 
             key = match.group (3) + " " + match.group (1)
 
             if key not in self.textures.keys ():
-              error ("can't read from undefined texture '" + key + "'")
+              error ("can't read from undefined texture '" + key \
+                  + "' at line " + repr (child.number))
 
             if key not in self.read_calls.keys ():
               self.read_calls[key] = (define, match.group (3), \
@@ -278,7 +318,8 @@ class Shader:
             key = match.group (2) + " " + match.group (1)
 
             if key not in self.textures.keys ():
-              error ("can't copy from undefined texture '" + key + "'")
+              error ("can't copy from undefined texture '" + key \
+                  + "' at line " + repr (child.number))
 
             if key not in self.read_calls.keys ():
               self.read_calls[key] = (define, match.group (2), \
@@ -287,7 +328,7 @@ class Shader:
             string = string[match.span ()[1]:]
             match = copy_call_re.search (string)
       elif isinstance (child, Block):
-        if child.version in ["default", self.version]:
+        if child.has_version (["default", self.version]):
           self.parse_read_calls (child)
       else:
         error ("internal type error")
@@ -304,7 +345,7 @@ class Shader:
 
   def replace_numbers (self, string, type):
     if type == "float":
-      string = re.sub ("((?:[+\\-*/=,( ]|^)[0-9]+)([^0-9\\.]|$)", "\\1.0\\2", \
+      string = re.sub ("((?:[+\\-*/=,( ]|^)[0-9]+)([^0-9u\\.]|$)", "\\1.0\\2", \
           string)
 
     return string
@@ -347,10 +388,10 @@ class Shader:
 
     for child in function.children:
       if isinstance (child, Line):
-        if child.version in ["default", self.version]:
+        if child.has_version (["default", self.version]):
           string += self.print_function_line (child, type, "  ")
       elif isinstance (child, Block):
-        if child.version in ["default", self.version]:
+        if child.has_version (["default", self.version]):
           result = self.print_function_block (child, type, "  ")
 
           if result.startswith ("else "):
@@ -390,10 +431,10 @@ class Shader:
 
     for child in block.children:
       if isinstance (child, Line):
-        if child.version in ["default", self.version]:
+        if child.has_version (["default", self.version]):
           string += self.print_function_line (child, type, indent + "  ")
       elif isinstance (child, Block):
-        if child.version in ["default", self.version]:
+        if child.has_version (["default", self.version]):
           result = self.print_function_block (child, type, indent + "  ")
 
           if result.startswith ("else "):
@@ -433,7 +474,7 @@ class ShaderBunch:
 
     # parse versions
     if not isinstance (children[0], Block):
-      error ("expecting a block")
+      error ("expecting a 'versions:' block")
 
     if children[0].header.content != "versions:":
       error ("expecting 'versions:' as first block after " \
@@ -465,16 +506,23 @@ class ShaderBunch:
     version = match.group (1)
     define = match.group (2)
 
-    if version in ["default", "shader", "versions", "uniforms", "textures"] or \
-        version.startswith ("func "):
-      error ("version '" + version + "' is a reserved word [default, shader, " \
-          "versions, uniforms, textures, func]")
+    if self.contains_reserved_word ([version]):
+      error ("version '" + version + "' is a reserved word")
 
     if version in self.versions:
       error ("version '" + version + "' already defined")
 
     self.versions += [version]
     self.defines[version] = define
+
+  def contains_reserved_word (self, list):
+    for item in list:
+     if item in ["shader", "versions", "uniforms", "textures", "else"] or \
+         item.startswith ("func ") or item.startswith ("if ") or \
+         item.startswith ("elif "):
+       return True
+
+    return False
 
   def transform_versions (self, children):
     transformed = []
@@ -483,25 +531,38 @@ class ShaderBunch:
       if isinstance (child, Line):
         transformed += [child]
       elif isinstance (child, Block):
-        version = child.header.content[:-1]
-
-        if version in ["shader", "versions", "uniforms", "textures"] or \
-            version.startswith ("func ") or version.startswith ("if ") or \
-            version.startswith ("elif ") or version.startswith ("else"):
+        if self.contains_reserved_word ([child.header.content[:-1]]):
           child.children = self.transform_versions (child.children)
           transformed += [child]
-        elif version not in self.versions:
-          error ("version '" + version + "' is undefined")
         else:
-          for subchild in child.children:
-            if subchild.version != "default":
-              error ("nesting versions is not allowed at line " \
-                  + repr (child.number))
+          versions = []
+          version_re = re.compile ("^([a-z0-9_]+)[ ]*[,:][ ]*")
+          string = child.header.content
+          match = version_re.search (string)
 
-            subchild.decrease_level ()
-            subchild.version = version
+          while match is not None:
+            versions += [match.group (1)]
+            string = string[match.span ()[1]:]
+            match = version_re.search (string)
 
-          transformed += self.transform_versions (child.children)
+          if self.contains_reserved_word (versions):
+            if len (versions) > 1:
+              error ("versions " + repr (versions) + " contain a reserved word")
+            else:
+              child.children = self.transform_versions (child.children)
+              transformed += [child]
+          elif intersection (versions, self.versions) != versions:
+            error ("at least one versions " + repr (versions) + " is undefined")
+          else:
+            for subchild in child.children:
+              if subchild.versions != ["default"]:
+                error ("nesting versions is not allowed at line " \
+                    + repr (child.number))
+
+              subchild.decrease_level ()
+              subchild.add_versions (versions)
+
+            transformed += self.transform_versions (child.children)
       else:
         error ("internal type error")
 
