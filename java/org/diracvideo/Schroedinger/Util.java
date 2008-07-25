@@ -22,6 +22,18 @@ final class Util {
 	return clamp(v,l,h);
     }
 
+    public final static int median(int a[]) {
+	if(a[0] < a[1]) {
+	    if(a[1] < a[2]) return a[1];
+	    if(a[2] < a[0]) return a[0];
+	    return a[2];
+	} else {
+	    if(a[0] < a[2]) return a[0];
+	    if(a[2] < a[1]) return a[1];
+	    return a[2];
+	}
+    }
+
     public final static int mean(int ... numbers) {
 	int s = 0;
 	for(int i = 0; i < numbers.length; i++)

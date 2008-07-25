@@ -19,7 +19,7 @@ public class Wavelet {
      * for interleave, which interleaves four subbands so that it is ready
      * to be used for inverse(). The actual picture decoding sequence never
      * calles interleave() though.  **/
-    public static void inverse(short data[], int w, int depth) {
+    public void inverse(short data[], int w, int depth) {
 	/* data is assumed to be preinterleaved */
 	for(int s = (1 << (depth - 1)); s > 0; s >>= 1) {
 	    for(int x = 0; x < w; x += s) {
@@ -36,7 +36,7 @@ public class Wavelet {
 	}
     }
 
-    public static void inverse(Block block, int depth) {
+    public void inverse(Block block, int depth) {
 	inverse(block.d, block.s.width, depth);
     }
     /** synthesize:
@@ -47,7 +47,7 @@ public class Wavelet {
      * @param e   end
      *
      *  This method is public for testing purposes only. */
-    public static void synthesize(short d[], int s, int b, int e) {
+    public void synthesize(short d[], int s, int b, int e) {
 	for(int i = b; i < e; i += 2*s) {
 	    if(i - s < b) {
 		d[i] -= (d[i+s] + 1) >> 1;
@@ -77,11 +77,13 @@ public class Wavelet {
 	    d[i] += (9*d[i-s] + 9*d[i+s] - d[i-3*s] - d[i+3*s] + 8) >> 4;
 	}
     }
-    /**
-     * interleave interleaves four subbands.
+    /** interleave interleaves four subbands.
+     * 
      * @param ll array containing the subband data (like hl, lh, hh)
-     * @param width: the width of each subband **/
-    public static short[] interleave(short ll[], short hl[], 
+     * @param width: the width of each subband 
+     * @return the new subband, 4 times the size of each individual argument
+     **/
+    public short[] interleave(short ll[], short hl[], 
 				     short lh[], short hh[], int width) {
 	short o[] = new short[ll.length*4];
 	int height = ll.length / width;

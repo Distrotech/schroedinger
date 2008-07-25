@@ -204,6 +204,13 @@ class SubBand {
 
 
 class Parameters {
+    /* static array of wavelets */ 
+    private static Wavelet[] wavs = {
+	new Wavelet(),
+	new Wavelet(),
+	new Wavelet()
+    };
+    
     /* Wavelet transform parameters */
     public int transformDepth = 4, wavelet_index;
     public int codeblock_mode_index = 0;
@@ -281,6 +288,14 @@ class Parameters {
 	y_offset = (yblen_luma - ybsep_luma)/2;
     }
     
+    public Dimension getBlockDimension() {
+	return new Dimension(0,0);
+    }
+
+    public Wavelet getWavelet() {
+	return wavs[wavelet_index];
+    }
+
     public String toString() {
 	StringBuilder sb = new StringBuilder();
 	sb.append("\nParameters:\n");
@@ -436,6 +451,7 @@ public class Picture {
 
     private void parseTransformParameters(Unpack u) throws Exception {
 	par.wavelet_index = u.decodeUint();
+	wav = par.getWavelet();
 	par.transformDepth = u.decodeUint();
 	if(!par.is_lowdelay) {
 	    if(u.decodeBool()) {
@@ -508,23 +524,21 @@ public class Picture {
 		coeffs[c][3*i+2].decodeCoeffs(out);
 		coeffs[c][3*i+3].decodeCoeffs(out);
 	    } 
-	    Wavelet.inverse(frame[c], par.transformDepth);  
+	    wav.inverse(frame[c], par.transformDepth);  
 	}
     }
 
     private void decodeMotionCompensate() {
-	motion = new Motion();
+	motion = new Motion(par, refs);
+	motion.initialize(motion_buffers);
 	for(int y = 0; y < par.y_num_blocks; y += 4)
 	    for(int x = 0; x < par.x_num_blocks; x += 4)
-		decodeMacroBlock(x,y);
+		motion.decodeMacroBlock(x,y);
 	motion.render(frame[0]);
 	motion.render(frame[1]);
 	motion.render(frame[2]);
     }
 
-    private void decodeMacroBlock(int x, int y) {
-
-    }
 
     private void initializeFrames() {
 	frame = new Block[3];
