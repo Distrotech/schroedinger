@@ -120,8 +120,7 @@ schro_opengl_shader_check_status (GLhandleARB handle, GLenum status,
   glGetObjectParameterivARB (handle, GL_OBJECT_INFO_LOG_LENGTH_ARB, &length);
 
   if (length < 1) {
-    SCHRO_ERROR ("invalid infolog length %i", length);
-    return FALSE;
+    return result != 0;
   }
 
   infolog = schro_malloc0 (length * sizeof (char));
@@ -282,6 +281,8 @@ schro_opengl_shader_library_new (SchroOpenGL *opengl)
   shader_library->opengl = opengl;
 
   schro_opengl_lock_context (opengl);
+
+  schro_opengl_canvas_check_flags ();
 
   for (i = 0; i < SCHRO_OPENGL_SHADER_COUNT; ++i) {
     SCHRO_ASSERT (schro_opengl_shader_code_list[i].index == i);

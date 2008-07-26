@@ -253,6 +253,8 @@ schro_opengl_check_essential_extensions (SchroOpenGL *opengl)
     }
   }
 
+  schro_opengl_canvas_check_flags ();
+
   schro_opengl_unlock_context (opengl);
 
   return ok;
@@ -260,7 +262,9 @@ schro_opengl_check_essential_extensions (SchroOpenGL *opengl)
 
 void schro_opengl_init (void)
 {
+#if SCHRO_OPENGL_XLOCKDISPLAY
   XInitThreads ();
+#endif
 }
 
 SchroOpenGL *
@@ -309,9 +313,6 @@ schro_opengl_new (void)
 
   opengl->shader_library = schro_opengl_shader_library_new (opengl);
   opengl->resources = schro_opengl_resources_new (opengl);
-
-  schro_opengl_canvas_check_flags ();
-
   opengl->obmc_weight_canvas = schro_opengl_canvas_new (opengl,
       SCHRO_OPENGL_CANVAS_TYPE_SECONDARY, SCHRO_FRAME_FORMAT_S16_444, 64, 64);
 
@@ -390,13 +391,17 @@ schro_opengl_lock_context (SchroOpenGL *opengl)
   schro_mutex_lock (opengl->context_mutex);
 
   if (opengl->context_lock_count == 0) {
+#if SCHRO_OPENGL_XLOCKDISPLAY
     XLockDisplay (opengl->display);
+#endif
 
     if (!glXMakeCurrent (opengl->display, opengl->window, opengl->context)) {
       SCHRO_ERROR ("glXMakeCurrent failed");
     }
 
+#if SCHRO_OPENGL_XLOCKDISPLAY
     XUnlockDisplay (opengl->display);
+#endif
   }
 
   ++opengl->context_lock_count;
@@ -452,13 +457,17 @@ schro_opengl_unlock_context (SchroOpenGL *opengl)
       }
     }
 
+#if SCHRO_OPENGL_XLOCKDISPLAY
     XLockDisplay (opengl->display);
+#endif
 
     if (!glXMakeCurrent (opengl->display, None, NULL)) {
       SCHRO_ERROR ("glXMakeCurrent failed");
     }
 
+#if SCHRO_OPENGL_XLOCKDISPLAY
     XUnlockDisplay (opengl->display);
+#endif
   }
 
   schro_mutex_unlock (opengl->context_mutex);

@@ -362,7 +362,7 @@
     "uniform float ref_divisor;\n" /* 1 << ref_weight_precision */ \
     "float biref_weighting_s16 (float value1, float value2) {\n" \
     "  return divide_s16 (value1 * ref_weight1 + value2 * ref_weight2\n" \
-    "      + ref_addend, divisor);\n" \
+    "      + ref_addend, ref_divisor);\n" \
     "}\n"
 
 #define SHADER_BIREF_WEIGHTING_S16_INTEGER \
