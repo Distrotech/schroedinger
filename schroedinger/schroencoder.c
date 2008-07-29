@@ -1055,11 +1055,9 @@ run_stage (SchroEncoderFrame *frame, SchroEncoderFrameStateEnum state)
     case SCHRO_ENCODER_FRAME_STATE_ANALYSE:
       func = schro_encoder_analyse_picture;
       break;
-      /* Removed by Andrea
     case SCHRO_ENCODER_FRAME_STATE_PREDICT:
       func = schro_encoder_predict_picture;
       break;
-      */
     case SCHRO_ENCODER_FRAME_STATE_ENCODING:
       func = schro_encoder_encode_picture;
       break;
@@ -1072,13 +1070,15 @@ run_stage (SchroEncoderFrame *frame, SchroEncoderFrameStateEnum state)
     case SCHRO_ENCODER_FRAME_STATE_FULLPEL_ME:
       func = schro_encoder_fullpel_predict_picture;
       break;
+    case SCHRO_ENCODER_FRAME_STATE_MODE_DECISION:
+      func = schro_encoder_mode_decision;
+      break;
     default:
       SCHRO_ASSERT(0);
   }
   schro_async_run_locked (frame->encoder->async, func, frame);
 }
 
-#if 0
 /**
  * check_refs:
  * @frame: encoder frame
@@ -1102,7 +1102,6 @@ check_refs (SchroEncoderFrame *frame)
 
   return TRUE;
 }
-#endif
 
 static int
 schro_encoder_async_schedule (SchroEncoder *encoder, SchroExecDomain exec_domain)
@@ -1141,16 +1140,6 @@ schro_encoder_async_schedule (SchroEncoder *encoder, SchroExecDomain exec_domain
       break;
     }
   }
-  /* Added by Andrea - now we do fullpel ME */
-  for (i=0; encoder->frame_queue->n > i;++i) {
-    frame = encoder->frame_queue->elements[i].data;
-    if (frame->busy) continue;
-    todo = frame->needed_state & (~frame->state);
-    if (todo & SCHRO_ENCODER_FRAME_STATE_FULLPEL_ME) {
-      run_stage (frame, SCHRO_ENCODER_FRAME_STATE_FULLPEL_ME);
-      return TRUE;
-    }
-  }
 
   /* Reference pictures are higher priority, so we pass over the list
    * first for reference pictures, then for non-ref. */
@@ -1171,15 +1160,22 @@ schro_encoder_async_schedule (SchroEncoder *encoder, SchroExecDomain exec_domain
           frame->state |= SCHRO_ENCODER_FRAME_STATE_HAVE_PARAMS;
         }
       }
-      /* removed by Andrea - we want to split motion prediction in fullpel and
-       * subpel. We also want to separate MC from ME
-      if (todo & SCHRO_ENCODER_FRAME_STATE_PREDICT &&
-          frame->state & SCHRO_ENCODER_FRAME_STATE_HAVE_PARAMS) {
-        if (!check_refs(frame)) continue;
-        run_stage (frame, SCHRO_ENCODER_FRAME_STATE_PREDICT);
+
+      /* now we do fullpel ME */
+      if (todo & SCHRO_ENCODER_FRAME_STATE_FULLPEL_ME
+          && frame->state & SCHRO_ENCODER_FRAME_STATE_HAVE_PARAMS) {
+        run_stage (frame, SCHRO_ENCODER_FRAME_STATE_FULLPEL_ME);
         return TRUE;
       }
-      */
+
+      /* time for mode decision and superblock splitting (as well as DWT) */
+      if (todo & SCHRO_ENCODER_FRAME_STATE_MODE_DECISION
+          && frame->state & SCHRO_ENCODER_FRAME_STATE_FULLPEL_ME) {
+        if (!check_refs (frame)) continue;
+        run_stage (frame, SCHRO_ENCODER_FRAME_STATE_MODE_DECISION);
+        return TRUE;
+      }
+
     }
   }
 
@@ -1288,18 +1284,36 @@ schro_encoder_predict_picture (SchroEncoderFrame *frame)
   schro_encoder_render_picture (frame);
 }
 
-/* Added by Andrea - should perform fullpel ME without "rendering",
+/* should perform fullpel ME without "rendering",
  * ie without mode decision and motion compensation and DWT */
 void
 schro_encoder_fullpel_predict_picture (SchroEncoderFrame* frame)
 {
-  SCHRO_ASSERT (frame);
+  SCHRO_ASSERT (frame && frame->state & SCHRO_ENCODER_FRAME_STATE_HAVE_GOP);
   SCHRO_INFO ("fullpel predict picture %d", frame->frame_number);
 
   if (frame->params.num_refs > 0) {
     schro_encoder_motion_predict_only (frame);
   }
 }
+
+/* performs mode decision and superblock splitting
+ * finally it does DWT */
+void
+schro_encoder_mode_decision (SchroEncoderFrame* frame)
+{
+  SCHRO_ASSERT(frame && frame->state & SCHRO_ENCODER_FRAME_STATE_FULLPEL_ME);
+  SCHRO_INFO("mode decision and superblock splitting picture %d", frame->frame_number);
+
+  if (frame->params.num_refs > 0) {
+    schro_encoder_do_mode_decision (frame);
+ }
+
+  frame->tmpbuf = schro_malloc(sizeof(int16_t) *
+      (frame->encoder->video_format.width + 16));
+  schro_encoder_render_picture (frame);
+}
+
 
 void
 schro_encoder_render_picture (SchroEncoderFrame *frame)
@@ -2639,7 +2653,7 @@ schro_encoder_frame_new (SchroEncoder *encoder)
 
   encoder_frame = schro_malloc0 (sizeof(SchroEncoderFrame));
   encoder_frame->state = SCHRO_ENCODER_FRAME_STATE_NEW;
-  encoder_frame->needed_state = 0xfff;
+  encoder_frame->needed_state = 0xffff;
   encoder_frame->refcount = 1;
 
   frame_format = schro_params_get_frame_format (16,
@@ -2714,6 +2728,10 @@ schro_encoder_frame_unref (SchroEncoderFrame *frame)
 
     if (frame->tmpbuf) schro_free (frame->tmpbuf);
     schro_list_free (frame->inserted_buffers);
+
+    if (frame->me) {
+      schro_motionest_free (frame->me);
+    }
 
     schro_free (frame);
   }

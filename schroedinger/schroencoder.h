@@ -32,16 +32,17 @@ typedef enum {
   SCHRO_ENCODER_FRAME_STATE_ANALYSE = (1<<1),
   SCHRO_ENCODER_FRAME_STATE_HAVE_GOP = (1<<7),
   SCHRO_ENCODER_FRAME_STATE_HAVE_PARAMS = (1<<8),
-  SCHRO_ENCODER_FRAME_STATE_PREDICT = (1<<2), 
+  SCHRO_ENCODER_FRAME_STATE_PREDICT = (1<<2),
+  SCHRO_ENCODER_FRAME_STATE_FULLPEL_ME = (1<<12),
+  SCHRO_ENCODER_FRAME_STATE_SUBPEL_ME = (1<<13),
+  SCHRO_ENCODER_FRAME_STATE_MODE_DECISION = (1<<14),
   SCHRO_ENCODER_FRAME_STATE_HAVE_REFS = (1<<10),
   SCHRO_ENCODER_FRAME_STATE_HAVE_QUANTS = (1<<11),
   SCHRO_ENCODER_FRAME_STATE_ENCODING = (1<<3),
   SCHRO_ENCODER_FRAME_STATE_RECONSTRUCT = (1<<4),
   SCHRO_ENCODER_FRAME_STATE_POSTANALYSE = (1<<5),
   SCHRO_ENCODER_FRAME_STATE_DONE = (1<<6),
-  SCHRO_ENCODER_FRAME_STATE_FREE = (1<<9),
-  SCHRO_ENCODER_FRAME_STATE_FULLPEL_ME = (1<<12), /* Added by Andrea */
-  SCHRO_ENCODER_FRAME_STATE_SUBPEL_ME = (1<<13) /* Added by Andrea, includes mode decision */
+  SCHRO_ENCODER_FRAME_STATE_FREE = (1<<9)
 } SchroEncoderFrameStateEnum;
 #endif
 
@@ -73,6 +74,9 @@ typedef enum {
 #ifdef SCHRO_ENABLE_UNSTABLE_API
 typedef int (*SchroEngineIterateFunc) (SchroEncoder *encoder);
 
+/* Added by Andrea - forward declaration */
+struct _SchroMotionEst;
+
 struct _SchroEncoderFrame {
   /*< private >*/
   int refcount;
@@ -85,7 +89,7 @@ struct _SchroEncoderFrame {
 
   /* Bits telling the engine stages which stuff needs to happen */
   unsigned int need_downsampling;
-  unsigned int need_upsampling; /* Added by Andrea */
+  unsigned int need_upsampling;
   unsigned int need_filtering;
   unsigned int need_average_luma;
 
@@ -95,7 +99,7 @@ struct _SchroEncoderFrame {
   unsigned int have_histograms;
   unsigned int have_scene_change_score;
   unsigned int have_downsampling;
-  unsigned int have_upsampling; /* Added by Andrea */
+  unsigned int have_upsampling;
   unsigned int have_average_luma;
 
   /* other stuff */
@@ -161,9 +165,7 @@ struct _SchroEncoderFrame {
 
   SchroEncoderFrame *ref_frame[2];
 
-  /* Added by Andrea - I need to store all MVs after full-pel ME
-   * in here to allow me to split ME from mode decision */
-  SchroMotionField* mf[2];
+  struct _SchroMotionEst* me;
 
   SchroMotion *motion;
   SchroList *motion_field_list;
@@ -434,8 +436,9 @@ void schro_encoder_encode_subband_noarith (SchroEncoderFrame *frame, int compone
 
 void schro_encoder_analyse_picture (SchroEncoderFrame *frame);
 void schro_encoder_predict_picture (SchroEncoderFrame *frame);
-/* Added by Andrea */
+
 void schro_encoder_fullpel_predict_picture (SchroEncoderFrame* frame);
+void schro_encoder_mode_decision (SchroEncoderFrame* frame);
 
 void schro_encoder_encode_picture (SchroEncoderFrame *frame);
 void schro_encoder_reconstruct_picture (SchroEncoderFrame *frame);

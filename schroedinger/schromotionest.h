@@ -47,8 +47,10 @@ void schro_motionest_free (SchroMotionEst *me);
 
 /* this one does ME AND mode decision!! */
 void schro_encoder_motion_predict (SchroEncoderFrame *frame);
-/* Added by Andrea - it only performs ME, no mode decision */
+/* it only performs ME, no mode decision */
 void schro_encoder_motion_predict_only (SchroEncoderFrame* frame);
+/* it performs mode decision and superblock splitting */
+void schro_encoder_do_mode_decision (SchroEncoderFrame* frame);
 
 void schro_encoder_global_estimation (SchroMotionEst *me);
 

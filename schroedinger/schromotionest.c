@@ -819,7 +819,15 @@ schro_motionest_rough_scan_nohint2 (SchroMotionEst *me, int shift, int ref,
         int metric, width, height;
 
         dx = hint_mv[m]->dx[ref];
+        dx += i * me->params->xbsep_luma;
+        dx >>=shift;
         dy = hint_mv[m]->dy[ref];
+        dy += j * me->params->ybsep_luma;
+        dy >>= shift;
+
+        if (0>dx || 0>dy || dx>scan.ref_frame->width || dy>scan.ref_frame->height) {
+          continue;
+        }
 
         schro_frame_get_subdata (scan.ref_frame,
             &ref_data, 0,
@@ -1050,8 +1058,8 @@ schro_motionest_rough_scan_hint (SchroMotionEst *me, int shift, int ref,
         dy += j*params->ybsep_luma;
         dy >>= shift;
 
-        if (0>dx || scan.ref_frame->width>dx
-            || 0>dy || scan.ref_frame->height>dy) {
+        if (0>dx || scan.ref_frame->width<dx
+            || 0>dy || scan.ref_frame->height<dy) {
           continue;
         }
         schro_frame_get_subdata (scan.ref_frame, &ref_data, 0, dx, dy);
@@ -1769,7 +1777,7 @@ schro_motion_copy_to (SchroMotion *motion, int i, int j, SchroBlock *block)
   }
 }
 
-/* Added by Andrea - performs full-pel ME without mode decision */
+/* performs full-pel ME without mode decision */
 void
 schro_encoder_motion_predict_only (SchroEncoderFrame* frame)
 {
@@ -1803,7 +1811,7 @@ schro_encoder_motion_predict_only (SchroEncoderFrame* frame)
   frame->me = me;
 }
 
-/* Added by Andrea - performs mode decision for a superblock, split level 2
+/* performs mode decision for a superblock, split level 2
  * Must returns a valid superblock, which probably means going through DC
  * first and then the other prediction modes */
 static void
@@ -1921,7 +1929,7 @@ do_split2 (SchroMotionEst* me, int i, int j, SchroBlock* block)
   block->entropy = total_entropy;
 }
 
-/* Added by Andrea - performs mode decision for a superblock, split level 1
+/* performs mode decision for a superblock, split level 1
  * Must return a valid superblock, which probably means setting DC first
  * and then trying out all other cases */
 static void
@@ -1931,7 +1939,7 @@ do_split1 (SchroMotionEst* me, int i, int j, SchroBlock* block)
   block->valid = FALSE;
 }
 
-/* Added by Andrea - performs mode decision for a superblock, split level 0
+/* performs mode decision for a superblock, split level 0
  * Must return a valid superblock, which probably means setting DC first
  * amd then trying out all other cases */
 static void
@@ -1987,7 +1995,7 @@ do_split0 (SchroMotionEst* me, int i, int j, SchroBlock* block)
   }
 }
 
-/* Added by Andrea - performs mdoe decision and block/superblock splitting */
+/* performs mdoe decision and block/superblock splitting */
 void
 schro_encoder_do_mode_decision (SchroEncoderFrame* frame)
 {
