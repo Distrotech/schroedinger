@@ -21,7 +21,7 @@ public class Decoder {
     public Decoder() {
 	next_frame_number = 0;
 	refs = new Queue(4);
-	out = new Queue(100);
+	out = new Queue(4);
     }
 
     /** Push:
@@ -33,7 +33,7 @@ public class Decoder {
      * We could probably fix that some day.
      */
 
-    public void push(byte d[]) throws Exception {
+    public synchronized void push(byte d[]) throws Exception {
 	Unpack u = new Unpack(d);
 	int v = u.decodeLit32();
 	if(v != 0x42424344) {
@@ -72,6 +72,10 @@ public class Decoder {
 	if(p.error == null) {
 	    out.add(p);
 	}
+    }
+
+    public synchronized void reset() {
+	out.flush();
     }
 
     public synchronized Picture pull() {

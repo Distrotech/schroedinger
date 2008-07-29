@@ -8,15 +8,20 @@ package org.diracvideo.Schroedinger;
 class Motion {
     Parameters par;
     Vector vecs[];
-    Block temp;
+    short tmp[];
     Picture refs[];
     Arithmetic ar[];
-
+    int xbsep, ybsep, xblen, yblen, width, height;
+    int xoffset, yoffset, max_fast_x, max_fast_y;
+    short obmc[];
+    Block block;
+    
     public Motion(Parameters p, Picture r[]) {
 	par = p;
-	vecs = new Vector[par.x_num_blocks * par.y_num_blocks];
-	temp = new Block(par.getBlockDimension());
 	refs = r;
+	vecs = new Vector[par.x_num_blocks * par.y_num_blocks];
+	
+	tmp = new short[64*64*3];
     }
     
     public void initialize(Buffer bufs[]) {
@@ -25,9 +30,6 @@ class Motion {
 	    if(bufs[i] == null)
 		continue;
 	    ar[i] = new Arithmetic(bufs[i]);
-	}
-	for(int i = 0; i < vecs.length; i++) {
-	    vecs[i] = new Vector();
 	}
     }
 
@@ -38,11 +40,31 @@ class Motion {
 	switch(mv.split) {
 	case 0:
 	    decodePredictionUnit(mv, x, y);
+	    for(int i = 0; i < 4; i++) 
+		for(int j = 0; j < 4; j++) 
+		    setVector(mv, x + j, y + i);
 	    break;
 	case 1:
-	case 2:
-	default:
+	    for(int i = 0; i < 4; i += 2) 
+		for(int j = 0; j < 4; j += 2) {
+		    mv = getVector(x + j, y + i);
+		    mv.split = 1;
+		    decodePredictionUnit(mv, x + j, y + i);
+		    setVector(mv, x + j + 1, y + i);
+		    setVector(mv, x + j, y + i + 1);
+		    setVector(mv, x + j + 1, y + i + 1);
+		}
 	    break;
+	case 2:
+	    for(int i = 0; i < 4; i++) 
+		for(int j = 0; j < 4; j++) {
+		    mv = getVector(x + j, y + i);
+		    mv.split = 2;
+		    decodePredictionUnit(mv, x + j, y + i);
+		}
+	    break;
+	default:
+	    throw new Error("Unsupported splitting mode");
 	}
     }
 
@@ -102,10 +124,115 @@ class Motion {
 	}
     }
 
+    public void render(Block frame[], VideoFormat f) {
+	for(int k = 0; k < frame.length; k++) {
+	    if(k == 0) {
+		xbsep = par.xbsep_luma;
+		ybsep = par.ybsep_luma;
+		xblen = par.xblen_luma;
+		yblen = par.yblen_luma;
+	    } else {
+		xbsep = par.xbsep_luma >> f.chromaHShift();
+		ybsep = par.ybsep_luma >> f.chromaVShift();
+		xblen = par.xblen_luma >> f.chromaHShift();
+		yblen = par.yblen_luma >> f.chromaVShift();
+	    }
+	    width = frame[k].s.width;
+	    height = frame[k].s.height;
+	    xoffset = (xblen - xbsep)/2;
+	    yoffset = (xblen - ybsep)/2;
+	    max_fast_x = (width - xblen) << par.mv_precision;
+	    max_fast_y = (height - yblen) << par.mv_precision;
+	    initOBMCWeight();
+	    int max_x_blocks = Math.min(par.x_num_blocks - 1,
+					(width - xoffset)/xbsep);
+	    int max_y_blocks = Math.min(par.y_num_blocks - 1,
+					(height - yoffset)/ybsep);
+	    for(int i = 0; i < par.x_num_blocks; i++) {
+		int x = xbsep * i - xoffset;
+		predictBlock(x, -yoffset, k, i, 0);
+		accumalateBlock(x, -yoffset, frame[k]);
+	    }
+	    for(int j = 1; j < max_y_blocks; j++) {
+		
+	    }
+	}
+    }
 
-    
-    public void render(Block frame) {
+    private void predictBlock(int x, int y, int k, int i, int j) {
+	Vector mv = getVector(i,j);
+	switch(mv.pred_mode) {
+	case 0:
+	    getDCBlock(i, j, k, x, y);
+	    break;
+	case 1:
+	    getRef1Block(i, j, k, x, y);
+	    break;
+	case 2:
+	    getRef2Block(i, j, k, x, y);
+	    break;
+	case 3:
+	    getBiRefBlock(i, j, k, x, y);
+	    break;
+	default:
+	    break;
+	}
+    }
+
+    private void accumalateBlock(int x, int y, Block frame) {
+
+    }
+
+    private void getDCBlock(int i, int j, int k, int x, int y) {
 	
+    }
+
+    private void getRef1Block(int i, int j, int k, int x, int y) {
+	
+    }
+
+    private void getRef2Block(int i, int j, int k, int x, int y) {
+	
+    }
+
+    private void getBiRefBlock(int i, int j, int k, int x, int y) {
+	
+    }
+
+    private void initOBMCWeight() {
+	int wx, wy;
+	int weight_y[] = new int[yblen],
+	    weight_x[] = new int[xblen];
+	obmc = new short[yblen*xblen];
+	for(int i = 0; i < xblen; i++) {
+	    if(xoffset == 0) {
+		wx = 8;
+	    } else if( i < 2*xoffset) {
+		wx = Util.getRamp(i, xoffset);
+	    } else if(xblen - 1 - i < 2*xoffset) {
+		wx = Util.getRamp(xblen - 1 - i, xoffset);
+	    } else {
+		wx = 8;
+	    }
+	    weight_x[i] = wx;
+	}
+	for(int j = 0; j < yblen; j++) {
+	    if(yoffset == 0) {
+		wy = 8;
+	    } else if(j < 2*yoffset) {
+		wy = Util.getRamp(j, yoffset);
+	    } else if(yblen - 1 - j < 2*yoffset) {
+		wy = Util.getRamp(yblen - 1 - j, yoffset);
+	    } else {
+		wy = 8;
+	    }
+	    weight_y[j] = wy;
+	}
+	for(int j = 0; j < yblen; j++) {
+	    for(int i = 0; i < xblen; i++) {
+		obmc[i + j*xblen] = (short)(weight_x[i] * weight_y[j]);
+	    }
+	}
     }
 
     private int splitPrediction(int x, int y) {
@@ -256,8 +383,26 @@ class Motion {
     }
 
     private final Vector getVector(int x, int y) {
-	return vecs[x + y*par.x_num_blocks];
+	int pos = x + y*par.x_num_blocks;
+	if(vecs[pos] == null) {
+	    vecs[pos] = new Vector();
+	}
+	return vecs[pos];
     }
+
+    private final void setVector(Vector mv, int x, int y) {
+	vecs[x + y*par.x_num_blocks] = mv;
+    }
+
+}
+
+/** Global
+ *
+ * The class for global motion estimation */
+class Global {
+    int b0, b1;
+    int a_exp, a00, a01, a10, a11;
+    int c_exp, c0, c1;
 }
 
 

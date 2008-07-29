@@ -206,8 +206,8 @@ class SubBand {
 class Parameters {
     /* static array of wavelets */ 
     private static Wavelet[] wavs = {
-	new Wavelet(),
-	new Wavelet(),
+	new DeslauriesDebuc(),
+	new LeGall5_3(),
 	new Wavelet()
     };
     
@@ -228,6 +228,7 @@ class Parameters {
     public int picture_prediction_mode, mv_precision;
     public int picture_weight_bits = 1, 
 	picture_weight_1 = 1,picture_weight_2 = 1;
+    public Global global[] = new Global[3];
 
     public Parameters(int c) {
 	no_ac = !((c & 0x48) == 0x8);
@@ -258,7 +259,8 @@ class Parameters {
 	}
     }
 
-    public void setBlockParams(int i) throws Exception {
+    public void setBlockParams(int i)
+	throws Exception {
 	switch(i) {
 	case 1:
 	    xblen_luma = yblen_luma = 8;
@@ -279,6 +281,7 @@ class Parameters {
 	default:
 	    throw new Exception("Unsupported Block Parameters index");
 	}
+
     }
 
     public void calculateMCSizes() {
@@ -288,13 +291,11 @@ class Parameters {
 	y_offset = (yblen_luma - ybsep_luma)/2;
     }
     
-    public Dimension getBlockDimension() {
-	return new Dimension(0,0);
-    }
-
     public Wavelet getWavelet() {
 	return wavs[wavelet_index];
     }
+
+    
 
     public String toString() {
 	StringBuilder sb = new StringBuilder();
@@ -420,11 +421,32 @@ public class Picture {
 	}
 	par.have_global_motion = u.decodeBool();
 	if(par.have_global_motion) {
-	    if(true) {
-		throw new Exception("Global Motion unsupported as of yet");
-	    }
 	    for(int i = 0; i < par.num_refs; i++) {
-
+		Global gm = par.global[i];
+		if(u.decodeBool()) {
+		    gm.b0 = u.decodeSint();
+		    gm.b1 = u.decodeSint();
+		} else {
+		    gm.b0 = gm.b1 = 0;
+		}
+		if(u.decodeBool()) {
+		    gm.a_exp = u.decodeUint();
+		    gm.a00 = u.decodeSint();
+		    gm.a01 = u.decodeSint();
+		    gm.a10 = u.decodeSint();
+		    gm.a11 = u.decodeSint();
+		} else {
+		    gm.a_exp = 0;
+		    gm.a00 = gm.a11 = 1;
+		    gm.a10 = gm.a01 = 0;
+		}
+		if(u.decodeBool()) {
+		    gm.c_exp = u.decodeUint();
+		    gm.c0 = u.decodeSint();
+		    gm.c1 = u.decodeSint();
+		} else {
+		    gm.c_exp = gm.c0 = gm.c1 = 0;
+		}
 	    }
 	}
 	par.picture_prediction_mode = u.decodeUint();
@@ -534,11 +556,12 @@ public class Picture {
 	for(int y = 0; y < par.y_num_blocks; y += 4)
 	    for(int x = 0; x < par.x_num_blocks; x += 4)
 		motion.decodeMacroBlock(x,y);
-	motion.render(frame[0]);
-	motion.render(frame[1]);
-	motion.render(frame[2]);
+	motion.render(frame, format);
     }
 
+    public short getPixel(int x, int y, int k) {
+	return frame[k].pixel(x,y);
+    }
 
     private void initializeFrames() {
 	frame = new Block[3];

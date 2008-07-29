@@ -10,6 +10,7 @@ public class VideoFormat {
 	aspect_ratio_numerator, aspect_ratio_denominator;
     public int clean_width, clean_height, left_offset, top_offset;
     public int luma_offset, luma_excursion, chroma_offset, chroma_excursion;
+    public int transfer_function, colour_primaries, colour_matrix;
     public int interlaced_coding;
     public ColourSpace colour;
     
@@ -149,6 +150,8 @@ public class VideoFormat {
 	}
 	if(u.decodeBool()) { /* chroma format */
 	    int c = u.decodeUint();
+	    chroma_format = (c == 0 ? 0444 : 
+			     (c == 1 ? 0422 : 0420));
 	}
 
 	if(u.decodeBool()) { /* scan format */
@@ -202,20 +205,19 @@ public class VideoFormat {
 	    setDefaultColourSpec(i);
 	    if(i == 0) {
 		if(u.decodeBool()) {
-		    u.decodeUint();
+		    colour_primaries = u.decodeUint();
 		}
 		if(u.decodeBool()) {
-		    u.decodeUint();
+		    colour_matrix = u.decodeUint();
 		}
 		if(u.decodeBool()) {
-		    u.decodeUint();
+		    transfer_function = u.decodeUint();
 		}
 	    }
 	} else {
 	    colour = new ColourSpace(0,this);
 	}
-	
-	this.interlaced_coding = u.decodeUint();
+	interlaced_coding = u.decodeUint();
 	validate();
     }
 
@@ -261,9 +263,15 @@ public class VideoFormat {
     }
 
     public void getPictureChromaSize(int[] out) {
-	out[0] = Util.roundUpShift(this.width, ( chroma_format == 444 ? 0 : 1));
-	out[1] = Util.roundUpShift(this.height,0); /* this is not generally true
-						      but it works for the 
-						      test video */
+	out[0] = Util.roundUpShift(this.width, chromaHShift());
+	out[1] = Util.roundUpShift(this.height,chromaVShift() + interlaced_coding); 
+    }
+
+    public int chromaHShift() {
+	return (chroma_format == 0444 ? 0 : 1);
+    }
+
+    public int chromaVShift() {
+	return (chroma_format == 0420 ? 1 : 0);
     }
 }

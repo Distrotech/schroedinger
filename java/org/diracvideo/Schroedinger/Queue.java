@@ -67,5 +67,11 @@ class Queue {
     public boolean full() {
 	return (used >= pics.length -1);
     }
-    
+
+    public synchronized void flush() {
+	for(int i = 0; i < pics.length; i++) {
+	    pics[i] = null;
+	}
+	used = 0;
+    }
 }

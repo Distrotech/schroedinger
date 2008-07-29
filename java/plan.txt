@@ -13,10 +13,11 @@ x#10   Fix colorspace conversion (at least initially)
 x#11   Start arithmetic decoder
 x#12   Fix spatial partitioning and colour
 x#13   Fix arithmetic unpacking of Subbands (sign prediction almost done)
-#14    Implement motion vector structures 
-#15    Decode motion vectors
+x#14   Implement motion vector structures 
+x#15   Decode motion vectors
 #16    Implement motion decoding
-#20    Unroll loops in Wavelet.synthesize() and SubBand.intraDCPredict()
+#17    Make Cortado plugin
+#30    Profile decoder and speed it up
 
 
      

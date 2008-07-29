@@ -47,36 +47,12 @@ public class Wavelet {
      * @param e   end
      *
      *  This method is public for testing purposes only. */
+
     public void synthesize(short d[], int s, int b, int e) {
-	for(int i = b; i < e; i += 2*s) {
-	    if(i - s < b) {
-		d[i] -= (d[i+s] + 1) >> 1;
-	    } else {
-		d[i] -= (d[i-s] + d[i+s] + 2) >> 2;
-	    }
-	}
-	for(int i = b + s; i < e; i += 2*s) {
-	    if(i + s >= e) {
-		d[i] += d[i-s];
-	    } else {
-		d[i] += (d[i-s] + d[i+s] + 1) >> 1;
-	    }
-	}
+	return;
     }
 
-    private static void
-	synthesizeDeslausriesDebuc(short d[], int s, int b, int e) {
-	for(int i = b; i < e; i += 2*s) {
-	    if(i - s < b) {
-		d[i] -= (d[i+s] + 1) >> 1;
-	    } else {
-		d[i] -= (d[i-s] + d[i+s] + 2) >> 2;
-	    }
-	}
-	for(int i = b + s; i < e; i+= 2*s) {
-	    d[i] += (9*d[i-s] + 9*d[i+s] - d[i-3*s] - d[i+3*s] + 8) >> 4;
-	}
-    }
+
     /** interleave interleaves four subbands.
      * 
      * @param ll array containing the subband data (like hl, lh, hh)
@@ -98,6 +74,49 @@ public class Wavelet {
 	    }
 	}
 	return o;
+    }
+
+}
+
+
+class LeGall5_3 extends Wavelet {
+    public void synthesize(short d[], int s, int b, int e) {
+	for(int i = b; i < e; i += 2*s) {
+	    if(i - s < b) {
+		d[i] -= (d[i+s] + 1) >> 1;
+	    } else {
+		d[i] -= (d[i-s] + d[i+s] + 2) >> 2;
+	    }
+	}
+	for(int i = b + s; i < e; i += 2*s) {
+	    if(i + s >= e) {
+		d[i] += d[i-s];
+	    } else {
+		d[i] += (d[i-s] + d[i+s] + 1) >> 1;
+	    }
+	}
+    }
+}
+
+class DeslauriesDebuc extends Wavelet {
+    public void	synthesize(short d[], int s, int b, int e) {
+	for(int i = b; i < e; i += 2*s) {
+	    if(i - s < b) {
+		d[i] -= (d[i+s] + 1) >> 1;
+	    } else {
+		d[i] -= (d[i-s] + d[i+s] + 2) >> 2;
+	    }
+	}
+	/*	for(int i = b + s; i < e; i+= 2*s) {
+	    d[i] += (9*d[i-s] + 9*d[i+s] - d[i-3*s] - d[i+3*s] + 8) >> 4;
+	    } */
+	for(int i = b + s; i < e; i += 2*s) {
+	    if(i + s >= e) {
+		d[i] += d[i-s];
+	    } else {
+		d[i] += (d[i-s] + d[i+s] + 1) >> 1;
+	    }
+	}
     }
 
 }

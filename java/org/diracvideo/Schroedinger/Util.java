@@ -40,5 +40,13 @@ final class Util {
 	    s += numbers[i];
 	return s/numbers.length;
     }
+
+    public final static int getRamp(int x, int offset) {
+	if(offset == 1) {
+	    if(x == 0) return 3;
+	    return 5;
+	}
+	return 1 + (6 * x + offset - 1)/(2*offset - 1);
+    }
 }
 

@@ -5,7 +5,6 @@ FILES= Unpack.class Wavelet.class Decoder.class \
 
 CLASSPATH= ../../../
 
-
 all: ${FILES}
 	@echo "Build!"
 
@@ -13,4 +12,4 @@ all: ${FILES}
 	javac $< -classpath ${CLASSPATH}
 
 clean:
-	@rm *.class
+	@rm -f *.class

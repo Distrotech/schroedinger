@@ -72,4 +72,9 @@ final class Block {
     public int index(int x, int y) {
 	return line(y) + Util.clamp(x,0, s.width - 1);
     }
+
+    /** Pixel at a given point */
+    public short pixel(int x, int y) {
+	return d[(y + p.y)*o.width + x];
+    }
 }
