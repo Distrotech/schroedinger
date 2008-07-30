@@ -224,6 +224,8 @@ schro_opengl_shader_new (const char* code, const char* name)
   UNIFORM_LOCATION (vec2,  offset7,        offsets[6]);
   UNIFORM_LOCATION (vec2,  offset8,        offsets[7]);
   UNIFORM_LOCATION (vec2,  origin,         origin);
+  UNIFORM_LOCATION (vec2,  edge1,          edges[0]);
+  UNIFORM_LOCATION (vec2,  edge2,          edges[1]);
   UNIFORM_LOCATION (vec2,  size,           size);
   UNIFORM_LOCATION (vec2,  remaining1,     remainings[0]);
   UNIFORM_LOCATION (vec2,  remaining2,     remainings[1]);

@@ -38,8 +38,20 @@ struct _SchroOpenGLPixelbuffer {
 };
 
 typedef enum _SchroOpenGLCanvasType {
+  /* a primary canvas is used to store framedata. each primary canvas is only
+     assigned to a single framedata object at the same time. it has a secondary
+     canvas and the configured set of pixelbuffers assigned */
   SCHRO_OPENGL_CANVAS_TYPE_PRIMARAY = 0,
-  SCHRO_OPENGL_CANVAS_TYPE_SECONDARY = 1
+  /* a secondary canvas is used as temorary rendertarget to store intermediate
+     results while working with a primary canvas, each secondary canvas may be
+     assigned to multiple primary canvases at the same time. it has no secondary
+     canvas and no pixelbuffers assigned */
+  SCHRO_OPENGL_CANVAS_TYPE_SECONDARY = 1,
+  /* a spatial weight canvas is used to store a spatial weight block. like the
+     primary canvas, each spatial weight canvas is only assigned to a single
+     spatial weight block at the same time. like the secondary canvas, it has no
+     secondary canvas and no pixelbuffers assigned */
+  SCHRO_OPENGL_CANVAS_TYPE_SPATIAL_WEIGHT = 2
 } SchroOpenGLCanvasType;
 
 struct _SchroOpenGLCanvas {
@@ -63,30 +75,30 @@ struct _SchroOpenGLCanvas {
   /* framebuffer */
   GLuint framebuffer;
 
-  /* secondary, only for primary canvas */
+  /* secondary canvas, only for primary canvas */
   SchroOpenGLCanvas* secondary;
 
-  /* push, only for primary canvas */
+  /* push pixelbuffer, only for primary canvas */
   GLenum push_type;
   int push_stride;
   SchroOpenGLPixelbuffer* push_pixelbuffer;
 
-  /* pull, only for primary canvas */
+  /* pull pixelbuffer, only for primary canvas */
   GLenum pull_type;
   int pull_stride;
   SchroOpenGLPixelbuffer* pull_pixelbuffer;
 };
 
-#define SCHRO_OPENGL_RESOURCES_LIMIT 1024
+#define SCHRO_OPENGL_CANVAS_POOL_LIMIT 1024
 
 // FIXME: add a mechanism to drop long time unused canvases from the pool
-struct _SchroOpenGLResources {
+struct _SchroOpenGLCanvasPool {
   SchroOpenGL *opengl;
 
-  SchroOpenGLCanvas *canvases[2][SCHRO_OPENGL_RESOURCES_LIMIT];
-  int canvas_count[2];
+  SchroOpenGLCanvas *canvases[3][SCHRO_OPENGL_CANVAS_POOL_LIMIT];
+  int canvas_count[3];
 
-  SchroOpenGLPixelbuffer *pixelbuffers[2][SCHRO_OPENGL_RESOURCES_LIMIT];
+  SchroOpenGLPixelbuffer *pixelbuffers[2][SCHRO_OPENGL_CANVAS_POOL_LIMIT];
   int pixelbuffer_count[2];
 };
 
@@ -139,8 +151,9 @@ SchroOpenGLPixelbuffer *schro_opengl_pixelbuffer_new (SchroOpenGL *opengl,
     SchroOpenGLPixelbufferType type, int width, int height, int stride);
 void schro_opengl_pixelbuffer_unref (SchroOpenGLPixelbuffer *pixelbuffer);
 
-SchroOpenGLResources *schro_opengl_resources_new (SchroOpenGL *opengl);
-void schro_opengl_resources_free (SchroOpenGLResources* resources);
+SchroOpenGLCanvasPool *schro_opengl_canvas_pool_new (SchroOpenGL *opengl);
+void schro_opengl_canvas_pool_free (SchroOpenGLCanvasPool* pool);
+void schro_opengl_canvas_pool_squeeze (SchroOpenGLCanvasPool* pool);
 
 SCHRO_END_DECLS
 

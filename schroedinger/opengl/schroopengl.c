@@ -5,6 +5,7 @@
 #include <schroedinger/schro.h>
 #include <schroedinger/opengl/schroopengl.h>
 #include <schroedinger/opengl/schroopenglcanvas.h>
+#include <schroedinger/opengl/schroopenglmotion.h>
 #include <schroedinger/opengl/schroopenglshader.h>
 #include <limits.h>
 #include <GL/glew.h>
@@ -21,8 +22,8 @@ struct _SchroOpenGL {
   SchroMutex *context_mutex;
   int context_lock_count;
 
-  SchroMutex *resources_mutex;
-  int resources_lock_count;
+  SchroMutex *canvas_pool_mutex;
+  int canvas_pool_lock_count;
 
   Display *display;
   Window root;
@@ -36,9 +37,9 @@ struct _SchroOpenGL {
 
   SchroOpenGLShaderLibrary *shader_library;
 
-  SchroOpenGLResources* resources;
+  SchroOpenGLCanvasPool* canvas_pool;
 
-  SchroOpenGLCanvas *obmc_weight_canvas;
+  SchroOpenGLSpatialWeightPool *spatial_weight_pool;
 };
 
 static int
@@ -277,8 +278,8 @@ schro_opengl_new (void)
   opengl->is_visible = FALSE;
   opengl->context_mutex = schro_mutex_new_recursive ();
   opengl->context_lock_count = 0;
-  opengl->resources_mutex = schro_mutex_new_recursive ();
-  opengl->resources_lock_count = 0;
+  opengl->canvas_pool_mutex = schro_mutex_new_recursive ();
+  opengl->canvas_pool_lock_count = 0;
   opengl->display = NULL;
   opengl->root = None;
   opengl->screen = 0;
@@ -288,8 +289,8 @@ schro_opengl_new (void)
   opengl->tmp = NULL;
   opengl->tmp_size = 0;
   opengl->shader_library = NULL;
-  opengl->resources = NULL;
-  opengl->obmc_weight_canvas = NULL;
+  opengl->canvas_pool = NULL;
+  opengl->spatial_weight_pool = NULL;
 
   if (!schro_opengl_open_display (opengl, getenv ("SCHRO_OPENGL_DISPLAY"))) {
     opengl->is_usable = FALSE;
@@ -312,9 +313,8 @@ schro_opengl_new (void)
   }
 
   opengl->shader_library = schro_opengl_shader_library_new (opengl);
-  opengl->resources = schro_opengl_resources_new (opengl);
-  opengl->obmc_weight_canvas = schro_opengl_canvas_new (opengl,
-      SCHRO_OPENGL_CANVAS_TYPE_SECONDARY, SCHRO_FRAME_FORMAT_S16_444, 64, 64);
+  opengl->canvas_pool = schro_opengl_canvas_pool_new (opengl);
+  opengl->spatial_weight_pool = schro_opengl_spatial_weight_pool_new ();
 
   schro_opengl_lock_context (opengl);
 
@@ -339,27 +339,25 @@ void
 schro_opengl_free (SchroOpenGL *opengl)
 {
   SCHRO_ASSERT (opengl->context_lock_count == 0);
-  SCHRO_ASSERT (opengl->resources_lock_count == 0);
+  SCHRO_ASSERT (opengl->canvas_pool_lock_count == 0);
 
   if (opengl->shader_library) {
     schro_opengl_shader_library_free (opengl->shader_library);
     opengl->shader_library = NULL;
   }
 
-  if (opengl->obmc_weight_canvas) {
-    schro_opengl_canvas_unref (opengl->obmc_weight_canvas);
-    opengl->obmc_weight_canvas = NULL;
+  if (opengl->spatial_weight_pool) {
+    schro_opengl_spatial_weight_pool_free (opengl->spatial_weight_pool);
+    opengl->spatial_weight_pool = NULL;
+  }
+
+  if (opengl->canvas_pool) {
+    schro_opengl_canvas_pool_free (opengl->canvas_pool);
+    opengl->canvas_pool = NULL;
   }
 
   SCHRO_ASSERT (opengl->context_lock_count == 0);
-  SCHRO_ASSERT (opengl->resources_lock_count == 0);
-
-  if (opengl->resources) {
-    schro_opengl_resources_free (opengl->resources);
-    opengl->resources = NULL;
-  }
-
-  SCHRO_ASSERT (opengl->resources_lock_count == 0);
+  SCHRO_ASSERT (opengl->canvas_pool_lock_count == 0);
 
   schro_opengl_destroy_window (opengl);
   schro_opengl_close_display (opengl);
@@ -370,7 +368,7 @@ schro_opengl_free (SchroOpenGL *opengl)
   }
 
   schro_mutex_free (opengl->context_mutex);
-  schro_mutex_free (opengl->resources_mutex);
+  schro_mutex_free (opengl->canvas_pool_mutex);
 
   schro_free (opengl);
 }
@@ -474,23 +472,23 @@ schro_opengl_unlock_context (SchroOpenGL *opengl)
 }
 
 void
-schro_opengl_lock_resources (SchroOpenGL *opengl)
+schro_opengl_lock_canvas_pool (SchroOpenGL *opengl)
 {
-  SCHRO_ASSERT (opengl->resources_lock_count < (INT_MAX - 1));
+  SCHRO_ASSERT (opengl->canvas_pool_lock_count < (INT_MAX - 1));
 
-  schro_mutex_lock (opengl->resources_mutex);
+  schro_mutex_lock (opengl->canvas_pool_mutex);
 
-  ++opengl->resources_lock_count;
+  ++opengl->canvas_pool_lock_count;
 }
 
 void
-schro_opengl_unlock_resources (SchroOpenGL *opengl)
+schro_opengl_unlock_canvas_pool (SchroOpenGL *opengl)
 {
-  SCHRO_ASSERT (opengl->resources_lock_count > 0);
+  SCHRO_ASSERT (opengl->canvas_pool_lock_count > 0);
 
-  --opengl->resources_lock_count;
+  --opengl->canvas_pool_lock_count;
 
-  schro_mutex_unlock (opengl->resources_mutex);
+  schro_mutex_unlock (opengl->canvas_pool_mutex);
 }
 
 void
@@ -585,12 +583,6 @@ schro_opengl_render_quad (int x, int y, int width, int height)
   glEnd ();
 }
 
-SchroOpenGLShaderLibrary *
-schro_opengl_get_shader_library (SchroOpenGL *opengl)
-{
-  return opengl->shader_library;
-}
-
 void *
 schro_opengl_get_tmp (SchroOpenGL *opengl, int size)
 {
@@ -609,26 +601,29 @@ schro_opengl_get_tmp (SchroOpenGL *opengl, int size)
   return opengl->tmp;
 }
 
-SchroOpenGLResources *
-schro_opengl_get_resources (SchroOpenGL *opengl)
+SchroOpenGLShaderLibrary *
+schro_opengl_get_shader_library (SchroOpenGL *opengl)
 {
-  return opengl->resources;
+  return opengl->shader_library;
 }
 
-SchroOpenGLCanvas *
-schro_opengl_get_obmc_weight_canvas (SchroOpenGL *opengl, int width,
-    int height)
+SchroOpenGLCanvasPool *
+schro_opengl_get_canvas_pool (SchroOpenGL *opengl)
 {
-  if (width > opengl->obmc_weight_canvas->width ||
-      height > opengl->obmc_weight_canvas->height) {
-    schro_opengl_canvas_unref (opengl->obmc_weight_canvas);
+  return opengl->canvas_pool;
+}
 
-    opengl->obmc_weight_canvas = schro_opengl_canvas_new (opengl,
-        SCHRO_OPENGL_CANVAS_TYPE_PRIMARAY, SCHRO_FRAME_FORMAT_S16_444,
-        MAX (width, 64), MAX (height, 64));
-  }
+SchroOpenGLSpatialWeightPool *
+schro_opengl_get_spatial_weight_pool (SchroOpenGL *opengl)
+{
+  return opengl->spatial_weight_pool;
+}
 
-  return opengl->obmc_weight_canvas;
+void
+schro_opengl_squeeze_pools (SchroOpenGL *opengl)
+{
+  schro_opengl_canvas_pool_squeeze (opengl->canvas_pool);
+  schro_opengl_spatial_weight_pool_squeeze (opengl->spatial_weight_pool);
 }
 
 static void *

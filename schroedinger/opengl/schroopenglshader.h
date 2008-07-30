@@ -12,6 +12,7 @@ struct _SchroOpenGLShader {
   GLhandleARB program;
   GLint textures[10];   /* {s|us|is}ampler2DRect */
   GLint offsets[8];     /* vec2 */
+  GLint edges[2];       /* vec2 */
   GLint origin;         /* vec2 */
   GLint size;           /* vec2 */
   GLint remainings[2];  /* vec2 */
@@ -65,7 +66,7 @@ struct _SchroOpenGLShader {
 #define SCHRO_OPENGL_SHADER_IIWT_S16_HORIZONTAL_INTERLEAVE            33
 #define SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_SHIFT                     34
 #define SCHRO_OPENGL_SHADER_UPSAMPLE_U8                               35
-#define SCHRO_OPENGL_SHADER_OBMC_WEIGHT                               36
+#define SCHRO_OPENGL_SHADER_OBMC_SPATIAL_WEIGHT                       36
 #define SCHRO_OPENGL_SHADER_OBMC_CLEAR                                37
 #define SCHRO_OPENGL_SHADER_OBMC_SHIFT                                38
 #define SCHRO_OPENGL_SHADER_OBMC_RENDER_DC                            39

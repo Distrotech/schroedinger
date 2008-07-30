@@ -8,5 +8,6 @@ LDADD = $(SCHRO_LIBS) ../libschrotest.la
 opengl_SOURCES = \
 	opengl.c \
 	opengl_combine.c \
+	opengl_convert.c \
 	opengl_pushpull.c \
 	opengl_util.c

@@ -623,13 +623,15 @@ shader upsample_u8: ############################################################
 
 
 
-shader obmc_weight: ############################################################
+shader obmc_spatial_weight: ####################################################
   versions:
-    normal SCHRO_OPENGL_SHADER_OBMC_WEIGHT
+    normal SCHRO_OPENGL_SHADER_OBMC_SPATIAL_WEIGHT
 
   uniforms:
-    vec2 size # block size # FIXME: bind as ivec2
-    vec2 offset1 # block offset # FIXME: bind as ivec2
+    vec2 offset1 # [xy]offset # FIXME: bind as ivec2
+    vec2 edge1   # edge condition: left, top
+    vec2 edge2   # edge condition: right, bottom
+    vec2 size    # [xy]blen # FIXME: bind as ivec2
 
   func var_s16 ramp (var_s16 coordinate, var_s16 offset):
     if offset == 1:
@@ -640,21 +642,27 @@ shader obmc_weight: ############################################################
     else:
       return 1 + divide_s16 (6 * coordinate + offset - 1, 2 * offset - 1)
 
-  func var_s16 obmc_weight (var_s16 coordinate, var_s16 size, var_s16 offset):
+  func var_s16 spatial_weight (var_s16 coordinate, var_s16 size, var_s16 offset, vec2 edge):
     if offset == 0:
       return 8
     elif coordinate < 2 * offset:
-      return ramp (coordinate, offset)
+      if edge.x > 0.5:
+        return 8
+      else:
+        return ramp (coordinate, offset)
     elif size - 1 - coordinate < 2 * offset:
-      return ramp (size - 1 - coordinate, offset)
+      if edge.y > 0.5:
+        return 8
+      else:
+        return ramp (size - 1 - coordinate, offset)
     else:
       return 8
 
   func void main (void):
-    # round coordinate down from texel center n.5 to texel edge n.0 */
+    # round coordinate down from texel center n.5 to texel edge n.0
     vec2 coordinate = floor (gl_TexCoord[0].xy)
-    var_s16 weight_x = obmc_weight (var_s16 (coordinate.x), var_s16 (size.x), var_s16 (offset1.x))
-    var_s16 weight_y = obmc_weight (var_s16 (coordinate.y), var_s16 (size.y), var_s16 (offset1.y))
+    var_s16 weight_x = spatial_weight (var_s16 (coordinate.x), var_s16 (size.x), var_s16 (offset1.x), vec2 (edge1.x, edge2.x))
+    var_s16 weight_y = spatial_weight (var_s16 (coordinate.y), var_s16 (size.y), var_s16 (offset1.y), vec2 (edge1.y, edge2.y))
 
     write_s16 (weight_x * weight_y)
 

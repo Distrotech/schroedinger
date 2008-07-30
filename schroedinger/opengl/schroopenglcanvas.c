@@ -299,25 +299,27 @@ schro_opengl_canvas_new (SchroOpenGL *opengl, SchroOpenGLCanvasType type,
 {
   int i;
   SchroOpenGLCanvas *canvas;
-  SchroOpenGLResources *resources;
+  SchroOpenGLCanvasPool *pool;
 
   SCHRO_ASSERT (type >= SCHRO_OPENGL_CANVAS_TYPE_PRIMARAY);
-  SCHRO_ASSERT (type <= SCHRO_OPENGL_CANVAS_TYPE_SECONDARY);
+  SCHRO_ASSERT (type <= SCHRO_OPENGL_CANVAS_TYPE_SPATIAL_WEIGHT);
 
-  schro_opengl_lock_resources (opengl);
+  schro_opengl_lock_canvas_pool (opengl);
 
-  resources = schro_opengl_get_resources (opengl);
+  pool = schro_opengl_get_canvas_pool (opengl);
 
   /* try to reuse existing canvas */
-  SCHRO_ASSERT (resources->canvas_count[type] >= 0);
-  SCHRO_ASSERT (resources->canvas_count[type] <= SCHRO_OPENGL_RESOURCES_LIMIT);
+  SCHRO_ASSERT (pool->canvas_count[type] >= 0);
+  SCHRO_ASSERT (pool->canvas_count[type] <= SCHRO_OPENGL_CANVAS_POOL_LIMIT);
 
-  for (i = 0; i < resources->canvas_count[type]; ++i) {
-    canvas = resources->canvases[type][i];
+  for (i = 0; i < pool->canvas_count[type]; ++i) {
+    canvas = pool->canvases[type][i];
 
-    /* only reuse primary cansaves, if they are not in use by a caller, only
-       in the resources */
-    if (type == SCHRO_OPENGL_CANVAS_TYPE_PRIMARAY && canvas->refcount != 1) {
+    /* only reuse primary and spatial weight cansaves, if they are not in use
+       by a caller, only in the pool */
+    if ((type == SCHRO_OPENGL_CANVAS_TYPE_PRIMARAY ||
+        type == SCHRO_OPENGL_CANVAS_TYPE_SPATIAL_WEIGHT) &&
+        canvas->refcount != 1) {
       continue;
     }
 
@@ -325,7 +327,7 @@ schro_opengl_canvas_new (SchroOpenGL *opengl, SchroOpenGLCanvasType type,
         canvas->height == height) {
       ++canvas->refcount;
 
-      schro_opengl_unlock_resources (opengl);
+      schro_opengl_unlock_canvas_pool (opengl);
 
       return canvas;
     }
@@ -333,14 +335,14 @@ schro_opengl_canvas_new (SchroOpenGL *opengl, SchroOpenGLCanvasType type,
     ++canvas->uselessness;
   }
 
-  schro_opengl_unlock_resources (opengl);
+  schro_opengl_unlock_canvas_pool (opengl);
 
   /* create new canvas */
   canvas = schro_malloc0 (sizeof (SchroOpenGLCanvas));
 
   canvas->opengl = opengl;
   canvas->type = type;
-  canvas->refcount = 2; /* 1 ref for caller + 1 ref for resources */
+  canvas->refcount = 2; /* 1 ref for caller + 1 ref for pool */
   canvas->uselessness = 0;
   canvas->format = format;
   canvas->width = width;
@@ -640,16 +642,16 @@ schro_opengl_canvas_new (SchroOpenGL *opengl, SchroOpenGLCanvasType type,
 
   schro_opengl_unlock_context (opengl);
 
-  /* add new canvas to resources */
-  schro_opengl_lock_resources (opengl);
+  /* add new canvas to pool */
+  schro_opengl_lock_canvas_pool (opengl);
 
-  SCHRO_ASSERT (resources->canvas_count[type] >= 0);
-  SCHRO_ASSERT (resources->canvas_count[type] < SCHRO_OPENGL_RESOURCES_LIMIT);
+  SCHRO_ASSERT (pool->canvas_count[type] >= 0);
+  SCHRO_ASSERT (pool->canvas_count[type] < SCHRO_OPENGL_CANVAS_POOL_LIMIT);
 
-  resources->canvases[type][resources->canvas_count[type]] = canvas;
-  ++resources->canvas_count[type];
+  pool->canvases[type][pool->canvas_count[type]] = canvas;
+  ++pool->canvas_count[type];
 
-  schro_opengl_unlock_resources (opengl);
+  schro_opengl_unlock_canvas_pool (opengl);
 
   return canvas;
 }
@@ -658,43 +660,42 @@ void
 schro_opengl_canvas_unref (SchroOpenGLCanvas *canvas)
 {
   int i;
-  SchroOpenGLResources *resources;
+  SchroOpenGLCanvasPool *pool;
 
-  schro_opengl_lock_resources (canvas->opengl);
+  schro_opengl_lock_canvas_pool (canvas->opengl);
 
   SCHRO_ASSERT (canvas->refcount > 0);
 
   --canvas->refcount;
 
   if (canvas->refcount > 0) {
-    schro_opengl_unlock_resources (canvas->opengl);
+    schro_opengl_unlock_canvas_pool (canvas->opengl);
     return;
   }
 
-  /* remove canvas from the resources */
-  resources = schro_opengl_get_resources (canvas->opengl);
+  /* remove canvas from the pool */
+  pool = schro_opengl_get_canvas_pool (canvas->opengl);
 
   SCHRO_ASSERT (canvas->type >= SCHRO_OPENGL_CANVAS_TYPE_PRIMARAY);
-  SCHRO_ASSERT (canvas->type <= SCHRO_OPENGL_CANVAS_TYPE_SECONDARY);
-  SCHRO_ASSERT (resources->canvas_count[canvas->type] >= 1);
-  SCHRO_ASSERT (resources->canvas_count[canvas->type]
-      <= SCHRO_OPENGL_RESOURCES_LIMIT);
+  SCHRO_ASSERT (canvas->type <= SCHRO_OPENGL_CANVAS_TYPE_SPATIAL_WEIGHT);
+  SCHRO_ASSERT (pool->canvas_count[canvas->type] >= 1);
+  SCHRO_ASSERT (pool->canvas_count[canvas->type]
+      <= SCHRO_OPENGL_CANVAS_POOL_LIMIT);
 
-  for (i = 0; i < resources->canvas_count[canvas->type]; ++i) {
-    if (resources->canvases[canvas->type][i] == canvas) {
-      --resources->canvas_count[canvas->type];
+  for (i = 0; i < pool->canvas_count[canvas->type]; ++i) {
+    if (pool->canvases[canvas->type][i] == canvas) {
+      --pool->canvas_count[canvas->type];
 
       /* move the last canvas in the array to the slot of the removed
          one to maintain the array continuous in memory */
-      resources->canvases[canvas->type][i]
-          = resources->canvases[canvas->type]
-          [resources->canvas_count[canvas->type]];
+      pool->canvases[canvas->type][i] = pool->canvases[canvas->type]
+          [pool->canvas_count[canvas->type]];
 
       break;
     }
   }
 
-  schro_opengl_unlock_resources (canvas->opengl);
+  schro_opengl_unlock_canvas_pool (canvas->opengl);
 
   /* free OpenGL handles */
   schro_opengl_lock_context (canvas->opengl);
@@ -723,6 +724,7 @@ schro_opengl_canvas_unref (SchroOpenGLCanvas *canvas)
 
       break;
     case SCHRO_OPENGL_CANVAS_TYPE_SECONDARY:
+    case SCHRO_OPENGL_CANVAS_TYPE_SPATIAL_WEIGHT:
       SCHRO_ASSERT (canvas->secondary == NULL);
       SCHRO_ASSERT (canvas->push_pixelbuffer == NULL);
       SCHRO_ASSERT (canvas->pull_pixelbuffer == NULL);
@@ -741,41 +743,41 @@ schro_opengl_pixelbuffer_new (SchroOpenGL *opengl,
 {
   int i;
   SchroOpenGLPixelbuffer *pixelbuffer;
-  SchroOpenGLResources *resources;
+  SchroOpenGLCanvasPool *pool;
 
   SCHRO_ASSERT (type >= SCHRO_OPENGL_PIXELBUFFER_TYPE_PUSH);
   SCHRO_ASSERT (type <= SCHRO_OPENGL_PIXELBUFFER_TYPE_PULL);
 
-  schro_opengl_lock_resources (opengl);
+  schro_opengl_lock_canvas_pool (opengl);
 
-  resources = schro_opengl_get_resources (opengl);
+  pool = schro_opengl_get_canvas_pool (opengl);
 
   /* try to reuse existing pixelbuffer */
-  SCHRO_ASSERT (resources->pixelbuffer_count[type] >= 0);
-  SCHRO_ASSERT (resources->pixelbuffer_count[type]
-      <= SCHRO_OPENGL_RESOURCES_LIMIT);
+  SCHRO_ASSERT (pool->pixelbuffer_count[type] >= 0);
+  SCHRO_ASSERT (pool->pixelbuffer_count[type]
+      <= SCHRO_OPENGL_CANVAS_POOL_LIMIT);
 
-  for (i = 0; i < resources->pixelbuffer_count[type]; ++i) {
-    pixelbuffer = resources->pixelbuffers[type][i];
+  for (i = 0; i < pool->pixelbuffer_count[type]; ++i) {
+    pixelbuffer = pool->pixelbuffers[type][i];
 
     if (pixelbuffer->width == width && pixelbuffer->height == height &&
         pixelbuffer->stride == stride) {
       ++pixelbuffer->refcount;
 
-      schro_opengl_unlock_resources (opengl);
+      schro_opengl_unlock_canvas_pool (opengl);
 
       return pixelbuffer;
     }
   }
 
-  schro_opengl_unlock_resources (opengl);
+  schro_opengl_unlock_canvas_pool (opengl);
 
   /* create new pixelbuffer */
   pixelbuffer = schro_malloc0 (sizeof (SchroOpenGLPixelbuffer));
 
   pixelbuffer->opengl = opengl;
   pixelbuffer->type = type;
-  pixelbuffer->refcount = 2; /* 1 ref for caller + 1 ref for resources */
+  pixelbuffer->refcount = 2; /* 1 ref for caller + 1 ref for pool */
   pixelbuffer->uselessness = 0;
   pixelbuffer->width = width;
   pixelbuffer->height = height;
@@ -816,18 +818,16 @@ schro_opengl_pixelbuffer_new (SchroOpenGL *opengl,
 
   schro_opengl_unlock_context (opengl);
 
-  /* add new pixelbuffer to resources */
-  schro_opengl_lock_resources (opengl);
+  /* add new pixelbuffer to pool */
+  schro_opengl_lock_canvas_pool (opengl);
 
-  SCHRO_ASSERT (resources->pixelbuffer_count[type] >= 0);
-  SCHRO_ASSERT (resources->pixelbuffer_count[type]
-      < SCHRO_OPENGL_RESOURCES_LIMIT);
+  SCHRO_ASSERT (pool->pixelbuffer_count[type] >= 0);
+  SCHRO_ASSERT (pool->pixelbuffer_count[type] < SCHRO_OPENGL_CANVAS_POOL_LIMIT);
 
-  resources->pixelbuffers[type][resources->pixelbuffer_count[type]]
-      = pixelbuffer;
-  ++resources->pixelbuffer_count[type];
+  pool->pixelbuffers[type][pool->pixelbuffer_count[type]] = pixelbuffer;
+  ++pool->pixelbuffer_count[type];
 
-  schro_opengl_unlock_resources (opengl);
+  schro_opengl_unlock_canvas_pool (opengl);
 
   return pixelbuffer;
 }
@@ -836,43 +836,43 @@ void
 schro_opengl_pixelbuffer_unref (SchroOpenGLPixelbuffer *pixelbuffer)
 {
   int i;
-  SchroOpenGLResources *resources;
+  SchroOpenGLCanvasPool *pool;
 
-  schro_opengl_lock_resources (pixelbuffer->opengl);
+  schro_opengl_lock_canvas_pool (pixelbuffer->opengl);
 
   SCHRO_ASSERT (pixelbuffer->refcount > 0);
 
   --pixelbuffer->refcount;
 
   if (pixelbuffer->refcount > 0) {
-    schro_opengl_unlock_resources (pixelbuffer->opengl);
+    schro_opengl_unlock_canvas_pool (pixelbuffer->opengl);
     return;
   }
 
-  /* remove pixelbuffer from the resources */
-  resources = schro_opengl_get_resources (pixelbuffer->opengl);
+  /* remove pixelbuffer from the pool */
+  pool = schro_opengl_get_canvas_pool (pixelbuffer->opengl);
 
   SCHRO_ASSERT (pixelbuffer->type >= SCHRO_OPENGL_PIXELBUFFER_TYPE_PUSH);
   SCHRO_ASSERT (pixelbuffer->type <= SCHRO_OPENGL_PIXELBUFFER_TYPE_PULL);
-  SCHRO_ASSERT (resources->pixelbuffer_count[pixelbuffer->type] >= 1);
-  SCHRO_ASSERT (resources->pixelbuffer_count[pixelbuffer->type]
-      <= SCHRO_OPENGL_RESOURCES_LIMIT);
+  SCHRO_ASSERT (pool->pixelbuffer_count[pixelbuffer->type] >= 1);
+  SCHRO_ASSERT (pool->pixelbuffer_count[pixelbuffer->type]
+      <= SCHRO_OPENGL_CANVAS_POOL_LIMIT);
 
-  for (i = 0; i < resources->pixelbuffer_count[pixelbuffer->type]; ++i) {
-    if (resources->pixelbuffers[pixelbuffer->type][i] == pixelbuffer) {
-      --resources->pixelbuffer_count[pixelbuffer->type];
+  for (i = 0; i < pool->pixelbuffer_count[pixelbuffer->type]; ++i) {
+    if (pool->pixelbuffers[pixelbuffer->type][i] == pixelbuffer) {
+      --pool->pixelbuffer_count[pixelbuffer->type];
 
       /* move the last pixelbuffer in the array to the slot of the removed
          one to maintain the array continuous in memory */
-      resources->pixelbuffers[pixelbuffer->type][i]
-          = resources->pixelbuffers[pixelbuffer->type]
-          [resources->pixelbuffer_count[pixelbuffer->type]];
+      pool->pixelbuffers[pixelbuffer->type][i]
+          = pool->pixelbuffers[pixelbuffer->type]
+          [pool->pixelbuffer_count[pixelbuffer->type]];
 
       break;
     }
   }
 
-  schro_opengl_unlock_resources (pixelbuffer->opengl);
+  schro_opengl_unlock_canvas_pool (pixelbuffer->opengl);
 
   /* free OpenGL handles */
   schro_opengl_lock_context (pixelbuffer->opengl);
@@ -888,61 +888,115 @@ schro_opengl_pixelbuffer_unref (SchroOpenGLPixelbuffer *pixelbuffer)
   schro_free (pixelbuffer);
 }
 
-SchroOpenGLResources *
-schro_opengl_resources_new (SchroOpenGL *opengl)
+SchroOpenGLCanvasPool *
+schro_opengl_canvas_pool_new (SchroOpenGL *opengl)
 {
-  SchroOpenGLResources *resources;
+  SchroOpenGLCanvasPool *pool;
 
-  resources = schro_malloc0 (sizeof (SchroOpenGLResources));
+  pool = schro_malloc0 (sizeof (SchroOpenGLCanvasPool));
 
-  resources->opengl = opengl;
-  resources->canvas_count[SCHRO_OPENGL_CANVAS_TYPE_PRIMARAY] = 0;
-  resources->canvas_count[SCHRO_OPENGL_CANVAS_TYPE_SECONDARY] = 0;
-  resources->pixelbuffer_count[SCHRO_OPENGL_PIXELBUFFER_TYPE_PUSH] = 0;
-  resources->pixelbuffer_count[SCHRO_OPENGL_PIXELBUFFER_TYPE_PULL] = 0;
+  pool->opengl = opengl;
+  pool->canvas_count[SCHRO_OPENGL_CANVAS_TYPE_PRIMARAY] = 0;
+  pool->canvas_count[SCHRO_OPENGL_CANVAS_TYPE_SECONDARY] = 0;
+  pool->canvas_count[SCHRO_OPENGL_CANVAS_TYPE_SPATIAL_WEIGHT] = 0;
+  pool->pixelbuffer_count[SCHRO_OPENGL_PIXELBUFFER_TYPE_PUSH] = 0;
+  pool->pixelbuffer_count[SCHRO_OPENGL_PIXELBUFFER_TYPE_PULL] = 0;
 
-  return resources;
+  return pool;
 }
 
 void
-schro_opengl_resources_free (SchroOpenGLResources* resources)
+schro_opengl_canvas_pool_free (SchroOpenGLCanvasPool* pool)
 {
   int i;
 
-  schro_opengl_lock_resources (resources->opengl);
+  schro_opengl_lock_canvas_pool (pool->opengl);
 
   #define UNREF_CANVASES(_type) \
       do { \
-        for (i = 0; i < resources->canvas_count[_type]; ++i) { \
-          SCHRO_ASSERT (resources->canvases[_type][i]->refcount == 1); \
+        for (i = 0; i < pool->canvas_count[_type]; ++i) { \
+          SCHRO_ASSERT (pool->canvases[_type][i]->refcount == 1); \
         } \
-        while (resources->canvas_count[_type] > 0) { \
-          schro_opengl_canvas_unref (resources->canvases[_type][0]); \
+        while (pool->canvas_count[_type] > 0) { \
+          schro_opengl_canvas_unref (pool->canvases[_type][0]); \
         } \
-        SCHRO_ASSERT (resources->canvas_count[_type] == 0); \
+        SCHRO_ASSERT (pool->canvas_count[_type] == 0); \
       } while (0)
 
   #define UNREF_PIXELBUFFERS(_type) \
       do { \
-        for (i = 0; i < resources->pixelbuffer_count[_type]; ++i) { \
-          SCHRO_ASSERT (resources->pixelbuffers[_type][i]->refcount == 1); \
+        for (i = 0; i < pool->pixelbuffer_count[_type]; ++i) { \
+          SCHRO_ASSERT (pool->pixelbuffers[_type][i]->refcount == 1); \
         } \
-        while (resources->pixelbuffer_count[_type] > 0) { \
-          schro_opengl_pixelbuffer_unref (resources->pixelbuffers[_type][0]); \
+        while (pool->pixelbuffer_count[_type] > 0) { \
+          schro_opengl_pixelbuffer_unref (pool->pixelbuffers[_type][0]); \
         } \
-        SCHRO_ASSERT (resources->pixelbuffer_count[_type] == 0); \
+        SCHRO_ASSERT (pool->pixelbuffer_count[_type] == 0); \
       } while (0)
 
   UNREF_CANVASES (SCHRO_OPENGL_CANVAS_TYPE_PRIMARAY);
   UNREF_CANVASES (SCHRO_OPENGL_CANVAS_TYPE_SECONDARY);
+  UNREF_CANVASES (SCHRO_OPENGL_CANVAS_TYPE_SPATIAL_WEIGHT);
   UNREF_PIXELBUFFERS (SCHRO_OPENGL_PIXELBUFFER_TYPE_PUSH);
   UNREF_PIXELBUFFERS (SCHRO_OPENGL_PIXELBUFFER_TYPE_PULL);
 
   #undef UNREF_CANVASES
   #undef UNREF_PIXELBUFFERS
 
-  schro_opengl_unlock_resources (resources->opengl);
+  schro_opengl_unlock_canvas_pool (pool->opengl);
 
-  schro_free (resources);
+  schro_free (pool);
+}
+
+void
+schro_opengl_canvas_pool_squeeze (SchroOpenGLCanvasPool* pool)
+{
+  int i;
+  int done = FALSE;
+
+  schro_opengl_lock_canvas_pool (pool->opengl);
+
+  #define SQUEEZE_CANVASES(_type) \
+      do { \
+        done = FALSE; \
+        while (!done) { \
+          done = TRUE; \
+          for (i = 0; i < pool->canvas_count[_type]; ++i) { \
+            if (pool->canvases[_type][i]->refcount == 1) { \
+              /* canvas only in pool */ \
+              schro_opengl_canvas_unref (pool->canvases[_type][i]); \
+              done = FALSE; \
+              break; \
+            } \
+          } \
+        } \
+      } while (0)
+
+  #define SQUEEZE_PIXELBUFFERS(_type) \
+      do { \
+        done = FALSE; \
+        while (!done) { \
+          done = TRUE; \
+          for (i = 0; i < pool->pixelbuffer_count[_type]; ++i) { \
+            if (pool->pixelbuffers[_type][i]->refcount == 1) { \
+              /* pixelbuffer only in pool */ \
+              schro_opengl_pixelbuffer_unref (pool->pixelbuffers[_type][i]); \
+              done = FALSE; \
+              break; \
+            } \
+          } \
+        } \
+      } while (0)
+
+  SQUEEZE_CANVASES (SCHRO_OPENGL_CANVAS_TYPE_PRIMARAY);
+  SQUEEZE_CANVASES (SCHRO_OPENGL_CANVAS_TYPE_SECONDARY);
+  SQUEEZE_CANVASES (SCHRO_OPENGL_CANVAS_TYPE_SPATIAL_WEIGHT);
+  SQUEEZE_PIXELBUFFERS (SCHRO_OPENGL_PIXELBUFFER_TYPE_PUSH);
+  SQUEEZE_PIXELBUFFERS (SCHRO_OPENGL_PIXELBUFFER_TYPE_PULL);
+
+  #undef SQUEEZE_CANVASES
+  #undef SQUEEZE_PIXELBUFFERS
+
+  schro_opengl_unlock_canvas_pool (pool->opengl);
 }
 

@@ -28,8 +28,8 @@ int schro_opengl_is_usable (SchroOpenGL *opengl);
 
 void schro_opengl_lock_context (SchroOpenGL *opengl);
 void schro_opengl_unlock_context (SchroOpenGL *opengl);
-void schro_opengl_lock_resources (SchroOpenGL *opengl);
-void schro_opengl_unlock_resources (SchroOpenGL *opengl);
+void schro_opengl_lock_canvas_pool (SchroOpenGL *opengl);
+void schro_opengl_unlock_canvas_pool (SchroOpenGL *opengl);
 void schro_opengl_check_error (const char *file, int line, const char *func);
 void schro_opengl_check_framebuffer (const char *file, int line,
     const char *func);
@@ -40,9 +40,10 @@ void schro_opengl_render_quad (int x, int y, int width, int height);
 //SchroOpenGLPipelineType *schro_opengl_get_pipeline_type (SchroOpenGL *opengl); // FIXME
 void *schro_opengl_get_tmp (SchroOpenGL *opengl, int size);
 SchroOpenGLShaderLibrary *schro_opengl_get_shader_library (SchroOpenGL *opengl);
-SchroOpenGLResources *schro_opengl_get_resources (SchroOpenGL *opengl);
-SchroOpenGLCanvas *schro_opengl_get_obmc_weight_canvas (SchroOpenGL *opengl,
-    int width, int height);
+SchroOpenGLCanvasPool *schro_opengl_get_canvas_pool (SchroOpenGL *opengl);
+SchroOpenGLSpatialWeightPool *schro_opengl_get_spatial_weight_pool
+    (SchroOpenGL *opengl);
+void schro_opengl_squeeze_pools (SchroOpenGL *opengl);
 
 SchroMemoryDomain *schro_memory_domain_new_opengl (void);
 

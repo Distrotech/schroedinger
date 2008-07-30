@@ -6,6 +6,7 @@
 #include <schroedinger/opengl/schroopengl.h>
 #include <schroedinger/opengl/schroopenglcanvas.h>
 #include <schroedinger/opengl/schroopenglframe.h>
+#include <schroedinger/opengl/schroopenglmotion.h>
 #include <schroedinger/opengl/schroopenglshader.h>
 #include <stdio.h>
 
@@ -27,7 +28,43 @@ struct _SchroOpenGLMotion {
   SchroOpenGLShader *shader_biref_prec3a_weight;
   SchroOpenGLShader *shader_biref_prec3b;
   SchroOpenGLShader *shader_biref_prec3b_weight;
-  SchroOpenGLCanvas *obmc_weight_canvas;
+};
+
+struct _SchroOpenGLSpatialWeightBlock {
+  SchroOpenGLSpatialWeightPool* pool;
+  int refcount;
+
+  int edges[4]; /* left, top, right, bottom */
+  int xbsep;
+  int ybsep;
+  int xblen;
+  int yblen;
+  SchroOpenGLCanvas* canvas;
+};
+
+struct _SchroOpenGLSpatialWeightGrid {
+  SchroOpenGLSpatialWeightPool* pool;
+  int refcount;
+
+  int width;
+  int height;
+  int x_num_blocks;
+  int y_num_blocks;
+  int xbsep;
+  int ybsep;
+  int xblen;
+  int yblen;
+  SchroOpenGLSpatialWeightBlock **blocks;
+};
+
+#define SCHRO_OPENGL_SPATIAL_WEIGHT_POOL_LIMIT 1024
+
+struct _SchroOpenGLSpatialWeightPool {
+  SchroOpenGLSpatialWeightBlock *blocks[SCHRO_OPENGL_SPATIAL_WEIGHT_POOL_LIMIT];
+  int block_count;
+
+  SchroOpenGLSpatialWeightGrid *grids[SCHRO_OPENGL_SPATIAL_WEIGHT_POOL_LIMIT];
+  int grid_count;
 };
 
 static void
@@ -126,8 +163,10 @@ schro_opengl_motion_render_ref_block (SchroOpenGLMotion *opengl_motion,
     case 0: // schro_upsampled_frame_get_block_fast_prec0
       if (needs_weighting) {
         shader = opengl_motion->shader_ref_prec0_weight;
+        //SCHRO_ERROR ("shader_ref_prec0_weight");
       } else {
         shader = opengl_motion->shader_ref_prec0;
+        //SCHRO_ERROR ("shader_ref_prec0");
       }
 
       glUseProgramObjectARB (shader->program);
@@ -137,8 +176,10 @@ schro_opengl_motion_render_ref_block (SchroOpenGLMotion *opengl_motion,
     case 1: // schro_upsampled_frame_get_block_fast_prec1
       if (needs_weighting) {
         shader = opengl_motion->shader_ref_prec0_weight;
+        //SCHRO_ERROR ("shader_ref_prec0_weight 1");
       } else {
         shader = opengl_motion->shader_ref_prec0;
+        //SCHRO_ERROR ("shader_ref_prec0 1");
       }
 
       glUseProgramObjectARB (shader->program);
@@ -159,8 +200,10 @@ schro_opengl_motion_render_ref_block (SchroOpenGLMotion *opengl_motion,
         case 0: // schro_upsampled_frame_get_block_fast_prec1
           if (needs_weighting) {
             shader = opengl_motion->shader_ref_prec0_weight;
+            //SCHRO_ERROR ("shader_ref_prec0_weight 3 0");
           } else {
             shader = opengl_motion->shader_ref_prec0;
+            //SCHRO_ERROR ("shader_ref_prec0 3 0");
           }
 
           glUseProgramObjectARB (shader->program);
@@ -171,8 +214,10 @@ schro_opengl_motion_render_ref_block (SchroOpenGLMotion *opengl_motion,
         case 8:
           if (needs_weighting) {
             shader = opengl_motion->shader_ref_prec3a_weight;
+            //SCHRO_ERROR ("shader_ref_prec3a_weight");
           } else {
             shader = opengl_motion->shader_ref_prec3a;
+            //SCHRO_ERROR ("shader_ref_prec3a");
           }
 
           glUseProgramObjectARB (shader->program);
@@ -189,8 +234,10 @@ schro_opengl_motion_render_ref_block (SchroOpenGLMotion *opengl_motion,
         default:
           if (needs_weighting) {
             shader = opengl_motion->shader_ref_prec3b_weight;
+            //SCHRO_ERROR ("shader_ref_prec3b_weight");
           } else {
             shader = opengl_motion->shader_ref_prec3b;
+            //SCHRO_ERROR ("shader_ref_prec3b");
           }
 
           glUseProgramObjectARB (shader->program);
@@ -446,21 +493,23 @@ schro_opengl_motion_render (SchroMotion *motion, SchroFrame *dest)
   SchroOpenGLCanvas *dest_canvas;
   SchroChromaFormat chroma_format;
   SchroOpenGLShader *shader_copy;
-  SchroOpenGLShader *shader_weight;
   SchroOpenGLShader *shader_clear;
   SchroOpenGLShader *shader_shift;
   SchroOpenGLMotion opengl_motion;
+  SchroOpenGLSpatialWeightGrid *spatial_weight_grid;
+  SchroOpenGLSpatialWeightBlock *spatial_weight_block;
+  SchroOpenGLSpatialWeightBlock *previous_spatial_weight_block = NULL;
 
   SCHRO_ASSERT (SCHRO_FRAME_IS_OPENGL (dest));
   SCHRO_ASSERT (SCHRO_FRAME_FORMAT_DEPTH (dest->format)
       == SCHRO_FRAME_FORMAT_DEPTH_S16);
 
+  SCHRO_ASSERT (params->picture_weight_1 < (1 << params->picture_weight_bits));
+  SCHRO_ASSERT (params->picture_weight_2 < (1 << params->picture_weight_bits));
+
   if (params->num_refs == 1) {
     SCHRO_ASSERT (params->picture_weight_2 == 1);
   }
-
-  SCHRO_ASSERT (params->picture_weight_1 < (1 << params->picture_weight_bits));
-  SCHRO_ASSERT (params->picture_weight_2 < (1 << params->picture_weight_bits));
 
   dest_canvas = SCHRO_OPNEGL_CANVAS_FROM_FRAMEDATA (dest->components + 0);
 
@@ -470,15 +519,12 @@ schro_opengl_motion_render (SchroMotion *motion, SchroFrame *dest)
 
   shader_copy = schro_opengl_shader_get (dest_canvas->opengl,
       SCHRO_OPENGL_SHADER_COPY_S16);
-  shader_weight = schro_opengl_shader_get (dest_canvas->opengl,
-      SCHRO_OPENGL_SHADER_OBMC_WEIGHT);
   shader_clear = schro_opengl_shader_get (dest_canvas->opengl,
       SCHRO_OPENGL_SHADER_OBMC_CLEAR);
   shader_shift = schro_opengl_shader_get (dest_canvas->opengl,
       SCHRO_OPENGL_SHADER_OBMC_SHIFT);
 
   SCHRO_ASSERT (shader_copy != NULL);
-  SCHRO_ASSERT (shader_weight != NULL);
   SCHRO_ASSERT (shader_clear != NULL);
   SCHRO_ASSERT (shader_shift != NULL);
 
@@ -565,6 +611,13 @@ schro_opengl_motion_render (SchroMotion *motion, SchroFrame *dest)
           >> SCHRO_CHROMA_FORMAT_V_SHIFT (chroma_format);
     }
 
+    SCHRO_ASSERT (motion->xblen <= 2 * motion->xbsep);
+    SCHRO_ASSERT (motion->yblen <= 2 * motion->ybsep);
+    SCHRO_ASSERT (motion->xblen >= motion->xbsep);
+    SCHRO_ASSERT (motion->yblen >= motion->ybsep);
+    SCHRO_ASSERT ((motion->xblen - motion->xbsep) % 2 == 0);
+    SCHRO_ASSERT ((motion->yblen - motion->ybsep) % 2 == 0);
+
     motion->width = dest->components[i].width;
     motion->height = dest->components[i].height;
     motion->xoffset = (motion->xblen - motion->xbsep) / 2;
@@ -574,40 +627,10 @@ schro_opengl_motion_render (SchroMotion *motion, SchroFrame *dest)
     motion->max_fast_y = (motion->height - motion->yblen)
         << motion->mv_precision;
 
-    /* push obmc weight to texture */
-    opengl_motion.obmc_weight_canvas
-        = schro_opengl_get_obmc_weight_canvas (dest_canvas->opengl,
-        motion->xblen, motion->yblen);
-
-#if 0
-    motion->obmc_weight.format = SCHRO_FRAME_FORMAT_S16_444;
-    motion->obmc_weight.width = opengl_motion.obmc_weight_canvas->width;
-    motion->obmc_weight.height = opengl_motion.obmc_weight_canvas->height;
-    motion->obmc_weight.stride = motion->obmc_weight.width * sizeof (int16_t);
-    motion->obmc_weight.data = schro_malloc (motion->obmc_weight.stride
-        * motion->obmc_weight.height);
-
-    schro_motion_init_obmc_weight (motion);
-
-    schro_opengl_canvas_push (opengl_motion.obmc_weight_canvas,
-        &motion->obmc_weight);
-#else
-    schro_opengl_setup_viewport (motion->xblen, motion->yblen);
-
-    glBindFramebufferEXT (GL_FRAMEBUFFER_EXT,
-        opengl_motion.obmc_weight_canvas->framebuffer);
-
-    glUseProgramObjectARB (shader_weight->program);
-    glUniform2fARB (shader_weight->size, motion->xblen, motion->yblen);
-    glUniform2fARB (shader_weight->offsets[0], motion->xoffset,
-        motion->yoffset);
-
-    schro_opengl_render_quad (0, 0, motion->xblen, motion->yblen);
-
-    SCHRO_OPENGL_CHECK_ERROR
-
-    glFlush();
-#endif
+    spatial_weight_grid = schro_opengl_spatial_weight_grid_new
+        (dest_canvas->opengl, motion->width, motion->height,
+        params->x_num_blocks, params->y_num_blocks, motion->xbsep,
+        motion->ybsep, motion->xblen, motion->yblen);
 
     /* clear */
     schro_opengl_setup_viewport (motion->width, motion->height);
@@ -658,18 +681,27 @@ schro_opengl_motion_render (SchroMotion *motion, SchroFrame *dest)
           dest_canvas->secondary->framebuffer);
 
       glBindTexture (GL_TEXTURE_RECTANGLE_ARB, dest_canvas->texture);
-      glActiveTextureARB (GL_TEXTURE1_ARB);
-      glBindTexture (GL_TEXTURE_RECTANGLE_ARB,
-          opengl_motion.obmc_weight_canvas->texture);
-      glActiveTextureARB (GL_TEXTURE0_ARB);
 
       SCHRO_OPENGL_CHECK_ERROR
+
+      previous_spatial_weight_block = NULL;
 
       for (v = passes[k][0]; v < params->y_num_blocks; v += 2) {
         y = motion->ybsep * v - motion->yoffset;
 
         for (u = passes[k][1]; u < params->x_num_blocks; u += 2) {
           x = motion->xbsep * u - motion->xoffset;
+          spatial_weight_block
+              = spatial_weight_grid->blocks[v * params->x_num_blocks + u];
+
+          if (spatial_weight_block != previous_spatial_weight_block) {
+            previous_spatial_weight_block = spatial_weight_block;
+
+            glActiveTextureARB (GL_TEXTURE1_ARB);
+            glBindTexture (GL_TEXTURE_RECTANGLE_ARB,
+                spatial_weight_block->canvas->texture);
+            glActiveTextureARB (GL_TEXTURE0_ARB);
+          }
 
           schro_opengl_motion_render_block (&opengl_motion, i, x, y, u, v);
         }
@@ -693,7 +725,7 @@ schro_opengl_motion_render (SchroMotion *motion, SchroFrame *dest)
 
     glFlush();
 
-    schro_free (motion->obmc_weight.data);
+    schro_opengl_spatial_weight_grid_unref (spatial_weight_grid);
   }
 
   glUseProgramObjectARB (0);
@@ -727,5 +759,316 @@ schro_opengl_motion_render (SchroMotion *motion, SchroFrame *dest)
   }*/
 
   schro_opengl_unlock_context (dest_canvas->opengl);
+}
+
+SchroOpenGLSpatialWeightBlock *
+schro_opengl_spatial_weight_block_new (SchroOpenGL *opengl, int* edges, int xbsep,
+    int ybsep, int xblen, int yblen)
+{
+  int i;
+  int xoffset, yoffset;
+  SchroOpenGLSpatialWeightPool* pool;
+  SchroOpenGLSpatialWeightBlock* block;
+  SchroOpenGLShader *shader;
+
+  pool = schro_opengl_get_spatial_weight_pool (opengl);
+
+  /* try to reuse existing block */
+  SCHRO_ASSERT (pool->block_count >= 0);
+  SCHRO_ASSERT (pool->block_count <= SCHRO_OPENGL_SPATIAL_WEIGHT_POOL_LIMIT);
+
+  for (i = 0; i < pool->block_count; ++i) {
+    block = pool->blocks[i];
+
+    if (block->edges[0] == edges[0] && block->edges[1] == edges[1] &&
+        block->edges[2] == edges[2] && block->edges[3] == edges[3] &&
+        block->xbsep == xbsep && block->ybsep == ybsep &&
+        block->xblen == xblen && block->yblen == yblen) {
+      ++block->refcount;
+
+      return block;
+    }
+  }
+
+  /* create new block */
+  block = schro_malloc0 (sizeof (SchroOpenGLSpatialWeightBlock));
+
+  block->pool = pool;
+  block->refcount = 2; /* 1 ref for caller + 1 ref for pool */
+  block->edges[0] = edges[0];
+  block->edges[1] = edges[1];
+  block->edges[2] = edges[2];
+  block->edges[3] = edges[3];
+  block->xbsep = xbsep;
+  block->ybsep = ybsep;
+  block->xblen = xblen;
+  block->yblen = yblen;
+  block->canvas = schro_opengl_canvas_new (opengl,
+      SCHRO_OPENGL_CANVAS_TYPE_SPATIAL_WEIGHT, SCHRO_FRAME_FORMAT_S16_444,
+      MAX(xblen, 16), MAX(yblen, 16));
+
+  xoffset = (xblen - xbsep) / 2;
+  yoffset = (yblen - ybsep) / 2;
+
+  schro_opengl_lock_context (opengl);
+
+  shader = schro_opengl_shader_get (opengl,
+      SCHRO_OPENGL_SHADER_OBMC_SPATIAL_WEIGHT);
+
+  SCHRO_ASSERT (shader != NULL);
+
+  schro_opengl_setup_viewport (xblen, yblen);
+
+  glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, block->canvas->framebuffer);
+
+  glUseProgramObjectARB (shader->program);
+  glUniform2fARB (shader->offsets[0], xoffset, yoffset);
+  glUniform2fARB (shader->edges[0], edges[0], edges[1]);
+  glUniform2fARB (shader->edges[1], edges[2], edges[3]);
+  glUniform2fARB (shader->size, xblen, yblen);
+
+  schro_opengl_render_quad (0, 0, xblen, yblen);
+
+  glUseProgramObjectARB (0);
+
+  SCHRO_OPENGL_CHECK_ERROR
+
+  glFlush();
+
+  schro_opengl_unlock_context (opengl);
+
+  /* add new block to pool */
+  SCHRO_ASSERT (pool->block_count >= 0);
+  SCHRO_ASSERT (pool->block_count < SCHRO_OPENGL_SPATIAL_WEIGHT_POOL_LIMIT);
+
+  pool->blocks[pool->block_count] = block;
+  ++pool->block_count;
+
+  return block;
+}
+
+void
+schro_opengl_spatial_weight_block_unref (SchroOpenGLSpatialWeightBlock *block)
+{
+  int i;
+  SchroOpenGLSpatialWeightPool *pool;
+
+  SCHRO_ASSERT (block->refcount > 0);
+
+  --block->refcount;
+
+  if (block->refcount > 0) {
+    return;
+  }
+
+  /* remove block from the pool */
+  pool = block->pool;
+
+  SCHRO_ASSERT (pool->block_count >= 1);
+  SCHRO_ASSERT (pool->block_count <= SCHRO_OPENGL_SPATIAL_WEIGHT_POOL_LIMIT);
+
+  for (i = 0; i < pool->block_count; ++i) {
+    if (pool->blocks[i] == block) {
+      --pool->block_count;
+
+      /* move the last block in the array to the slot of the removed
+         one to maintain the array continuous in memory */
+      pool->blocks[i] = pool->blocks[pool->block_count];
+
+      break;
+    }
+  }
+
+  /* unref canvas */
+  schro_opengl_canvas_unref (block->canvas);
+
+  schro_free (block);
+}
+
+SchroOpenGLSpatialWeightGrid *
+schro_opengl_spatial_weight_grid_new (SchroOpenGL *opengl,
+    int width, int height, int x_num_blocks, int y_num_blocks, int xbsep,
+    int ybsep, int xblen, int yblen)
+{
+  int i, u, v;
+  int x, y;
+  int xoffset, yoffset;
+  int edges[4];
+  SchroOpenGLSpatialWeightPool* pool;
+  SchroOpenGLSpatialWeightGrid* grid;
+
+  pool = schro_opengl_get_spatial_weight_pool (opengl);
+
+  /* try to reuse existing grid */
+  SCHRO_ASSERT (pool->grid_count >= 0);
+  SCHRO_ASSERT (pool->grid_count <= SCHRO_OPENGL_SPATIAL_WEIGHT_POOL_LIMIT);
+
+  for (i = 0; i < pool->grid_count; ++i) {
+    grid = pool->grids[i];
+
+    if (grid->width == width && grid->height == height &&
+        grid->x_num_blocks == x_num_blocks &&
+        grid->y_num_blocks == y_num_blocks && grid->xbsep == xbsep &&
+        grid->ybsep == ybsep && grid->xblen == xblen && grid->yblen == yblen) {
+      ++grid->refcount;
+
+      return grid;
+    }
+  }
+
+  /* create new grid */
+  grid = schro_malloc0 (sizeof (SchroOpenGLSpatialWeightGrid));
+
+  grid->pool = pool;
+  grid->refcount = 2; /* 1 ref for caller + 1 ref for pool */
+  grid->width = width;
+  grid->height = height;
+  grid->x_num_blocks = x_num_blocks;
+  grid->y_num_blocks = y_num_blocks;
+  grid->xbsep = xbsep;
+  grid->ybsep = ybsep;
+  grid->xblen = xblen;
+  grid->yblen = yblen;
+  grid->blocks = schro_malloc0 (sizeof (SchroOpenGLSpatialWeightBlock*)
+      * y_num_blocks * x_num_blocks);
+
+  xoffset = (xblen - xbsep) / 2;
+  yoffset = (yblen - ybsep) / 2;
+
+  for (v = 0; v < y_num_blocks; ++v) {
+    y = ybsep * v - yoffset;
+
+    for (u = 0; u < x_num_blocks; ++u) {
+      x = xbsep * u - xoffset;
+
+      edges[0] = u == 0 ? 1 : 0;                /* left */
+      edges[1] = v == 0 ? 1 : 0;                /* top */
+      edges[2] = u == x_num_blocks - 1 ? 1 : 0; /* right */
+      edges[3] = v == y_num_blocks - 1 ? 1 : 0; /* bottom */
+
+      grid->blocks[v * x_num_blocks + u] = schro_opengl_spatial_weight_block_new
+          (opengl, edges, xbsep, ybsep, xblen, yblen);
+    }
+  }
+
+  /* add new grid to pool */
+  SCHRO_ASSERT (pool->grid_count >= 0);
+  SCHRO_ASSERT (pool->grid_count < SCHRO_OPENGL_SPATIAL_WEIGHT_POOL_LIMIT);
+
+  pool->grids[pool->grid_count] = grid;
+  ++pool->grid_count;
+
+  return grid;
+}
+
+void
+schro_opengl_spatial_weight_grid_unref (SchroOpenGLSpatialWeightGrid *grid)
+{
+  int i, u, v;
+  SchroOpenGLSpatialWeightPool *pool;
+
+  SCHRO_ASSERT (grid->refcount > 0);
+
+  --grid->refcount;
+
+  if (grid->refcount > 0) {
+    return;
+  }
+
+  /* remove grid from the pool */
+  pool = grid->pool;
+
+  SCHRO_ASSERT (pool->grid_count >= 1);
+  SCHRO_ASSERT (pool->grid_count <= SCHRO_OPENGL_SPATIAL_WEIGHT_POOL_LIMIT);
+
+  for (i = 0; i < pool->grid_count; ++i) {
+    if (pool->grids[i] == grid) {
+      --pool->grid_count;
+
+      /* move the last grid in the array to the slot of the removed
+         one to maintain the array continuous in memory */
+      pool->grids[i] = pool->grids[pool->grid_count];
+
+      break;
+    }
+  }
+
+  /* unref blocks */
+  for (v = 0; v < grid->y_num_blocks; ++v) {
+    for (u = 0; u < grid->x_num_blocks; ++u) {
+      schro_opengl_spatial_weight_block_unref
+          (grid->blocks[v * grid->x_num_blocks + u]);
+    }
+  }
+
+  schro_free (grid->blocks);
+
+  schro_free (grid);
+}
+
+SchroOpenGLSpatialWeightPool *
+schro_opengl_spatial_weight_pool_new (void)
+{
+  SchroOpenGLSpatialWeightPool *pool;
+
+  pool = schro_malloc0 (sizeof (SchroOpenGLSpatialWeightPool));
+
+  pool->block_count = 0;
+  pool->grid_count = 0;
+
+  return pool;
+}
+
+void
+schro_opengl_spatial_weight_pool_free (SchroOpenGLSpatialWeightPool* pool)
+{
+  int i;
+
+  #define UNREF(_type) \
+      do { \
+        for (i = 0; i < pool->_type##_count; ++i) { \
+          SCHRO_ASSERT (pool->_type##s[i]->refcount == 1); \
+        } \
+        while (pool->_type##_count > 0) { \
+          schro_opengl_spatial_weight_##_type##_unref (pool->_type##s[0]); \
+        } \
+        SCHRO_ASSERT (pool->_type##_count == 0); \
+      } while (0)
+
+  UNREF (grid);
+  UNREF (block);
+
+  #undef UNREF
+
+  schro_free (pool);
+}
+
+void
+schro_opengl_spatial_weight_pool_squeeze (SchroOpenGLSpatialWeightPool* pool)
+{
+  int i;
+  int done = FALSE;
+
+  #define SQUEEZE(_type) \
+      do { \
+        done = FALSE; \
+        while (!done) { \
+          done = TRUE; \
+          for (i = 0; i < pool->_type##_count; ++i) { \
+            if (pool->_type##s[i]->refcount == 1) { \
+              /* item only in pool */ \
+              schro_opengl_spatial_weight_##_type##_unref (pool->_type##s[i]); \
+              done = FALSE; \
+              break; \
+            } \
+          } \
+        } \
+      } while (0)
+
+  SQUEEZE (grid);
+  SQUEEZE (block);
+
+  #undef SQUEEZE
+  #undef SQUEEZE
 }
 

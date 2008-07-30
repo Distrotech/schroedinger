@@ -22,6 +22,18 @@ def intersection (a, b):
 
 
 
+def contains_reserverd_block_header (list):
+  header_re = re.compile ("^(?:versions|uniforms|textures|else|" \
+      "(?:shader|func|if|elif)[ ]+[^:]+):$")
+
+  for item in list:
+    if header_re.search (item) is not None:
+      return True
+
+  return False
+
+
+
 class Item:
   def __init__ (self):
     self.versions = ["default"]
@@ -33,11 +45,6 @@ class Item:
     self.versions += versions
 
   def has_version (self, versions):
-    #for version in self.versions:
-    #  if version in versions:
-    #    return True
-
-    #return False
     return len (intersection (versions, self.versions)) > 0
 
 
@@ -49,13 +56,18 @@ class Line (Item):
     self.number = number
     self.level = 0
     self.content = ""
-    
+
     match = re.search ("^([ ]*)([^ ].*)$", string)
 
     if match is not None:
       if len (match.group (1)) % 2 != 0:
         error ("invalid indentation in line " + repr (number) + " '" + string \
             + "'")
+
+      if re.search ("^(?:versions|uniforms|textures|else|" \
+          "(?:shader|func|if|elif)[ ]+[^:]+)$", string) is not None:
+        error ("expecting reserved block header '" + match.group (2) \
+            + "' to be ended with a ':' at line " + repr (number))
 
       self.level = len (match.group (1)) / 2
       self.content = match.group (2)
@@ -101,17 +113,31 @@ class Block (Item):
     return string.rstrip ("\n") + ")"
 
   def parse (self, lines):
-    if len (lines) < 2 or lines[0].level + 1 != lines[1].level:
+    if len (lines) < 2 or (not lines[0].content.endswith (":") and
+        not lines[1].level > lines[0].level):
       return
+
+    if lines[1].level <= lines[0].level:
+      error ("expecting at least one line in the block '" + lines[0].content \
+          + "' started at line " + repr (lines[0].number))
+
+    if lines[1].level > lines[0].level + 1:
+      error ("invalid indentation in line " + repr (lines[1].number) \
+          + ", expecting this line to be intended one level further than " \
+          "the block '" + lines[0].content + "' started at line " \
+          + repr (lines[0].number))
+
+    if lines[1].level == lines[0].level + 1:
+      if not lines[0].content.endswith (":"):
+        error ("either invalid indentation in line "  \
+            + repr (lines[1].number) + " or expecting ':' at end of line " \
+            + repr (lines[0].number) + " to start a block but found '" \
+            + lines[0].content + "'")
 
     self.header = lines[0]
     lines = lines[1:]
 
-    if not self.header.content.endswith (":"):
-      error ("expecting ':' at end of line " + repr (self.header.number) \
-          + " but found '" + self.header.content + "'")
-
-    while len (lines) > 0 and self.header.level + 1 == lines[0].level:
+    while len (lines) > 0 and lines[0].level >= self.header.level + 1:
       block = Block ()
       result = block.parse (lines)
 
@@ -513,23 +539,14 @@ class ShaderBunch:
     version = match.group (1)
     define = match.group (2)
 
-    if self.contains_reserved_word ([version]):
-      error ("version '" + version + "' is a reserved word")
+    if contains_reserverd_block_header ([version]):
+      error ("version '" + version + "' is a reserved block header")
 
     if version in self.versions:
       error ("version '" + version + "' already defined")
 
     self.versions += [version]
     self.defines[version] = define
-
-  def contains_reserved_word (self, list):
-    for item in list:
-     if item in ["shader", "versions", "uniforms", "textures", "else"] or \
-         item.startswith ("func ") or item.startswith ("if ") or \
-         item.startswith ("elif "):
-       return True
-
-    return False
 
   def transform_versions (self, children):
     transformed = []
@@ -538,7 +555,7 @@ class ShaderBunch:
       if isinstance (child, Line):
         transformed += [child]
       elif isinstance (child, Block):
-        if self.contains_reserved_word ([child.header.content[:-1]]):
+        if contains_reserverd_block_header ([child.header.content]):
           child.children = self.transform_versions (child.children)
           transformed += [child]
         else:
@@ -552,9 +569,10 @@ class ShaderBunch:
             string = string[match.span ()[1]:]
             match = version_re.search (string)
 
-          if self.contains_reserved_word (versions):
+          if contains_reserverd_block_header (versions):
             if len (versions) > 1:
-              error ("versions " + repr (versions) + " contain a reserved word")
+              error ("versions " + repr (versions) + " contain a reserved " \
+                  "block header")
             else:
               child.children = self.transform_versions (child.children)
               transformed += [child]
@@ -599,6 +617,9 @@ if __name__ == "__main__":
     while len (lines) > 0:
       block = Block ()
       lines = block.parse (lines)
+
+      if lines is None:
+        error ("somethings wrong with the block structure")
 
       blocks += [block]
 

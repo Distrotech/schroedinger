@@ -16,7 +16,11 @@ typedef struct _SchroOpenGLShaderLibrary SchroOpenGLShaderLibrary;
 
 typedef struct _SchroOpenGLPixelbuffer SchroOpenGLPixelbuffer;
 typedef struct _SchroOpenGLCanvas SchroOpenGLCanvas;
-typedef struct _SchroOpenGLResources SchroOpenGLResources;
+typedef struct _SchroOpenGLCanvasPool SchroOpenGLCanvasPool;
+
+typedef struct _SchroOpenGLSpatialWeightBlock SchroOpenGLSpatialWeightBlock;
+typedef struct _SchroOpenGLSpatialWeightGrid SchroOpenGLSpatialWeightGrid;
+typedef struct _SchroOpenGLSpatialWeightPool SchroOpenGLSpatialWeightPool;
 
 SCHRO_END_DECLS
 

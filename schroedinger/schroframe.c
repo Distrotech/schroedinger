@@ -188,6 +188,7 @@ schro_frame_new_from_data_UYVY_full (void *data, int width, int height, int stri
   frame->width = width;
   frame->height = height;
 
+  frame->components[0].format = frame->format;
   frame->components[0].width = width;
   frame->components[0].height = height;
   frame->components[0].stride = stride;
