@@ -129,11 +129,8 @@ SchroFrame * schro_frame_convert_to_444 (SchroFrame *frame);
 void schro_frame_md5 (SchroFrame *frame, uint32_t *state);
 
 #ifdef SCHRO_ENABLE_UNSTABLE_API
-/* probably used in conjunction with ME/MC - extends bottom and right */
 void schro_frame_edge_extend (SchroFrame *frame, int width, int height);
 void schro_frame_zero_extend (SchroFrame *frame, int width, int height);
-/* set first byte of first 10 lines to value ?? */
-void schro_frame_mark (SchroFrame *frame, int value);
 
 void schro_frame_data_get_codeblock (SchroFrameData *dest, SchroFrameData *src,
         int x, int y, int horiz_codeblocks, int vert_codeblocks);

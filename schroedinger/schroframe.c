@@ -1784,23 +1784,6 @@ schro_frame_md5 (SchroFrame *frame, uint32_t *state)
 }
 
 void
-schro_frame_mark (SchroFrame *frame, int value)
-{
-  uint8_t *line;
-  int y;
-  int i;
-
-  for(y=0;y<MIN(10,frame->components[0].height);y++){
-    line = OFFSET(frame->components[0].data,
-        frame->components[0].stride * y);
-    for(i=0;i<10;i++){
-      line[i] = value;
-    }
-  }
-
-}
-
-void
 schro_frame_data_get_codeblock (SchroFrameData *dest, SchroFrameData *src,
     int x, int y, int horiz_codeblocks, int vert_codeblocks)
 {

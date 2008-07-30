@@ -17,9 +17,7 @@ struct _SchroMotionEst {
 
   double lambda;
 
-  SchroUpsampledFrame *src0; /* not used */
   SchroFrame *downsampled_src0[5];
-  SchroUpsampledFrame *src1; /* not used */
   SchroFrame *downsampled_src1[5];
 
   SchroMotion *motion;

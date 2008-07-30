@@ -32,9 +32,9 @@ typedef enum {
   SCHRO_ENCODER_FRAME_STATE_ANALYSE = (1<<1),
   SCHRO_ENCODER_FRAME_STATE_HAVE_GOP = (1<<7),
   SCHRO_ENCODER_FRAME_STATE_HAVE_PARAMS = (1<<8),
-  SCHRO_ENCODER_FRAME_STATE_PREDICT = (1<<2),
-  SCHRO_ENCODER_FRAME_STATE_FULLPEL_ME = (1<<12),
-  SCHRO_ENCODER_FRAME_STATE_SUBPEL_ME = (1<<13),
+  SCHRO_ENCODER_FRAME_STATE_PREDICT_ROUGH = (1<<2),
+  SCHRO_ENCODER_FRAME_STATE_PREDICT_PEL = (1<<12),
+  SCHRO_ENCODER_FRAME_STATE_PREDICT_SUBPEL = (1<<13),
   SCHRO_ENCODER_FRAME_STATE_MODE_DECISION = (1<<14),
   SCHRO_ENCODER_FRAME_STATE_HAVE_REFS = (1<<10),
   SCHRO_ENCODER_FRAME_STATE_HAVE_QUANTS = (1<<11),
@@ -74,7 +74,7 @@ typedef enum {
 #ifdef SCHRO_ENABLE_UNSTABLE_API
 typedef int (*SchroEngineIterateFunc) (SchroEncoder *encoder);
 
-/* Added by Andrea - forward declaration */
+/* forward declaration */
 struct _SchroMotionEst;
 
 struct _SchroEncoderFrame {
@@ -150,8 +150,6 @@ struct _SchroEncoderFrame {
   SchroBuffer *subband_buffer;
 
   int16_t *quant_data;
-
-  int16_t *tmpbuf;
 
   int quant_index[3][1+SCHRO_LIMIT_TRANSFORM_DEPTH*3];
   double est_entropy[3][1+SCHRO_LIMIT_TRANSFORM_DEPTH*3][60];
@@ -435,7 +433,9 @@ void schro_encoder_encode_subband (SchroEncoderFrame *frame, int component, int 
 void schro_encoder_encode_subband_noarith (SchroEncoderFrame *frame, int component, int index);
 
 void schro_encoder_analyse_picture (SchroEncoderFrame *frame);
-void schro_encoder_predict_picture (SchroEncoderFrame *frame);
+void schro_encoder_predict_rough_picture (SchroEncoderFrame *frame);
+void schro_encoder_predict_pel_picture (SchroEncoderFrame *frame);
+void schro_encoder_predict_subpel_picture (SchroEncoderFrame *frame);
 
 void schro_encoder_fullpel_predict_picture (SchroEncoderFrame* frame);
 void schro_encoder_mode_decision (SchroEncoderFrame* frame);
@@ -443,7 +443,6 @@ void schro_encoder_mode_decision (SchroEncoderFrame* frame);
 void schro_encoder_encode_picture (SchroEncoderFrame *frame);
 void schro_encoder_reconstruct_picture (SchroEncoderFrame *frame);
 void schro_encoder_postanalyse_picture (SchroEncoderFrame *frame);
-void schro_encoder_encode_picture_all (SchroEncoderFrame *frame);
 
 SchroFrame * schro_encoder_frame_queue_get (SchroEncoder *encoder,
     SchroPictureNumber frame_number);
