@@ -1164,16 +1164,27 @@ schro_encoder_async_schedule (SchroEncoder *encoder, SchroExecDomain exec_domain
         }
       }
 
-      /* now we do fullpel ME */
-      if (todo & SCHRO_ENCODER_FRAME_STATE_PREDICT_PEL
+      if (todo & SCHRO_ENCODER_FRAME_STATE_PREDICT_ROUGH
           && frame->state & SCHRO_ENCODER_FRAME_STATE_HAVE_PARAMS) {
+        if (!check_refs(frame)) continue;
+        run_stage (frame, SCHRO_ENCODER_FRAME_STATE_PREDICT_ROUGH);
+        return TRUE;
+      }
+
+      if (todo & SCHRO_ENCODER_FRAME_STATE_PREDICT_PEL
+          && frame->state & SCHRO_ENCODER_FRAME_STATE_PREDICT_ROUGH) {
         run_stage (frame, SCHRO_ENCODER_FRAME_STATE_PREDICT_PEL);
         return TRUE;
       }
 
-      /* time for mode decision and superblock splitting (as well as DWT) */
-      if (todo & SCHRO_ENCODER_FRAME_STATE_MODE_DECISION
+      if (todo & SCHRO_ENCODER_FRAME_STATE_PREDICT_SUBPEL
           && frame->state & SCHRO_ENCODER_FRAME_STATE_PREDICT_PEL) {
+        run_stage (frame, SCHRO_ENCODER_FRAME_STATE_PREDICT_SUBPEL);
+        return TRUE;
+      }
+
+      if (todo & SCHRO_ENCODER_FRAME_STATE_MODE_DECISION
+          && frame->state & SCHRO_ENCODER_FRAME_STATE_PREDICT_SUBPEL) {
         if (!check_refs (frame)) continue;
         run_stage (frame, SCHRO_ENCODER_FRAME_STATE_MODE_DECISION);
         return TRUE;
@@ -1276,11 +1287,13 @@ schro_encoder_predict_rough_picture (SchroEncoderFrame *frame)
 {
   SCHRO_INFO("predict picture %d", frame->frame_number);
 
+#if 0
   if (frame->params.num_refs > 0) {
     schro_encoder_motion_predict (frame);
   }
+#endif
 
-  schro_encoder_render_picture (frame);
+  //schro_encoder_render_picture (frame);
 }
 
 /* should perform fullpel ME without "rendering",
