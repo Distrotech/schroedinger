@@ -1775,11 +1775,11 @@ schro_motion_copy_to (SchroMotion *motion, int i, int j, SchroBlock *block)
   }
 }
 
-/* performs full-pel ME without mode decision */
+/* rough motion estimate using hierarchical block matching */
 void
-schro_encoder_motion_predict_only (SchroEncoderFrame* frame)
+schro_motionest_rough_scan (SchroEncoderFrame* frame)
 {
-  SCHRO_ASSERT(frame);
+  SCHRO_ASSERT(frame && frame->state & SCHRO_ENCODER_FRAME_STATE_HAVE_GOP);
 
   SchroParams* params = &frame->params;
   SchroMotionEst* me = 0;
@@ -1791,7 +1791,8 @@ schro_encoder_motion_predict_only (SchroEncoderFrame* frame)
 
   /* Note: we don't create SchroMotion in MotionEst, I don't think I need it at
    * this stage for full-pel ME only */
-  me = schro_motionest_new (frame);
+  frame->me = schro_motionest_new (frame);
+  me = frame->me;
 
   /* let's try to use four level of hierarchical BM to extend
    * the reach of our MVs - max MV should be 16*12 but in fact could be bigger,
@@ -1801,12 +1802,27 @@ schro_encoder_motion_predict_only (SchroEncoderFrame* frame)
     schro_motionest_rough_scan_hint (me, 3, ref, 4);
     schro_motionest_rough_scan_hint (me, 2, ref, 4);
     schro_motionest_rough_scan_hint (me, 1, ref, 4);
-    /* Note: Dave doesn't do this last step but we want to have the motion
-     * field fully populated */
+  }
+}
+
+/* performs full-pel ME */
+void
+schro_motionest_predict_pel (SchroEncoderFrame* frame)
+{
+  SCHRO_ASSERT(frame && frame->state & SCHRO_ENCODER_FRAME_STATE_PREDICT_ROUGH);
+
+  SchroParams* params = &frame->params;
+  SchroMotionEst* me = frame->me;
+  int ref=0;
+
+  SCHRO_ASSERT(params->x_num_blocks != 0);
+  SCHRO_ASSERT(params->y_num_blocks != 0);
+  SCHRO_ASSERT(params->num_refs > 0);
+
+  for(ref=0;ref<params->num_refs;ref++){
     schro_motionest_rough_scan_hint (me, 0, ref, 4);
   }
 
-  frame->me = me;
 }
 
 /* performs mode decision for a superblock, split level 2
@@ -1850,11 +1866,12 @@ do_split2 (SchroMotionEst* me, int i, int j, SchroBlock* block)
           0, (i+ii)*params->xbsep_luma, (j+jj)*params->ybsep_luma);
       error = schro_metric_get_dc (&orig, mvdc->dc[0]
           , MIN(params->xbsep_luma,orig.width), MIN(params->ybsep_luma,orig.height));
-      /* don't understand this, just copying from Dave's code */
-      error += params->xbsep_luma * 5;
+      error += params->xbsep_luma;
       mvdc->metric = error;
       entropy = schro_motion_block_estimate_entropy (me->motion, i+ii, j+jj);
-      min_score = entropy + error * me->lambda;
+      /* Increasing cost of DC prediction by 20% - this parameter should be
+       * optimised, perhaps should change adaptively, tbr FIXME */
+      min_score = (entropy + error * me->lambda) * 1.2;
       best_error = error;
       best_entropy = entropy;
       /* Another nasty cast */
@@ -1995,7 +2012,7 @@ do_split0 (SchroMotionEst* me, int i, int j, SchroBlock* block)
 
 /* performs mdoe decision and block/superblock splitting */
 void
-schro_encoder_do_mode_decision (SchroEncoderFrame* frame)
+schro_motionest_mode_decision (SchroEncoderFrame* frame)
 {
   SchroMotionEst* me;
   SchroParams* params;

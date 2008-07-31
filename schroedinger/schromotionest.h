@@ -43,12 +43,10 @@ struct _SchroBlock {
 SchroMotionEst *schro_motionest_new (SchroEncoderFrame *frame);
 void schro_motionest_free (SchroMotionEst *me);
 
-/* this one does ME AND mode decision!! */
 void schro_encoder_motion_predict (SchroEncoderFrame *frame);
-/* it only performs ME, no mode decision */
-void schro_encoder_motion_predict_only (SchroEncoderFrame* frame);
-/* it performs mode decision and superblock splitting */
-void schro_encoder_do_mode_decision (SchroEncoderFrame* frame);
+void schro_motionest_predict_pel (SchroEncoderFrame* frame);
+void schro_motionest_mode_decision (SchroEncoderFrame* frame);
+void schro_motionest_rough_scan (SchroEncoderFrame* frame);
 
 void schro_encoder_global_estimation (SchroMotionEst *me);
 
