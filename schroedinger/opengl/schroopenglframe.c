@@ -81,12 +81,94 @@ schro_opengl_frame_new (SchroOpenGL *opengl,
     SchroMemoryDomain *opengl_domain, SchroFrameFormat format, int width,
     int height)
 {
-  SchroFrame *opengl_frame;
+  SchroFrame *opengl_frame = schro_frame_new ();
+  int bytes_pp;
+  int h_shift, v_shift;
+  int chroma_width;
+  int chroma_height;
 
+  SCHRO_ASSERT (width > 0);
+  SCHRO_ASSERT (height > 0);
   SCHRO_ASSERT (opengl_domain->flags & SCHRO_MEMORY_DOMAIN_OPENGL);
 
-  opengl_frame = schro_frame_new_and_alloc (opengl_domain, format, width,
-      height);
+  opengl_frame->format = format;
+  opengl_frame->width = width;
+  opengl_frame->height = height;
+  opengl_frame->domain = opengl_domain;
+
+  if (SCHRO_FRAME_IS_PACKED (format)) {
+    opengl_frame->components[0].format = format;
+    opengl_frame->components[0].width = width;
+    opengl_frame->components[0].height = height;
+
+    if (format == SCHRO_FRAME_FORMAT_AYUV) {
+      opengl_frame->components[0].stride = width * 4;
+    } else {
+      opengl_frame->components[0].stride = ROUND_UP_POW2 (width, 1) * 2;
+    }
+
+    opengl_frame->components[0].length
+        = opengl_frame->components[0].stride * height;
+    opengl_frame->components[0].data = NULL;
+    opengl_frame->components[0].v_shift = 0;
+    opengl_frame->components[0].h_shift = 0;
+
+    schro_opengl_frame_setup (opengl, opengl_frame);
+
+    return opengl_frame;
+  }
+
+  switch (SCHRO_FRAME_FORMAT_DEPTH (format)) {
+    case SCHRO_FRAME_FORMAT_DEPTH_U8:
+      bytes_pp = 1;
+      break;
+    case SCHRO_FRAME_FORMAT_DEPTH_S16:
+      bytes_pp = 2;
+      break;
+    case SCHRO_FRAME_FORMAT_DEPTH_S32:
+      bytes_pp = 4;
+      break;
+    default:
+      SCHRO_ASSERT(0);
+      bytes_pp = 0;
+      break;
+  }
+
+  h_shift = SCHRO_FRAME_FORMAT_H_SHIFT (format);
+  v_shift = SCHRO_FRAME_FORMAT_V_SHIFT (format);
+  chroma_width = ROUND_UP_SHIFT (width, h_shift);
+  chroma_height = ROUND_UP_SHIFT (height, v_shift);
+
+  opengl_frame->components[0].format = format;
+  opengl_frame->components[0].width = width;
+  opengl_frame->components[0].height = height;
+  opengl_frame->components[0].stride = ROUND_UP_4 (width * bytes_pp);
+  opengl_frame->components[0].length
+      = opengl_frame->components[0].stride * opengl_frame->components[0].height;
+  opengl_frame->components[0].v_shift = 0;
+  opengl_frame->components[0].h_shift = 0;
+
+  opengl_frame->components[1].format = format;
+  opengl_frame->components[1].width = chroma_width;
+  opengl_frame->components[1].height = chroma_height;
+  opengl_frame->components[1].stride = ROUND_UP_4 (chroma_width * bytes_pp);
+  opengl_frame->components[1].length
+      = opengl_frame->components[1].stride * opengl_frame->components[1].height;
+  opengl_frame->components[1].v_shift = v_shift;
+  opengl_frame->components[1].h_shift = h_shift;
+
+  opengl_frame->components[2].format = format;
+  opengl_frame->components[2].width = chroma_width;
+  opengl_frame->components[2].height = chroma_height;
+  opengl_frame->components[2].stride = ROUND_UP_4 (chroma_width * bytes_pp);
+  opengl_frame->components[2].length
+      = opengl_frame->components[2].stride * opengl_frame->components[2].height;
+  opengl_frame->components[2].v_shift = v_shift;
+  opengl_frame->components[2].h_shift = h_shift;
+
+  opengl_frame->components[0].data = NULL;
+  opengl_frame->components[1].data = NULL;
+  opengl_frame->components[2].data = NULL;
 
   schro_opengl_frame_setup (opengl, opengl_frame);
 

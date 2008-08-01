@@ -9,10 +9,10 @@
 SCHRO_BEGIN_DECLS
 
 #define SCHRO_OPNEGL_CANVAS_FROM_FRAMEDATA(_framedata) \
-    *((SchroOpenGLCanvas **) (_framedata)->data)
+    ((SchroOpenGLCanvas *) (_framedata)->data)
 
 #define SCHRO_OPNEGL_CANVAS_TO_FRAMEDATA(_framedata, _canvas) \
-    *((SchroOpenGLCanvas **) (_framedata)->data) = _canvas
+    (/*(SchroOpenGLCanvas *) */(_framedata)->data) = _canvas
 
 typedef enum _SchroOpenGLPixelbufferType {
   SCHRO_OPENGL_PIXELBUFFER_TYPE_PUSH = 0,
