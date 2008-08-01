@@ -211,12 +211,15 @@ shader add_s16_u8: #############################################################
   versions:
     normal SCHRO_OPENGL_SHADER_ADD_S16_U8
 
+  defines:
+    XY gl_TexCoord[0].xy
+
   textures:
     s16 input1
     u8 input2
 
   func void main (void):
-    write_s16 (read_input1_s16 (gl_TexCoord[0].xy) + cast_s16_u8 (read_input2_u8 (gl_TexCoord[0].xy)))
+    write_s16 (read_input1_s16 (XY) + cast_s16_u8 (read_input2_u8 (XY)))
 
 
 
@@ -226,12 +229,15 @@ shader add_s16_s16: ############################################################
   versions:
     normal SCHRO_OPENGL_SHADER_ADD_S16_S16
 
+  defines:
+    XY gl_TexCoord[0].xy
+
   textures:
     s16 input1
     s16 input2
 
   func void main (void):
-    write_s16 (read_input1_s16 (gl_TexCoord[0].xy) + read_input2_s16 (gl_TexCoord[0].xy))
+    write_s16 (read_input1_s16 (XY) + read_input2_s16 (XY))
 
 
 
@@ -241,12 +247,15 @@ shader subtract_s16_u8: ########################################################
   versions:
     normal SCHRO_OPENGL_SHADER_SUBTRACT_S16_U8
 
+  defines:
+    XY gl_TexCoord[0].xy
+
   textures:
     s16 input1
     u8 input2
 
   func void main (void):
-    write_s16 (read_input1_s16 (gl_TexCoord[0].xy) - cast_s16_u8 (read_input2_u8 (gl_TexCoord[0].xy)))
+    write_s16 (read_input1_s16 (XY) - cast_s16_u8 (read_input2_u8 (XY)))
 
 
 
@@ -256,12 +265,15 @@ shader subtract_s16_s16: #######################################################
   versions:
     normal SCHRO_OPENGL_SHADER_SUBTRACT_S16_S16
 
+  defines:
+    XY gl_TexCoord[0].xy
+
   textures:
     s16 input1
     s16 input2
 
   func void main (void):
-    write_s16 (read_input1_s16 (gl_TexCoord[0].xy) - read_input2_s16 (gl_TexCoord[0].xy))
+    write_s16 (read_input1_s16 (XY) - read_input2_s16 (XY))
 
 
 
@@ -308,6 +320,9 @@ shader iiwt_s16_filter_deslauriers_dubuc_9_7_lp: ###############################
   versions:
     normal SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_DESLAURIERS_DUBUC_9_7_Lp
 
+  defines:
+    XY gl_TexCoord[0].xy
+
   uniforms:
     # distance between two corresponding texels from subbands L and H in texels
     vec2 offset1 # = vec2 (width / 2.0, 0.0) or vec2 (0.0, height / 2.0)
@@ -320,9 +335,9 @@ shader iiwt_s16_filter_deslauriers_dubuc_9_7_lp: ###############################
     return divide_s16 (h1m + h0 + 2, 4)
 
   func void main (void):
-    var_s16 l0  = read_input_s16 (gl_TexCoord[0].xy)                          # A[2 ∗ n]
-    var_s16 h1m = read_input_s16 (gl_TexCoord[0].xy + offset1 - one_decrease) # A[2 ∗ n - 1]
-    var_s16 h0  = read_input_s16 (gl_TexCoord[0].xy + offset1)                # A[2 ∗ n + 1]
+    var_s16 l0  = read_input_s16 (XY)                          # A[2 ∗ n]
+    var_s16 h1m = read_input_s16 (XY + offset1 - one_decrease) # A[2 ∗ n - 1]
+    var_s16 h0  = read_input_s16 (XY + offset1)                # A[2 ∗ n + 1]
 
     write_s16 (l0 - filter (h1m, h0))
 
@@ -331,6 +346,9 @@ shader iiwt_s16_filter_deslauriers_dubuc_9_7_lp: ###############################
 shader iiwt_s16_filter_deslauriers_dubuc_9_7_hp: ###############################
   versions:
     normal SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_DESLAURIERS_DUBUC_9_7_Hp
+
+  defines:
+    XY gl_TexCoord[0].xy
 
   uniforms:
     # distance between two corresponding texels from subbands L' and H in texels 
@@ -346,11 +364,11 @@ shader iiwt_s16_filter_deslauriers_dubuc_9_7_hp: ###############################
     return divide_s16 (-l1m + 9 * (l0 + l1p) - l2p + 8, 16)
 
   func void main (void):
-    var_s16 l1m = read_input_s16 (gl_TexCoord[0].xy - offset1 - one_decrease) # A[2 ∗ n - 2]
-    var_s16 l0  = read_input_s16 (gl_TexCoord[0].xy - offset1)                # A[2 ∗ n]
-    var_s16 l1p = read_input_s16 (gl_TexCoord[0].xy - offset1 + one_increase) # A[2 ∗ n + 2]
-    var_s16 l2p = read_input_s16 (gl_TexCoord[0].xy - offset1 + two_increase) # A[2 ∗ n + 4]
-    var_s16 h0  = read_input_s16 (gl_TexCoord[0].xy)                          # A[2 ∗ n + 1]
+    var_s16 l1m = read_input_s16 (XY - offset1 - one_decrease) # A[2 ∗ n - 2]
+    var_s16 l0  = read_input_s16 (XY - offset1)                # A[2 ∗ n]
+    var_s16 l1p = read_input_s16 (XY - offset1 + one_increase) # A[2 ∗ n + 2]
+    var_s16 l2p = read_input_s16 (XY - offset1 + two_increase) # A[2 ∗ n + 4]
+    var_s16 h0  = read_input_s16 (XY)                          # A[2 ∗ n + 1]
 
     write_s16 (h0 + filter (l1m, l0, l1p, l2p))
 
@@ -359,6 +377,9 @@ shader iiwt_s16_filter_deslauriers_dubuc_9_7_hp: ###############################
 shader iiwt_s16_filter_le_gall_5_3_lp: #########################################
   versions:
     normal SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_LE_GALL_5_3_Lp
+
+  defines:
+    XY gl_TexCoord[0].xy
 
   uniforms:
     # distance between two corresponding texels from subbands L and H in texels
@@ -372,9 +393,9 @@ shader iiwt_s16_filter_le_gall_5_3_lp: #########################################
     return divide_s16 (h1m + h0 + 2, 4)
 
   func void main (void):
-    var_s16 l0  = read_input_s16 (gl_TexCoord[0].xy)                          # A[2 ∗ n]
-    var_s16 h1m = read_input_s16 (gl_TexCoord[0].xy + offset1 - one_decrease) # A[2 ∗ n - 1]
-    var_s16 h0  = read_input_s16 (gl_TexCoord[0].xy + offset1)                # A[2 ∗ n + 1]
+    var_s16 l0  = read_input_s16 (XY)                          # A[2 ∗ n]
+    var_s16 h1m = read_input_s16 (XY + offset1 - one_decrease) # A[2 ∗ n - 1]
+    var_s16 h0  = read_input_s16 (XY + offset1)                # A[2 ∗ n + 1]
 
     write_s16 (l0 - filter (h1m, h0))
 
@@ -383,6 +404,9 @@ shader iiwt_s16_filter_le_gall_5_3_lp: #########################################
 shader iiwt_s16_filter_le_gall_5_3_hp: #########################################
   versions:
     normal SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_LE_GALL_5_3_Hp
+
+  defines:
+    XY gl_TexCoord[0].xy
 
   uniforms:
     # distance between two corresponding texels from subbands L and H in texels
@@ -396,9 +420,9 @@ shader iiwt_s16_filter_le_gall_5_3_hp: #########################################
     return divide_s16 (l0 + l1p + 1, 2)
 
   func void main (void):
-    var_s16 l0  = read_input_s16 (gl_TexCoord[0].xy - offset1)                # A[2 ∗ n]
-    var_s16 l1p = read_input_s16 (gl_TexCoord[0].xy - offset1 + one_increase) # A[2 ∗ n + 2]
-    var_s16 h0  = read_input_s16 (gl_TexCoord[0].xy)                          # A[2 ∗ n + 1]
+    var_s16 l0  = read_input_s16 (XY - offset1)                # A[2 ∗ n]
+    var_s16 l1p = read_input_s16 (XY - offset1 + one_increase) # A[2 ∗ n + 2]
+    var_s16 h0  = read_input_s16 (XY)                          # A[2 ∗ n + 1]
 
     write_s16 (h0 + filter (l0, l1p))
 
@@ -408,6 +432,9 @@ shader iiwt_s16_filter_le_gall_5_3_hp: #########################################
 shader iiwt_s16_filter_deslauriers_dubuc_13_7_lp: ##############################
   versions:
     normal SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_DESLAURIERS_DUBUC_13_7_Lp
+
+  defines:
+    XY gl_TexCoord[0].xy
 
   uniforms:
     # distance between two corresponding texels from subbands L and H in texels
@@ -423,11 +450,11 @@ shader iiwt_s16_filter_deslauriers_dubuc_13_7_lp: ##############################
     return divide_s16 (-h2m + 9 * (h1m + h0) - h1p + 16, 32)
 
   func void main (void):
-    var_s16 l0  = read_input_s16 (gl_TexCoord[0].xy)                          # A[2 ∗ n]
-    var_s16 h2m = read_input_s16 (gl_TexCoord[0].xy + offset1 - two_decrease) # A[2 ∗ n - 3]
-    var_s16 h1m = read_input_s16 (gl_TexCoord[0].xy + offset1 - one_decrease) # A[2 ∗ n - 1]
-    var_s16 h0  = read_input_s16 (gl_TexCoord[0].xy + offset1)                # A[2 ∗ n + 1]
-    var_s16 h1p = read_input_s16 (gl_TexCoord[0].xy + offset1 + one_increase) # A[2 ∗ n + 3]
+    var_s16 l0  = read_input_s16 (XY)                          # A[2 ∗ n]
+    var_s16 h2m = read_input_s16 (XY + offset1 - two_decrease) # A[2 ∗ n - 3]
+    var_s16 h1m = read_input_s16 (XY + offset1 - one_decrease) # A[2 ∗ n - 1]
+    var_s16 h0  = read_input_s16 (XY + offset1)                # A[2 ∗ n + 1]
+    var_s16 h1p = read_input_s16 (XY + offset1 + one_increase) # A[2 ∗ n + 3]
 
     write_s16 (l0 - filter (h2m, h1m, h0, h1p))
 
@@ -437,6 +464,9 @@ shader iiwt_s16_filter_deslauriers_dubuc_13_7_lp: ##############################
 shader iiwt_s16_filter_deslauriers_dubuc_13_7_hp: ##############################
   versions:
     normal SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_DESLAURIERS_DUBUC_13_7_Hp
+
+  defines:
+    XY gl_TexCoord[0].xy
 
   uniforms:
     # distance between two corresponding texels from subbands L and H in texels
@@ -452,11 +482,11 @@ shader iiwt_s16_filter_deslauriers_dubuc_13_7_hp: ##############################
     return divide_s16 (-l1m + 9 * (l0 + l1p) - l2p + 8, 16)
 
   func void main (void):
-    var_s16 l1m = read_input_s16 (gl_TexCoord[0].xy - offset1 - one_decrease) # A[2 ∗ n - 2]
-    var_s16 l0  = read_input_s16 (gl_TexCoord[0].xy - offset1)                # A[2 ∗ n]
-    var_s16 l1p = read_input_s16 (gl_TexCoord[0].xy - offset1 + one_increase) # A[2 ∗ n + 2]
-    var_s16 l2p = read_input_s16 (gl_TexCoord[0].xy - offset1 + two_increase) # A[2 ∗ n + 4]
-    var_s16 h0  = read_input_s16 (gl_TexCoord[0].xy)                          # A[2 ∗ n + 1]
+    var_s16 l1m = read_input_s16 (XY - offset1 - one_decrease) # A[2 ∗ n - 2]
+    var_s16 l0  = read_input_s16 (XY - offset1)                # A[2 ∗ n]
+    var_s16 l1p = read_input_s16 (XY - offset1 + one_increase) # A[2 ∗ n + 2]
+    var_s16 l2p = read_input_s16 (XY - offset1 + two_increase) # A[2 ∗ n + 4]
+    var_s16 h0  = read_input_s16 (XY)                          # A[2 ∗ n + 1]
 
     write_s16 (h0 + filter (l1m, l0, l1p, l2p))
 
@@ -596,6 +626,9 @@ shader upsample_u8: ############################################################
   versions:
     normal SCHRO_OPENGL_SHADER_UPSAMPLE_U8
 
+  defines:
+    XY gl_TexCoord[0].xy
+
   uniforms:
     vec2 three_decrease
     vec2 two_decrease
@@ -609,15 +642,16 @@ shader upsample_u8: ############################################################
     u8 input
 
   func void main (void):
-    var_s16 s3m = cast_s16_u8 (read_input_u8 (gl_TexCoord[0].xy - three_decrease)) # S[n - 3]
-    var_s16 s2m = cast_s16_u8 (read_input_u8 (gl_TexCoord[0].xy - two_decrease))   # S[n - 2]
-    var_s16 s1m = cast_s16_u8 (read_input_u8 (gl_TexCoord[0].xy - one_decrease))   # S[n - 1]
-    var_s16 s0  = cast_s16_u8 (read_input_u8 (gl_TexCoord[0].xy))                  # S[n]
-    var_s16 s1p = cast_s16_u8 (read_input_u8 (gl_TexCoord[0].xy + one_increase))   # S[n + 1]
-    var_s16 s2p = cast_s16_u8 (read_input_u8 (gl_TexCoord[0].xy + two_increase))   # S[n + 2]
-    var_s16 s3p = cast_s16_u8 (read_input_u8 (gl_TexCoord[0].xy + three_increase)) # S[n + 3]
-    var_s16 s4p = cast_s16_u8 (read_input_u8 (gl_TexCoord[0].xy + four_increase))  # S[n + 4]
-    var_s16 sum = divide_s16 (-s3m + 3 * s2m - 7 * s1m + 21 * s0 + 21 * s1p - 7 * s2p + 3 * s3p - s4p + 16, 32)
+    var_s16 s3m = cast_s16_u8 (read_input_u8 (XY - three_decrease)) # S[n - 3]
+    var_s16 s2m = cast_s16_u8 (read_input_u8 (XY - two_decrease))   # S[n - 2]
+    var_s16 s1m = cast_s16_u8 (read_input_u8 (XY - one_decrease))   # S[n - 1]
+    var_s16 s0  = cast_s16_u8 (read_input_u8 (XY))                  # S[n]
+    var_s16 s1p = cast_s16_u8 (read_input_u8 (XY + one_increase))   # S[n + 1]
+    var_s16 s2p = cast_s16_u8 (read_input_u8 (XY + two_increase))   # S[n + 2]
+    var_s16 s3p = cast_s16_u8 (read_input_u8 (XY + three_increase)) # S[n + 3]
+    var_s16 s4p = cast_s16_u8 (read_input_u8 (XY + four_increase))  # S[n + 4]
+    var_s16 sum = divide_s16 (-s3m + 3 * s2m - 7 * s1m + 21 * s0 \
+        + 21 * s1p - 7 * s2p + 3 * s3p - s4p + 16, 32)
 
     write_u8 (cast_u8_s16 (sum))
 
@@ -642,7 +676,8 @@ shader obmc_spatial_weight: ####################################################
     else:
       return 1 + divide_s16 (6 * coordinate + offset - 1, 2 * offset - 1)
 
-  func var_s16 spatial_weight (var_s16 coordinate, var_s16 size, var_s16 offset, vec2 edge):
+  func var_s16 spatial_weight (var_s16 coordinate, var_s16 size, \
+      var_s16 offset, vec2 edge):
     if offset == 0:
       return 8
     elif coordinate < 2 * offset:
@@ -661,8 +696,10 @@ shader obmc_spatial_weight: ####################################################
   func void main (void):
     # round coordinate down from texel center n.5 to texel edge n.0
     vec2 coordinate = floor (gl_TexCoord[0].xy)
-    var_s16 weight_x = spatial_weight (var_s16 (coordinate.x), var_s16 (size.x), var_s16 (offset1.x), vec2 (edge1.x, edge2.x))
-    var_s16 weight_y = spatial_weight (var_s16 (coordinate.y), var_s16 (size.y), var_s16 (offset1.y), vec2 (edge1.y, edge2.y))
+    var_s16 weight_x = spatial_weight (var_s16 (coordinate.x), \
+        var_s16 (size.x), var_s16 (offset1.x), vec2 (edge1.x, edge2.x))
+    var_s16 weight_y = spatial_weight (var_s16 (coordinate.y), \
+        var_s16 (size.y), var_s16 (offset1.y), vec2 (edge1.y, edge2.y))
 
     write_s16 (weight_x * weight_y)
 
@@ -727,7 +764,8 @@ shader obmc_render_ref_prec_0: #################################################
   func void main (void):
     var_s16 previous = read_previous_s16 (gl_TexCoord[0].xy)
     var_s16 obmc_weight = read_obmc_weight_s16 (gl_TexCoord[0].xy - origin)
-    var_s16 upsampled = cast_s16_u8 (read_upsampled_u8 (gl_TexCoord[0].xy + offset1))
+    var_s16 upsampled \
+        = cast_s16_u8 (read_upsampled_u8 (gl_TexCoord[0].xy + offset1))
 
     normal:
       write_s16 (previous + upsampled * obmc_weight)
@@ -756,8 +794,10 @@ shader obmc_render_ref_prec_3a: ################################################
   func void main (void):
     var_s16 previous = read_previous_s16 (gl_TexCoord[0].xy)
     var_s16 obmc_weight = read_obmc_weight_s16 (gl_TexCoord[0].xy - origin)
-    var_s16 upsampled1 = cast_s16_u8 (read_upsampled1_u8 (gl_TexCoord[0].xy + offset1))
-    var_s16 upsampled2 = cast_s16_u8 (read_upsampled2_u8 (gl_TexCoord[0].xy + offset2))
+    var_s16 upsampled1 \
+        = cast_s16_u8 (read_upsampled1_u8 (gl_TexCoord[0].xy + offset1))
+    var_s16 upsampled2 \
+        = cast_s16_u8 (read_upsampled2_u8 (gl_TexCoord[0].xy + offset2))
     var_s16 average = divide_s16 (upsampled1 + upsampled2 + 1, 2)
 
     normal:
@@ -834,8 +874,10 @@ shader obmc_render_biref_prec_0: ###############################################
   func void main (void):
     var_s16 previous = read_previous_s16 (gl_TexCoord[0].xy)
     var_s16 obmc_weight = read_obmc_weight_s16 (gl_TexCoord[0].xy - origin)
-    var_s16 upsampled_ref1 = cast_s16_u8 (read_upsampled_ref1_u8 (gl_TexCoord[0].xy + offset1))
-    var_s16 upsampled_ref2 = cast_s16_u8 (read_upsampled_ref2_u8 (gl_TexCoord[0].xy + offset2))
+    var_s16 upsampled_ref1 \
+        = cast_s16_u8 (read_upsampled_ref1_u8 (gl_TexCoord[0].xy + offset1))
+    var_s16 upsampled_ref2 \
+        = cast_s16_u8 (read_upsampled_ref2_u8 (gl_TexCoord[0].xy + offset2))
 
     normal:
       var_s16 average = divide_s16 (upsampled_ref1 + upsampled_ref2 + 1, 2)
@@ -872,10 +914,14 @@ shader obmc_render_biref_prec_3a: ##############################################
   func void main (void):
     var_s16 previous = read_previous_s16 (gl_TexCoord[0].xy)
     var_s16 obmc_weight = read_obmc_weight_s16 (gl_TexCoord[0].xy - origin)
-    var_s16 upsampled1_ref1 = cast_s16_u8 (read_upsampled1_ref1_u8 (gl_TexCoord[0].xy + offset1))
-    var_s16 upsampled2_ref1 = cast_s16_u8 (read_upsampled2_ref1_u8 (gl_TexCoord[0].xy + offset2))
-    var_s16 upsampled1_ref2 = cast_s16_u8 (read_upsampled1_ref2_u8 (gl_TexCoord[0].xy + offset3))
-    var_s16 upsampled2_ref2 = cast_s16_u8 (read_upsampled2_ref2_u8 (gl_TexCoord[0].xy + offset4))
+    var_s16 upsampled1_ref1 \
+        = cast_s16_u8 (read_upsampled1_ref1_u8 (gl_TexCoord[0].xy + offset1))
+    var_s16 upsampled2_ref1 \
+        = cast_s16_u8 (read_upsampled2_ref1_u8 (gl_TexCoord[0].xy + offset2))
+    var_s16 upsampled1_ref2 \
+        = cast_s16_u8 (read_upsampled1_ref2_u8 (gl_TexCoord[0].xy + offset3))
+    var_s16 upsampled2_ref2 \
+        = cast_s16_u8 (read_upsampled2_ref2_u8 (gl_TexCoord[0].xy + offset4))
     var_s16 average_ref1 = divide_s16 (upsampled1_ref1 + upsampled2_ref1 + 1, 2)
     var_s16 average_ref2 = divide_s16 (upsampled1_ref2 + upsampled2_ref2 + 1, 2)
 
@@ -939,18 +985,28 @@ shader obmc_render_biref_prec_3b: ##############################################
     weight_ref2.b = var_s16 (remaining2.y) * (4 - var_s16 (remaining2.x))
     weight_ref2.a = var_s16 (remaining2.y) * var_s16 (remaining2.x)
 
-    upsampled_ref1.r = cast_s16_u8 (read_upsampled1_ref1_u8 (gl_TexCoord[0].xy + offset1))
-    upsampled_ref1.g = cast_s16_u8 (read_upsampled2_ref1_u8 (gl_TexCoord[0].xy + offset2))
-    upsampled_ref1.b = cast_s16_u8 (read_upsampled3_ref1_u8 (gl_TexCoord[0].xy + offset3))
-    upsampled_ref1.a = cast_s16_u8 (read_upsampled4_ref1_u8 (gl_TexCoord[0].xy + offset4))
+    upsampled_ref1.r \
+        = cast_s16_u8 (read_upsampled1_ref1_u8 (gl_TexCoord[0].xy + offset1))
+    upsampled_ref1.g \
+        = cast_s16_u8 (read_upsampled2_ref1_u8 (gl_TexCoord[0].xy + offset2))
+    upsampled_ref1.b \
+        = cast_s16_u8 (read_upsampled3_ref1_u8 (gl_TexCoord[0].xy + offset3))
+    upsampled_ref1.a \
+        = cast_s16_u8 (read_upsampled4_ref1_u8 (gl_TexCoord[0].xy + offset4))
 
-    upsampled_ref2.r = cast_s16_u8 (read_upsampled1_ref2_u8 (gl_TexCoord[0].xy + offset5))
-    upsampled_ref2.g = cast_s16_u8 (read_upsampled2_ref2_u8 (gl_TexCoord[0].xy + offset6))
-    upsampled_ref2.b = cast_s16_u8 (read_upsampled3_ref2_u8 (gl_TexCoord[0].xy + offset7))
-    upsampled_ref2.a = cast_s16_u8 (read_upsampled4_ref2_u8 (gl_TexCoord[0].xy + offset8))
+    upsampled_ref2.r \
+        = cast_s16_u8 (read_upsampled1_ref2_u8 (gl_TexCoord[0].xy + offset5))
+    upsampled_ref2.g \
+        = cast_s16_u8 (read_upsampled2_ref2_u8 (gl_TexCoord[0].xy + offset6))
+    upsampled_ref2.b \
+        = cast_s16_u8 (read_upsampled3_ref2_u8 (gl_TexCoord[0].xy + offset7))
+    upsampled_ref2.a \
+        = cast_s16_u8 (read_upsampled4_ref2_u8 (gl_TexCoord[0].xy + offset8))
 
-    var_s16 average_ref1 = divide_s16 (crossfoot_s16 (upsampled_ref1 * weight_ref1) + 8, 16)
-    var_s16 average_ref2 = divide_s16 (crossfoot_s16 (upsampled_ref2 * weight_ref2) + 8, 16)
+    var_s16 average_ref1 \
+        = divide_s16 (crossfoot_s16 (upsampled_ref1 * weight_ref1) + 8, 16)
+    var_s16 average_ref2 \
+        = divide_s16 (crossfoot_s16 (upsampled_ref2 * weight_ref2) + 8, 16)
 
     normal:
       var_s16 average = divide_s16 (average_ref1 + average_ref2 + 1, 2)

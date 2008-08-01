@@ -23,7 +23,7 @@ def intersection (a, b):
 
 
 def contains_reserverd_block_header (list):
-  header_re = re.compile ("^(?:versions|uniforms|textures|else|" \
+  header_re = re.compile ("^(?:versions|uniforms|textures|defines|else|" \
       "(?:shader|func|if|elif)[ ]+[^:]+):$")
 
   for item in list:
@@ -64,7 +64,7 @@ class Line (Item):
         error ("invalid indentation in line " + repr (number) + " '" + string \
             + "'")
 
-      if re.search ("^(?:versions|uniforms|textures|else|" \
+      if re.search ("^(?:versions|uniforms|textures|defines|else|" \
           "(?:shader|func|if|elif)[ ]+[^:]+)$", string) is not None:
         error ("expecting reserved block header '" + match.group (2) \
             + "' to be ended with a ':' at line " + repr (number))
@@ -159,10 +159,11 @@ class Block (Item):
 
 
 class Shader:
-  def __init__ (self, bunch, version, define):
+  def __init__ (self, bunch, version, index):
     self.bunch = bunch
     self.version = version
-    self.define = define
+    self.index = index
+    self.defines = []
     self.uniforms = []
     self.textures = {}
     self.texture_order = []
@@ -202,7 +203,7 @@ class Shader:
           "var4_s16" : "vec4" } }
 
   def __str__ (self):
-    string = "  { " + self.define + ",\n      \"" + self.bunch + "/" \
+    string = "  { " + self.index + ",\n      \"" + self.bunch + "/" \
         + self.version + "\",\n" \
 
     string += self.print_type ("float", "")
@@ -212,12 +213,18 @@ class Shader:
     return string.rstrip(" \n") + " },\n"
 
   def parse (self, children):
-    # parse uniforms/textures/functions
+    # parse defines/uniforms/textures/functions
     while len (children) > 0:
       if not isinstance (children[0], Block):
         error ("expecting a block")
 
-      if children[0].header.content == "uniforms:":
+      if children[0].header.content == "defines:":
+        for child in children[0].children:
+          if not isinstance (child, Line):
+            error ("expecting lines in the defines block")
+
+          self.parse_define (child)
+      elif children[0].header.content == "uniforms:":
         for child in children[0].children:
           if not isinstance (child, Line):
             error ("expecting lines in the uniforms block")
@@ -235,34 +242,44 @@ class Shader:
 
         self.functions += [children[0]]
       else:
-        error ("expection uniforms/textures/function block but found '" \
-            + children[0].header.content + "'")
+        error ("expection defines/uniforms/textures/function block but " \
+            "found '" + children[0].header.content + "'")
 
       children = children[1:]
 
-      # check for builtin dependencies
-      self.used_builtins.sort ()
+    # check for builtin dependencies
+    self.used_builtins.sort ()
 
-      used_builtins = []
+    used_builtins = []
 
-      for builtin in self.used_builtins:
-        if builtin in self.builtin_dependencies.keys ():
-          builtin_dependency = self.builtin_dependencies[builtin]
+    for builtin in self.used_builtins:
+      if builtin in self.builtin_dependencies.keys ():
+        builtin_dependency = self.builtin_dependencies[builtin]
 
-          if builtin_dependency not in used_builtins:
-            used_builtins += [builtin_dependency]
+        if builtin_dependency not in used_builtins:
+          used_builtins += [builtin_dependency]
 
-        if builtin not in used_builtins:
-          used_builtins += [builtin]
+      if builtin not in used_builtins:
+        used_builtins += [builtin]
 
-      self.used_builtins = used_builtins
+    self.used_builtins = used_builtins
+
+  def parse_define (self, line):
+    if line.has_version (["default", self.version]):
+      match = re.search ("^[A-Z0-9]+[ ]+.+$", line.content)
+
+      if match is None:
+        error ("expecting define '[A-Z0-9]+[ ]+.+' but found '" \
+            + line.content + "' at line " + repr (line.number))
+
+      self.defines += [line]
 
   def parse_uniform (self, line):
     if line.has_version (["default", self.version]):
-      match = re.search ("^[a-z0-9]+[ ]+[a-z0-9_]+$", line.content)
+      match = re.search ("^[a-z1-4]+[ ]+[a-z0-9_]+$", line.content)
 
       if match is None:
-        error ("expecting uniform '[a-z0-9]+[ ]+[a-z0-9_]+' but found '" \
+        error ("expecting uniform '[a-z1-4]+[ ]+[a-z0-9_]+' but found '" \
             + line.content + "' at line " + repr (line.number))
 
       self.uniforms += [line]
@@ -399,9 +416,13 @@ class Shader:
     for builtin in self.used_builtins:
       string += "      " + self.available_builtins[builtin] + postfix + "\n"
 
+    # defines
+    for define in self.defines:
+      string += "      \"#define " + define.content + "\\n\"\n"
+
     # uniforms
     for uniform in self.uniforms:
-      string += "      \"uniform " +  uniform.content + ";\\n\"\n"
+      string += "      \"uniform " + uniform.content + ";\\n\"\n"
 
     # functions
     for function in self.functions:
@@ -484,7 +505,7 @@ class Shader:
 class ShaderBunch:
   def __init__ (self):
     self.versions = []
-    self.defines = {} # keyed by version
+    self.indices = {} # keyed by version
     self.shaders = []
 
   def __str__ (self):
@@ -523,7 +544,7 @@ class ShaderBunch:
     children = self.transform_versions (children[1:])
 
     for version in self.versions:
-      shader = Shader (bunch, version, self.defines[version])
+      shader = Shader (bunch, version, self.indices[version])
 
       shader.parse (children[:])
 
@@ -537,7 +558,7 @@ class ShaderBunch:
           + line.content + "' at line " + repr (line.number))
 
     version = match.group (1)
-    define = match.group (2)
+    index = match.group (2)
 
     if contains_reserverd_block_header ([version]):
       error ("version '" + version + "' is a reserved block header")
@@ -546,7 +567,7 @@ class ShaderBunch:
       error ("version '" + version + "' already defined")
 
     self.versions += [version]
-    self.defines[version] = define
+    self.indices[version] = index
 
   def transform_versions (self, children):
     transformed = []
@@ -560,14 +581,9 @@ class ShaderBunch:
           transformed += [child]
         else:
           versions = []
-          version_re = re.compile ("^([a-z0-9_]+)[ ]*[,:][ ]*")
-          string = child.header.content
-          match = version_re.search (string)
 
-          while match is not None:
-            versions += [match.group (1)]
-            string = string[match.span ()[1]:]
-            match = version_re.search (string)
+          for version in child.header.content[:-1].split(','):
+            versions += [version.strip()]
 
           if contains_reserverd_block_header (versions):
             if len (versions) > 1:
@@ -577,7 +593,9 @@ class ShaderBunch:
               child.children = self.transform_versions (child.children)
               transformed += [child]
           elif intersection (versions, self.versions) != versions:
-            error ("at least one versions " + repr (versions) + " is undefined")
+            error ("at least one version of " + repr (versions) + " in line " \
+                + repr (child.header.number) + " is undefined in " \
+                + repr (self.versions))
           else:
             for subchild in child.children:
               if subchild.versions != ["default"]:
@@ -597,8 +615,8 @@ class ShaderBunch:
 
 if __name__ == "__main__":
   for argument in sys.argv[1:]:
-    lines = []
-    number = 1
+    # parse raw lines
+    raw_lines = []
 
     for string in file (argument, "rb").readlines ():
       if '#' in string:
@@ -607,11 +625,23 @@ if __name__ == "__main__":
       string = string.rstrip ().replace("\t", " ")
       string = re.sub ("[ ]+:", ":", string)
 
+      if len (raw_lines) > 0 and raw_lines[-1].endswith("\\"):
+        raw_lines[-1] = raw_lines[-1][:-1].rstrip () + " " + string.lstrip ()
+        string = ""
+
+      raw_lines += [string]
+
+    # parse lines from raw lines
+    lines = []
+    number = 1
+
+    for string in raw_lines:
       if len (string) > 0:
         lines += [Line (number, string)]
 
-      number = number + 1
+      number += 1
 
+    # parse blocks from lines
     blocks = []
 
     while len (lines) > 0:
@@ -623,6 +653,7 @@ if __name__ == "__main__":
 
       blocks += [block]
 
+    # parse shaders from blocks
     shader_bunches = []
 
     for block in blocks:
@@ -632,6 +663,7 @@ if __name__ == "__main__":
 
       shader_bunches += [shader_bunch]
 
+    # output shaders
     preamble = file ("schroopenglshadercompiler.preamble", "rb").read ()
     string = "static struct ShaderCode schro_opengl_shader_code_list[] = {\n"
 
