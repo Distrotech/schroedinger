@@ -10,7 +10,6 @@ SCHRO_BEGIN_DECLS
 
 struct _SchroOpenGLShader {
   GLhandleARB program;
-  GLint textures[10];   /* {s|us|is}ampler2DRect */
   GLint offsets[8];     /* vec2 */
   GLint edges[2];       /* vec2 */
   GLint origin;         /* vec2 */

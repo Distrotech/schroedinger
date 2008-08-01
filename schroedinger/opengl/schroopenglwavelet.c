@@ -73,12 +73,11 @@ schro_opengl_wavelet_vertical_deinterleave (SchroFrameData *frame_data)
   BIND_FRAMEBUFFER_AND_TEXTURE
 
   glUseProgramObjectARB (shader_vertical_deinterleave_l->program);
-  glUniform1iARB (shader_vertical_deinterleave_l->textures[0], 0); // FIXME: pre-bind on create
 
   schro_opengl_render_quad (0, 0, width, height / 2);
 
   glUseProgramObjectARB (shader_vertical_deinterleave_h->program);
-  glUniform1iARB (shader_vertical_deinterleave_h->textures[0], 0); // FIXME: pre-bind on create
+
   glUniform2fARB (shader_vertical_deinterleave_h->offsets[0], 0, height / 2);
 
   schro_opengl_render_quad (0, height / 2, width, height / 2);
@@ -92,7 +91,6 @@ schro_opengl_wavelet_vertical_deinterleave (SchroFrameData *frame_data)
   BIND_FRAMEBUFFER_AND_TEXTURE
 
   glUseProgramObjectARB (shader_copy->program);
-  glUniform1iARB (shader_copy->textures[0], 0); // FIXME: pre-bind on create
 
   schro_opengl_render_quad (0, 0, width, height);
 
@@ -294,7 +292,7 @@ schro_opengl_wavelet_inverse_transform (SchroFrameData *frame_data,
   BIND_FRAMEBUFFER_AND_TEXTURE
 
   glUseProgramObjectARB (shader_filter_lp->program);
-  glUniform1iARB (shader_filter_lp->textures[0], 0); // FIXME: pre-bind on create
+
   glUniform2fARB (shader_filter_lp->offsets[0], 0, subband_height);
 
   #define RENDER_QUAD_VERTICAL_Lp(_y, _quad_height) \
@@ -319,7 +317,6 @@ schro_opengl_wavelet_inverse_transform (SchroFrameData *frame_data,
 
   /* copy XH */
   glUseProgramObjectARB (shader_copy->program);
-  glUniform1iARB (shader_copy->textures[0], 0); // FIXME: pre-bind on create
 
   schro_opengl_render_quad (0, subband_height, width, subband_height);
 
@@ -332,7 +329,7 @@ schro_opengl_wavelet_inverse_transform (SchroFrameData *frame_data,
   BIND_FRAMEBUFFER_AND_TEXTURE
 
   glUseProgramObjectARB (shader_filter_hp->program);
-  glUniform1iARB (shader_filter_hp->textures[0], 0); // FIXME: pre-bind on create
+
   glUniform2fARB (shader_filter_hp->offsets[0], 0, subband_height);
 
   #define RENDER_QUAD_VERTICAL_Hp(_y_offset, _quad_height) \
@@ -357,7 +354,6 @@ schro_opengl_wavelet_inverse_transform (SchroFrameData *frame_data,
 
   /* copy XL' */
   glUseProgramObjectARB (shader_copy->program);
-  glUniform1iARB (shader_copy->textures[0], 0); // FIXME: pre-bind on create
 
   schro_opengl_render_quad (0, 0, width, subband_height);
 
@@ -370,7 +366,7 @@ schro_opengl_wavelet_inverse_transform (SchroFrameData *frame_data,
   BIND_FRAMEBUFFER_AND_TEXTURE
 
   glUseProgramObjectARB (shader_vertical_interleave->program);
-  glUniform1iARB (shader_vertical_interleave->textures[0], 0); // FIXME: pre-bind on create
+
   glUniform2fARB (shader_vertical_interleave->offsets[0], 0, subband_height);
 
   schro_opengl_render_quad (0, 0, width, height);
@@ -384,7 +380,7 @@ schro_opengl_wavelet_inverse_transform (SchroFrameData *frame_data,
   BIND_FRAMEBUFFER_AND_TEXTURE
 
   glUseProgramObjectARB (shader_filter_lp->program);
-  glUniform1iARB (shader_filter_lp->textures[0], 0); // FIXME: pre-bind on create
+
   glUniform2fARB (shader_filter_lp->offsets[0], subband_width, 0);
 
   #define RENDER_QUAD_HORIZONTAL_Lp(_x, _quad_width) \
@@ -409,7 +405,6 @@ schro_opengl_wavelet_inverse_transform (SchroFrameData *frame_data,
 
   /* copy H */
   glUseProgramObjectARB (shader_copy->program);
-  glUniform1iARB (shader_copy->textures[0], 0); // FIXME: pre-bind on create
 
   schro_opengl_render_quad (subband_width, 0, subband_width, height);
 
@@ -422,7 +417,7 @@ schro_opengl_wavelet_inverse_transform (SchroFrameData *frame_data,
   BIND_FRAMEBUFFER_AND_TEXTURE
 
   glUseProgramObjectARB (shader_filter_hp->program);
-  glUniform1iARB (shader_filter_hp->textures[0], 0); // FIXME: pre-bind on create
+
   glUniform2fARB (shader_filter_hp->offsets[0], subband_width, 0);
 
   #define RENDER_QUAD_HORIZONTAL_Hp(_x_offset, _quad_width) \
@@ -447,7 +442,6 @@ schro_opengl_wavelet_inverse_transform (SchroFrameData *frame_data,
 
   /* copy L' */
   glUseProgramObjectARB (shader_copy->program);
-  glUniform1iARB (shader_copy->textures[0], 0); // FIXME: pre-bind on create
 
   schro_opengl_render_quad (0, 0, subband_width, height);
 
@@ -460,7 +454,7 @@ schro_opengl_wavelet_inverse_transform (SchroFrameData *frame_data,
   BIND_FRAMEBUFFER_AND_TEXTURE
 
   glUseProgramObjectARB (shader_horizontal_interleave->program);
-  glUniform1iARB (shader_horizontal_interleave->textures[0], 0); // FIXME: pre-bind on create
+
   glUniform2fARB (shader_horizontal_interleave->offsets[0], width / 2, 0);
 
   schro_opengl_render_quad (0, 0, width, height);
@@ -475,7 +469,6 @@ schro_opengl_wavelet_inverse_transform (SchroFrameData *frame_data,
     BIND_FRAMEBUFFER_AND_TEXTURE
 
     glUseProgramObjectARB (shader_filter_shift->program);
-    glUniform1iARB (shader_filter_shift->textures[0], 0); // FIXME: pre-bind on create
 
     schro_opengl_render_quad (0, 0, width, height);
 
@@ -491,7 +484,6 @@ schro_opengl_wavelet_inverse_transform (SchroFrameData *frame_data,
     BIND_FRAMEBUFFER_AND_TEXTURE
 
     glUseProgramObjectARB (shader_copy->program);
-    glUniform1iARB (shader_copy->textures[0], 0); // FIXME: pre-bind on create
 
     schro_opengl_render_quad (0, 0, width, height);
 

@@ -168,11 +168,9 @@ schro_opengl_frame_combine_with_shader (SchroFrame *dest, SchroFrame *src,
     switch (SCHRO_FRAME_FORMAT_DEPTH (dest_canvas->format)) {
       case SCHRO_FRAME_FORMAT_DEPTH_U8:
         glUseProgramObjectARB (shader_copy_u8->program);
-        glUniform1iARB (shader_copy_u8->textures[0], 0); // FIXME: pre-bind on create
         break;
       case SCHRO_FRAME_FORMAT_DEPTH_S16:
         glUseProgramObjectARB (shader_copy_s16->program);
-        glUniform1iARB (shader_copy_s16->textures[0], 0); // FIXME: pre-bind on create
         break;
       default:
         SCHRO_ASSERT (0);
@@ -189,13 +187,10 @@ schro_opengl_frame_combine_with_shader (SchroFrame *dest, SchroFrame *src,
 
     glUseProgramObjectARB (shader_combine->program);
 
-    //glActiveTextureARB (GL_TEXTURE0_ARB);
     glBindTexture (GL_TEXTURE_RECTANGLE_ARB, dest_canvas->secondary->texture);
-    glUniform1iARB (shader_combine->textures[0], 0); // FIXME: pre-bind on create
 
     glActiveTextureARB (GL_TEXTURE1_ARB);
     glBindTexture (GL_TEXTURE_RECTANGLE_ARB, src_canvas->texture);
-    glUniform1iARB (shader_combine->textures[1], 1); // FIXME: pre-bind on create
 
     glActiveTextureARB (GL_TEXTURE0_ARB);
 

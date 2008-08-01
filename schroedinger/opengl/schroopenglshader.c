@@ -182,27 +182,30 @@ schro_opengl_shader_new (const char* code, const char* name)
 
   SCHRO_ASSERT (ok);
 
-  #define UNIFORM_LOCATION_SAMPLER(_name, _member) \
+  #define UNIFORM_LOCATION_SAMPLER(_name, _index) \
       do { \
         if (strstr (code, "uniform sampler2DRect "#_name";") || \
             strstr (code, "uniform usampler2DRect "#_name";") || \
             strstr (code, "uniform isampler2DRect "#_name";")) { \
-          shader->_member = glGetUniformLocationARB (shader->program, #_name); \
-        } else { \
-          shader->_member = -1; \
+          glUniform1iARB (glGetUniformLocationARB (shader->program, #_name), \
+               _index); \
         } \
       } while (0)
 
-  UNIFORM_LOCATION_SAMPLER (texture1,  textures[0]);
-  UNIFORM_LOCATION_SAMPLER (texture2,  textures[1]);
-  UNIFORM_LOCATION_SAMPLER (texture3,  textures[2]);
-  UNIFORM_LOCATION_SAMPLER (texture4,  textures[3]);
-  UNIFORM_LOCATION_SAMPLER (texture5,  textures[4]);
-  UNIFORM_LOCATION_SAMPLER (texture6,  textures[5]);
-  UNIFORM_LOCATION_SAMPLER (texture7,  textures[6]);
-  UNIFORM_LOCATION_SAMPLER (texture8,  textures[7]);
-  UNIFORM_LOCATION_SAMPLER (texture9,  textures[8]);
-  UNIFORM_LOCATION_SAMPLER (texture10, textures[9]);
+  glUseProgramObjectARB (shader->program);
+
+  UNIFORM_LOCATION_SAMPLER (texture1,  0);
+  UNIFORM_LOCATION_SAMPLER (texture2,  1);
+  UNIFORM_LOCATION_SAMPLER (texture3,  2);
+  UNIFORM_LOCATION_SAMPLER (texture4,  3);
+  UNIFORM_LOCATION_SAMPLER (texture5,  4);
+  UNIFORM_LOCATION_SAMPLER (texture6,  5);
+  UNIFORM_LOCATION_SAMPLER (texture7,  6);
+  UNIFORM_LOCATION_SAMPLER (texture8,  7);
+  UNIFORM_LOCATION_SAMPLER (texture9,  8);
+  UNIFORM_LOCATION_SAMPLER (texture10, 9);
+
+  SCHRO_OPENGL_CHECK_ERROR
 
   #undef UNIFORM_LOCATION
 
@@ -243,6 +246,8 @@ schro_opengl_shader_new (const char* code, const char* name)
   UNIFORM_LOCATION (float, ref_addend,     ref_addend);
   UNIFORM_LOCATION (float, ref_divisor,    ref_divisor);
 
+  SCHRO_OPENGL_CHECK_ERROR
+
   #undef UNIFORM_LOCATION_SAMPLER
 
   if (GLEW_EXT_gpu_shader4) {
@@ -252,6 +257,8 @@ schro_opengl_shader_new (const char* code, const char* name)
       glBindFragDataLocationEXT (shader->program, 0, "fragcolor_s16");
     }
   }
+
+  glUseProgramObjectARB (0);
 
   return shader;
 }

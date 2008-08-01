@@ -83,8 +83,6 @@ schro_opengl_motion_render_dc_block (SchroOpenGLMotion *opengl_motion, int i,
 
   glUseProgramObjectARB (opengl_motion->shader_dc->program);
 
-  glUniform1iARB (opengl_motion->shader_dc->textures[0], 0); /* input */ // FIXME: pre-bind on create
-  glUniform1iARB (opengl_motion->shader_dc->textures[1], 1); /* obmc_weight */ // FIXME: pre-bind on create
   glUniform2fARB (opengl_motion->shader_dc->origin, x, y);
   glUniform1fARB (opengl_motion->shader_dc->dc, dc);
 
@@ -144,7 +142,6 @@ schro_opengl_motion_render_ref_block (SchroOpenGLMotion *opengl_motion,
         glBindTexture (GL_TEXTURE_RECTANGLE_ARB, \
             opengl_motion->src_canvases[_ref][0]->texture); \
         glActiveTextureARB (GL_TEXTURE0_ARB); \
-        glUniform1iARB (shader->textures[2 + (_index)], 2 + (_index)); /* FIXME: pre-bind on create */ \
         glUniform2fARB (shader->offsets[_index], (_x) - x, (_y) - y); \
       } while (0)
 
@@ -155,7 +152,6 @@ schro_opengl_motion_render_ref_block (SchroOpenGLMotion *opengl_motion,
         glBindTexture (GL_TEXTURE_RECTANGLE_ARB, \
             opengl_motion->src_canvases[_ref][sub]->texture); \
         glActiveTextureARB (GL_TEXTURE0_ARB); \
-        glUniform1iARB (shader->textures[2 + (_index)], 2 + (_index)); /* FIXME: pre-bind on create */ \
         glUniform2fARB (shader->offsets[_index], ((_x) >> 1) - x, ((_y) >> 1) - y); \
       } while (0)
 
@@ -262,8 +258,6 @@ schro_opengl_motion_render_ref_block (SchroOpenGLMotion *opengl_motion,
 
   SCHRO_ASSERT (shader != NULL);
 
-  glUniform1iARB (shader->textures[0], 0); /* previous */ // FIXME: pre-bind on create
-  glUniform1iARB (shader->textures[1], 1); /* obmc_weight */ // FIXME: pre-bind on create
   glUniform2fARB (shader->origin, x, y);
 
   if (needs_weighting) {
@@ -321,7 +315,6 @@ schro_opengl_motion_render_biref_block (SchroOpenGLMotion *opengl_motion,
         glBindTexture (GL_TEXTURE_RECTANGLE_ARB, \
             opengl_motion->src_canvases[_ref][0]->texture); \
         glActiveTextureARB (GL_TEXTURE0_ARB); \
-        glUniform1iARB (shader->textures[2 + (_index)], 2 + (_index)); /* FIXME: pre-bind on create */ \
         glUniform2fARB (shader->offsets[_index], (_x) - x, (_y) - y); \
       } while (0)
 
@@ -332,7 +325,6 @@ schro_opengl_motion_render_biref_block (SchroOpenGLMotion *opengl_motion,
         glBindTexture (GL_TEXTURE_RECTANGLE_ARB, \
             opengl_motion->src_canvases[_ref][sub]->texture); \
         glActiveTextureARB (GL_TEXTURE0_ARB); \
-        glUniform1iARB (shader->textures[2 + (_index)], 2 + (_index)); /* FIXME: pre-bind on create */ \
         glUniform2fARB (shader->offsets[_index], ((_x) >> 1) - x, ((_y) >> 1) - y); \
       } while (0)
 
@@ -441,8 +433,6 @@ schro_opengl_motion_render_biref_block (SchroOpenGLMotion *opengl_motion,
 
   SCHRO_ASSERT (shader != NULL);
 
-  glUniform1iARB (shader->textures[0], 0); /* previous */ // FIXME: pre-bind on create
-  glUniform1iARB (shader->textures[1], 1); /* obmc_weight */ // FIXME: pre-bind on create
   glUniform2fARB (shader->origin, x, y);
 
   if (needs_weighting) {
@@ -717,7 +707,6 @@ schro_opengl_motion_render (SchroMotion *motion, SchroFrame *dest)
     glBindTexture (GL_TEXTURE_RECTANGLE_ARB, dest_canvas->secondary->texture);
 
     glUseProgramObjectARB (shader_shift->program);
-    glUniform1iARB (shader_shift->textures[0], 0); // FIXME: pre-bind on create
 
     schro_opengl_render_quad (0, 0, motion->width, motion->height);
 

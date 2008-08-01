@@ -259,7 +259,6 @@ schro_opengl_upsampled_frame_upsample (SchroUpsampledFrame *upsampled_frame)
   SCHRO_ASSERT (shader != NULL);
 
   glUseProgramObjectARB (shader->program);
-  glUniform1iARB (shader->textures[0], 0); // FIXME: pre-bind on create
 
   SCHRO_OPENGL_CHECK_ERROR
 

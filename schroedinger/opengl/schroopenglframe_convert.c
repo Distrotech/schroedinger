@@ -138,7 +138,6 @@ schro_opengl_frame_convert_with_shader (SchroFrame *dest, SchroFrame *src,
     SCHRO_OPENGL_CHECK_ERROR
 
     glUseProgramObjectARB (shader->program);
-    glUniform1iARB (shader->textures[0], 0); // FIXME: pre-bind on create
 
     schro_opengl_render_quad (0, 0, width, height);
 
@@ -198,7 +197,6 @@ schro_opengl_frame_unpack_with_shader (SchroFrame *dest, SchroFrame *src,
     SCHRO_OPENGL_CHECK_ERROR
 
     glUseProgramObjectARB (shader->program);
-    glUniform1iARB (shader->textures[0], 0); // FIXME: pre-bind on create
 
     schro_opengl_render_quad (0, 0, width, height);
 
@@ -259,17 +257,13 @@ schro_opengl_frame_pack_with_shader (SchroFrame *dest, SchroFrame *src,
 
   glUseProgramObjectARB (shader->program);
 
-  //glActiveTextureARB (GL_TEXTURE0_ARB);
   glBindTexture (GL_TEXTURE_RECTANGLE_ARB, src_y_canvas->texture);
-  glUniform1iARB (shader->textures[0], 0); // FIXME: pre-bind on create
 
   glActiveTextureARB (GL_TEXTURE1_ARB);
   glBindTexture (GL_TEXTURE_RECTANGLE_ARB, src_u_canvas->texture);
-  glUniform1iARB (shader->textures[1], 1); // FIXME: pre-bind on create
 
   glActiveTextureARB (GL_TEXTURE2_ARB);
   glBindTexture (GL_TEXTURE_RECTANGLE_ARB, src_v_canvas->texture);
-  glUniform1iARB (shader->textures[2], 2); // FIXME: pre-bind on create
 
   glActiveTextureARB (GL_TEXTURE0_ARB);
 

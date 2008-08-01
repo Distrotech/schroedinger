@@ -343,7 +343,6 @@ schro_opengl_canvas_push (SchroOpenGLCanvas *dest, SchroFrameData *src)
       }
 
       glUseProgramObjectARB (shader->program);
-      glUniform1iARB (shader->textures[0], 0); // FIXME: pre-bind on create
     }
 
     schro_opengl_render_quad (0, 0, width, height);
