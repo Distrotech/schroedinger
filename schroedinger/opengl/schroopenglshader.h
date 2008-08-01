@@ -10,23 +10,23 @@ SCHRO_BEGIN_DECLS
 
 struct _SchroOpenGLShader {
   GLhandleARB program;
-  GLint offsets[8];     /* vec2 */
-  GLint edges[2];       /* vec2 */
-  GLint origin;         /* vec2 */
-  GLint size;           /* vec2 */
-  GLint remainings[2];  /* vec2 */
-  GLint four_decrease;  /* vec2 */ // FIXME: rename to decrease4
-  GLint three_decrease; /* vec2 */ // FIXME: rename to decrease3
-  GLint two_decrease;   /* vec2 */ // FIXME: rename to decrease2
-  GLint one_decrease;   /* vec2 */ // FIXME: rename to decrease1
-  GLint one_increase;   /* vec2 */ // FIXME: rename to increase1
-  GLint two_increase;   /* vec2 */ // FIXME: rename to increase2
-  GLint three_increase; /* vec2 */ // FIXME: rename to increase3
-  GLint four_increase;  /* vec2 */ // FIXME: rename to increase4
-  GLint dc;             /* float */
-  GLint ref_weights[2]; /* float */
-  GLint ref_addend;     /* float */
-  GLint ref_divisor;    /* float */
+  GLint offsets[8];        /* vec2 */
+  GLint edges[2];          /* vec2 */
+  GLint origin;            /* vec2 */
+  GLint size;              /* vec2 */
+  GLint four_decrease;     /* vec2 */ // FIXME: rename to decrease4
+  GLint three_decrease;    /* vec2 */ // FIXME: rename to decrease3
+  GLint two_decrease;      /* vec2 */ // FIXME: rename to decrease2
+  GLint one_decrease;      /* vec2 */ // FIXME: rename to decrease1
+  GLint one_increase;      /* vec2 */ // FIXME: rename to increase1
+  GLint two_increase;      /* vec2 */ // FIXME: rename to increase2
+  GLint three_increase;    /* vec2 */ // FIXME: rename to increase3
+  GLint four_increase;     /* vec2 */ // FIXME: rename to increase4
+  GLint linear_weights[2]; /* vec4 */
+  GLint dc;                /* float */
+  GLint ref_weights[2];    /* float */
+  GLint ref_addend;        /* float */
+  GLint ref_divisor;       /* float */
 };
 
 #define SCHRO_OPENGL_SHADER_COPY_U8                                    0
@@ -75,15 +75,15 @@ struct _SchroOpenGLShader {
 #define SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_3a_WEIGHT            43
 #define SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_3b                   44
 #define SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_3b_WEIGHT            45
-#define SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_0                  46
-#define SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_0_WEIGHT           47
-#define SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a                 48
-#define SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_WEIGHT          49
-#define SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b                 50
-#define SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_WEIGHT          51
+#define SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_0_0                46
+#define SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_0_0_WEIGHT         47
+#define SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_3a              48
+#define SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_3a_WEIGHT       49
+#define SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_3b              50
+#define SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_3b_WEIGHT       51
 
 #define SCHRO_OPENGL_SHADER_COUNT \
-    ((SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_WEIGHT) + 1)
+    ((SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_3b_WEIGHT) + 1)
 
 SchroOpenGLShaderLibrary *schro_opengl_shader_library_new (SchroOpenGL *opengl);
 void schro_opengl_shader_library_free (SchroOpenGLShaderLibrary *shader_library);

@@ -230,8 +230,6 @@ schro_opengl_shader_new (const char* code, const char* name)
   UNIFORM_LOCATION (vec2,  edge1,          edges[0]);
   UNIFORM_LOCATION (vec2,  edge2,          edges[1]);
   UNIFORM_LOCATION (vec2,  size,           size);
-  UNIFORM_LOCATION (vec2,  remaining1,     remainings[0]);
-  UNIFORM_LOCATION (vec2,  remaining2,     remainings[1]);
   UNIFORM_LOCATION (vec2,  four_decrease,  four_decrease);
   UNIFORM_LOCATION (vec2,  three_decrease, three_decrease);
   UNIFORM_LOCATION (vec2,  two_decrease,   two_decrease);
@@ -240,6 +238,8 @@ schro_opengl_shader_new (const char* code, const char* name)
   UNIFORM_LOCATION (vec2,  two_increase,   two_increase);
   UNIFORM_LOCATION (vec2,  three_increase, three_increase);
   UNIFORM_LOCATION (vec2,  four_increase,  four_increase);
+  UNIFORM_LOCATION (vec4,  linear_weight1, linear_weights[0]);
+  UNIFORM_LOCATION (vec4,  linear_weight2, linear_weights[1]);
   UNIFORM_LOCATION (float, dc,             dc);
   UNIFORM_LOCATION (float, ref_weight1,    ref_weights[0]);
   UNIFORM_LOCATION (float, ref_weight2,    ref_weights[1]);

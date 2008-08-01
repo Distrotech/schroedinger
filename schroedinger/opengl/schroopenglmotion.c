@@ -16,18 +16,18 @@ struct _SchroOpenGLMotion {
   SchroMotion *motion;
   SchroOpenGLCanvas *src_canvases[2][4];
   SchroOpenGLShader *shader_dc;
-  SchroOpenGLShader *shader_ref_prec0;
-  SchroOpenGLShader *shader_ref_prec0_weight;
-  SchroOpenGLShader *shader_ref_prec3a;
-  SchroOpenGLShader *shader_ref_prec3a_weight;
-  SchroOpenGLShader *shader_ref_prec3b;
-  SchroOpenGLShader *shader_ref_prec3b_weight;
-  SchroOpenGLShader *shader_biref_prec0;
-  SchroOpenGLShader *shader_biref_prec0_weight;
-  SchroOpenGLShader *shader_biref_prec3a;
-  SchroOpenGLShader *shader_biref_prec3a_weight;
-  SchroOpenGLShader *shader_biref_prec3b;
-  SchroOpenGLShader *shader_biref_prec3b_weight;
+  SchroOpenGLShader *shader_ref_prec_0;
+  SchroOpenGLShader *shader_ref_prec_0_weight;
+  SchroOpenGLShader *shader_ref_prec_3a;
+  SchroOpenGLShader *shader_ref_prec_3a_weight;
+  SchroOpenGLShader *shader_ref_prec_3b;
+  SchroOpenGLShader *shader_ref_prec_3b_weight;
+  SchroOpenGLShader *shader_biref_prec_0_0;
+  SchroOpenGLShader *shader_biref_prec_0_0_weight;
+  SchroOpenGLShader *shader_biref_prec_3a_3a;
+  SchroOpenGLShader *shader_biref_prec_3a_3a_weight;
+  SchroOpenGLShader *shader_biref_prec_3b_3b;
+  SchroOpenGLShader *shader_biref_prec_3b_3b_weight;
 };
 
 struct _SchroOpenGLSpatialWeightBlock {
@@ -152,17 +152,18 @@ schro_opengl_motion_render_ref_block (SchroOpenGLMotion *opengl_motion,
         glBindTexture (GL_TEXTURE_RECTANGLE_ARB, \
             opengl_motion->src_canvases[_ref][sub]->texture); \
         glActiveTextureARB (GL_TEXTURE0_ARB); \
-        glUniform2fARB (shader->offsets[_index], ((_x) >> 1) - x, ((_y) >> 1) - y); \
+        glUniform2fARB (shader->offsets[_index], ((_x) >> 1) - x, \
+            ((_y) >> 1) - y); \
       } while (0)
 
   switch (motion->mv_precision) {
     case 0: // schro_upsampled_frame_get_block_fast_prec0
       if (needs_weighting) {
-        shader = opengl_motion->shader_ref_prec0_weight;
-        //SCHRO_ERROR ("shader_ref_prec0_weight");
+        shader = opengl_motion->shader_ref_prec_0_weight;
+        //SCHRO_ERROR ("shader_ref_prec_0_weight");
       } else {
-        shader = opengl_motion->shader_ref_prec0;
-        //SCHRO_ERROR ("shader_ref_prec0");
+        shader = opengl_motion->shader_ref_prec_0;
+        //SCHRO_ERROR ("shader_ref_prec_0");
       }
 
       glUseProgramObjectARB (shader->program);
@@ -171,11 +172,11 @@ schro_opengl_motion_render_ref_block (SchroOpenGLMotion *opengl_motion,
       break;
     case 1: // schro_upsampled_frame_get_block_fast_prec1
       if (needs_weighting) {
-        shader = opengl_motion->shader_ref_prec0_weight;
-        //SCHRO_ERROR ("shader_ref_prec0_weight 1");
+        shader = opengl_motion->shader_ref_prec_0_weight;
+        //SCHRO_ERROR ("shader_ref_prec_0_weight 1");
       } else {
-        shader = opengl_motion->shader_ref_prec0;
-        //SCHRO_ERROR ("shader_ref_prec0 1");
+        shader = opengl_motion->shader_ref_prec_0;
+        //SCHRO_ERROR ("shader_ref_prec_0 1");
       }
 
       glUseProgramObjectARB (shader->program);
@@ -195,11 +196,11 @@ schro_opengl_motion_render_ref_block (SchroOpenGLMotion *opengl_motion,
       switch ((ry << 2) | rx) {
         case 0: // schro_upsampled_frame_get_block_fast_prec1
           if (needs_weighting) {
-            shader = opengl_motion->shader_ref_prec0_weight;
-            //SCHRO_ERROR ("shader_ref_prec0_weight 3 0");
+            shader = opengl_motion->shader_ref_prec_0_weight;
+            //SCHRO_ERROR ("shader_ref_prec_0_weight 3 0");
           } else {
-            shader = opengl_motion->shader_ref_prec0;
-            //SCHRO_ERROR ("shader_ref_prec0 3 0");
+            shader = opengl_motion->shader_ref_prec_0;
+            //SCHRO_ERROR ("shader_ref_prec_0 3 0");
           }
 
           glUseProgramObjectARB (shader->program);
@@ -209,11 +210,11 @@ schro_opengl_motion_render_ref_block (SchroOpenGLMotion *opengl_motion,
         case 2:
         case 8:
           if (needs_weighting) {
-            shader = opengl_motion->shader_ref_prec3a_weight;
-            //SCHRO_ERROR ("shader_ref_prec3a_weight");
+            shader = opengl_motion->shader_ref_prec_3a_weight;
+            //SCHRO_ERROR ("shader_ref_prec_3a_weight");
           } else {
-            shader = opengl_motion->shader_ref_prec3a;
-            //SCHRO_ERROR ("shader_ref_prec3a");
+            shader = opengl_motion->shader_ref_prec_3a;
+            //SCHRO_ERROR ("shader_ref_prec_3a");
           }
 
           glUseProgramObjectARB (shader->program);
@@ -229,21 +230,22 @@ schro_opengl_motion_render_ref_block (SchroOpenGLMotion *opengl_motion,
           break;
         default:
           if (needs_weighting) {
-            shader = opengl_motion->shader_ref_prec3b_weight;
-            //SCHRO_ERROR ("shader_ref_prec3b_weight");
+            shader = opengl_motion->shader_ref_prec_3b_weight;
+            //SCHRO_ERROR ("shader_ref_prec_3b_weight");
           } else {
-            shader = opengl_motion->shader_ref_prec3b;
-            //SCHRO_ERROR ("shader_ref_prec3b");
+            shader = opengl_motion->shader_ref_prec_3b;
+            //SCHRO_ERROR ("shader_ref_prec_3b");
           }
 
           glUseProgramObjectARB (shader->program);
 
-          SETUP_UNIFORMS_FOR_PREC_1_BLOCK (ref, 0, hx, hy);
+          SETUP_UNIFORMS_FOR_PREC_1_BLOCK (ref, 0, hx,     hy);
           SETUP_UNIFORMS_FOR_PREC_1_BLOCK (ref, 1, hx + 1, hy);
-          SETUP_UNIFORMS_FOR_PREC_1_BLOCK (ref, 2, hx, hy + 1);
+          SETUP_UNIFORMS_FOR_PREC_1_BLOCK (ref, 2, hx,     hy + 1);
           SETUP_UNIFORMS_FOR_PREC_1_BLOCK (ref, 3, hx + 1, hy + 1);
 
-          glUniform2fARB (shader->remainings[0], rx, ry);
+          glUniform4fARB (shader->linear_weights[0], (4 - ry) * (4 - rx),
+              (4 - ry) * rx, ry * (4 - rx), ry * rx);
           break;
       }
 
@@ -325,15 +327,16 @@ schro_opengl_motion_render_biref_block (SchroOpenGLMotion *opengl_motion,
         glBindTexture (GL_TEXTURE_RECTANGLE_ARB, \
             opengl_motion->src_canvases[_ref][sub]->texture); \
         glActiveTextureARB (GL_TEXTURE0_ARB); \
-        glUniform2fARB (shader->offsets[_index], ((_x) >> 1) - x, ((_y) >> 1) - y); \
+        glUniform2fARB (shader->offsets[_index], ((_x) >> 1) - x, \
+            ((_y) >> 1) - y); \
       } while (0)
 
   switch (motion->mv_precision) {
     case 0: // schro_upsampled_frame_get_block_fast_prec0
       if (needs_weighting) {
-        shader = opengl_motion->shader_biref_prec0_weight;
+        shader = opengl_motion->shader_biref_prec_0_0_weight;
       } else {
-        shader = opengl_motion->shader_biref_prec0;
+        shader = opengl_motion->shader_biref_prec_0_0;
       }
 
       glUseProgramObjectARB (shader->program);
@@ -343,9 +346,9 @@ schro_opengl_motion_render_biref_block (SchroOpenGLMotion *opengl_motion,
       break;
     case 1: // schro_upsampled_frame_get_block_fast_prec1
       if (needs_weighting) {
-        shader = opengl_motion->shader_biref_prec0_weight;
+        shader = opengl_motion->shader_biref_prec_0_0_weight;
       } else {
-        shader = opengl_motion->shader_biref_prec0;
+        shader = opengl_motion->shader_biref_prec_0_0;
       }
 
       glUseProgramObjectARB (shader->program);
@@ -373,9 +376,9 @@ schro_opengl_motion_render_biref_block (SchroOpenGLMotion *opengl_motion,
       switch ((ry << 2) | rx) {
         case 0: // schro_upsampled_frame_get_block_fast_prec1
           if (needs_weighting)
-            shader = opengl_motion->shader_biref_prec0_weight;
+            shader = opengl_motion->shader_biref_prec_0_0_weight;
           } else {
-            shader = opengl_motion->shader_biref_prec0;
+            shader = opengl_motion->shader_biref_prec_0_0;
           }
 
           glUseProgramObjectARB (shader->program);
@@ -385,9 +388,9 @@ schro_opengl_motion_render_biref_block (SchroOpenGLMotion *opengl_motion,
         case 2:
         case 8:
           if (needs_weighting)
-            shader = opengl_motion->shader_biref_prec3a_weight;
+            shader = opengl_motion->shader_biref_prec_3a_3a_weight;
           } else {
-            shader = opengl_motion->shader_biref_prec3a;
+            shader = opengl_motion->shader_biref_prec_3a_3a;
           }
 
           glUseProgramObjectARB (shader->program);
@@ -403,19 +406,20 @@ schro_opengl_motion_render_biref_block (SchroOpenGLMotion *opengl_motion,
           break;
         default:
           if (needs_weighting)
-            shader = opengl_motion->shader_biref_prec3b_weight;
+            shader = opengl_motion->shader_biref_prec_3b_3b_weight;
           } else {
-            shader = opengl_motion->shader_biref_prec3b;
+            shader = opengl_motion->shader_biref_prec_3b_3b;
           }
 
           glUseProgramObjectARB (shader->program);
 
-          SETUP_UNIFORMS_FOR_PREC_1_BLOCK (0, hx, hy);
+          SETUP_UNIFORMS_FOR_PREC_1_BLOCK (0, hx,     hy);
           SETUP_UNIFORMS_FOR_PREC_1_BLOCK (1, hx + 1, hy);
-          SETUP_UNIFORMS_FOR_PREC_1_BLOCK (2, hx, hy + 1);
+          SETUP_UNIFORMS_FOR_PREC_1_BLOCK (2, hx,     hy + 1);
           SETUP_UNIFORMS_FOR_PREC_1_BLOCK (3, hx + 1, hy + 1);
 
-          glUniform2fARB (shader->remaining, rx, ry);
+          glUniform4fARB (shader->linear_weights[0], (4 - ry) * (4 - rx),
+              (4 - ry) * rx, ry * (4 - rx), ry * rx);
           break;
       }
 #else
@@ -525,19 +529,19 @@ schro_opengl_motion_render (SchroMotion *motion, SchroFrame *dest)
           (dest_canvas->opengl, SCHRO_OPENGL_SHADER_OBMC_RENDER_##_name); \
       SCHRO_ASSERT (opengl_motion.shader_##_variable != NULL);
 
-  GET_SHADER (dc,                  DC)
-  GET_SHADER (ref_prec0,           REF_PREC_0)
-  GET_SHADER (ref_prec0_weight,    REF_PREC_0_WEIGHT)
-  GET_SHADER (ref_prec3a,          REF_PREC_3a)
-  GET_SHADER (ref_prec3a_weight,   REF_PREC_3a_WEIGHT)
-  GET_SHADER (ref_prec3b,          REF_PREC_3b)
-  GET_SHADER (ref_prec3b_weight,   REF_PREC_3b_WEIGHT)
-  GET_SHADER (biref_prec0,         BIREF_PREC_0)
-  GET_SHADER (biref_prec0_weight,  BIREF_PREC_0_WEIGHT)
-  GET_SHADER (biref_prec3a,        BIREF_PREC_3a)
-  GET_SHADER (biref_prec3a_weight, BIREF_PREC_3a_WEIGHT)
-  GET_SHADER (biref_prec3b,        BIREF_PREC_3b)
-  GET_SHADER (biref_prec3b_weight, BIREF_PREC_3b_WEIGHT)
+  GET_SHADER (dc,                      DC)
+  GET_SHADER (ref_prec_0,              REF_PREC_0)
+  GET_SHADER (ref_prec_0_weight,       REF_PREC_0_WEIGHT)
+  GET_SHADER (ref_prec_3a,             REF_PREC_3a)
+  GET_SHADER (ref_prec_3a_weight,      REF_PREC_3a_WEIGHT)
+  GET_SHADER (ref_prec_3b,             REF_PREC_3b)
+  GET_SHADER (ref_prec_3b_weight,      REF_PREC_3b_WEIGHT)
+  GET_SHADER (biref_prec_0_0,          BIREF_PREC_0_0)
+  GET_SHADER (biref_prec_0_0_weight,   BIREF_PREC_0_0_WEIGHT)
+  GET_SHADER (biref_prec_3a_3a,        BIREF_PREC_3a_3a)
+  GET_SHADER (biref_prec_3a_3a_weight, BIREF_PREC_3a_3a_WEIGHT)
+  GET_SHADER (biref_prec_3b_3b,        BIREF_PREC_3b_3b)
+  GET_SHADER (biref_prec_3b_3b_weight, BIREF_PREC_3b_3b_WEIGHT)
 
   #undef GET_SHADER
 

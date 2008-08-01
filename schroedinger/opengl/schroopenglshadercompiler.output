@@ -1380,177 +1380,187 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
       "obmc_render_dc/normal",
       SHADER_HEADER
       SHADER_READ_S16 ("texture1", "_previous")
-      SHADER_READ_S16 ("texture2", "_obmc_weight")
+      SHADER_READ_S16 ("texture2", "_spatial_weight")
       SHADER_WRITE_S16
+      "#define XY gl_TexCoord[0].xy\n"
       "uniform vec2 origin;\n"
       "uniform float dc;\n"
       "void main (void) {\n"
-      "  float previous = read_previous_s16 (gl_TexCoord[0].xy);\n"
-      "  float obmc_weight = read_obmc_weight_s16 (gl_TexCoord[0].xy - origin);\n"
-      "  write_s16 (previous + float (dc) * obmc_weight);\n"
+      "  float previous = read_previous_s16 (XY);\n"
+      "  float spatial_weight = read_spatial_weight_s16 (XY - origin);\n"
+      "  write_s16 (previous + float (dc) * spatial_weight);\n"
       "}\n",
       SHADER_HEADER_INTEGER
       SHADER_READ_S16_INTEGER ("texture1", "_previous")
-      SHADER_READ_S16_INTEGER ("texture2", "_obmc_weight")
+      SHADER_READ_S16_INTEGER ("texture2", "_spatial_weight")
       SHADER_WRITE_S16_INTEGER
+      "#define XY gl_TexCoord[0].xy\n"
       "uniform vec2 origin;\n"
       "uniform float dc;\n"
       "void main (void) {\n"
-      "  int previous = read_previous_s16 (gl_TexCoord[0].xy);\n"
-      "  int obmc_weight = read_obmc_weight_s16 (gl_TexCoord[0].xy - origin);\n"
-      "  write_s16 (previous + int (dc) * obmc_weight);\n"
+      "  int previous = read_previous_s16 (XY);\n"
+      "  int spatial_weight = read_spatial_weight_s16 (XY - origin);\n"
+      "  write_s16 (previous + int (dc) * spatial_weight);\n"
       "}\n" },
   { SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_0,
       "obmc_render_ref_prec_0/normal",
       SHADER_HEADER
       SHADER_READ_S16 ("texture1", "_previous")
-      SHADER_READ_S16 ("texture2", "_obmc_weight")
+      SHADER_READ_S16 ("texture2", "_spatial_weight")
       SHADER_READ_U8 ("texture3", "_upsampled")
       SHADER_CAST_S16_U8
       SHADER_WRITE_S16
+      "#define XY gl_TexCoord[0].xy\n"
       "uniform vec2 offset1;\n"
       "uniform vec2 origin;\n"
       "void main (void) {\n"
-      "  float previous = read_previous_s16 (gl_TexCoord[0].xy);\n"
-      "  float obmc_weight = read_obmc_weight_s16 (gl_TexCoord[0].xy - origin);\n"
-      "  float upsampled = cast_s16_u8 (read_upsampled_u8 (gl_TexCoord[0].xy + offset1));\n"
-      "  write_s16 (previous + upsampled * obmc_weight);\n"
+      "  float previous = read_previous_s16 (XY);\n"
+      "  float spatial_weight = read_spatial_weight_s16 (XY - origin);\n"
+      "  float upsampled = cast_s16_u8 (read_upsampled_u8 (XY + offset1));\n"
+      "  write_s16 (previous + upsampled * spatial_weight);\n"
       "}\n",
       SHADER_HEADER_INTEGER
       SHADER_READ_S16_INTEGER ("texture1", "_previous")
-      SHADER_READ_S16_INTEGER ("texture2", "_obmc_weight")
+      SHADER_READ_S16_INTEGER ("texture2", "_spatial_weight")
       SHADER_READ_U8_INTEGER ("texture3", "_upsampled")
       SHADER_CAST_S16_U8_INTEGER
       SHADER_WRITE_S16_INTEGER
+      "#define XY gl_TexCoord[0].xy\n"
       "uniform vec2 offset1;\n"
       "uniform vec2 origin;\n"
       "void main (void) {\n"
-      "  int previous = read_previous_s16 (gl_TexCoord[0].xy);\n"
-      "  int obmc_weight = read_obmc_weight_s16 (gl_TexCoord[0].xy - origin);\n"
-      "  int upsampled = cast_s16_u8 (read_upsampled_u8 (gl_TexCoord[0].xy + offset1));\n"
-      "  write_s16 (previous + upsampled * obmc_weight);\n"
+      "  int previous = read_previous_s16 (XY);\n"
+      "  int spatial_weight = read_spatial_weight_s16 (XY - origin);\n"
+      "  int upsampled = cast_s16_u8 (read_upsampled_u8 (XY + offset1));\n"
+      "  write_s16 (previous + upsampled * spatial_weight);\n"
       "}\n" },
   { SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_0_WEIGHT,
       "obmc_render_ref_prec_0/weight",
       SHADER_HEADER
       SHADER_READ_S16 ("texture1", "_previous")
-      SHADER_READ_S16 ("texture2", "_obmc_weight")
+      SHADER_READ_S16 ("texture2", "_spatial_weight")
       SHADER_READ_U8 ("texture3", "_upsampled")
       SHADER_CAST_S16_U8
       SHADER_DIVIDE_S16
       SHADER_REF_WEIGHTING_S16
       SHADER_WRITE_S16
+      "#define XY gl_TexCoord[0].xy\n"
       "uniform vec2 offset1;\n"
       "uniform vec2 origin;\n"
       "void main (void) {\n"
-      "  float previous = read_previous_s16 (gl_TexCoord[0].xy);\n"
-      "  float obmc_weight = read_obmc_weight_s16 (gl_TexCoord[0].xy - origin);\n"
-      "  float upsampled = cast_s16_u8 (read_upsampled_u8 (gl_TexCoord[0].xy + offset1));\n"
-      "  write_s16 (previous + ref_weighting_s16 (upsampled) * obmc_weight);\n"
+      "  float previous = read_previous_s16 (XY);\n"
+      "  float spatial_weight = read_spatial_weight_s16 (XY - origin);\n"
+      "  float upsampled = cast_s16_u8 (read_upsampled_u8 (XY + offset1));\n"
+      "  write_s16 (previous + ref_weighting_s16 (upsampled) * spatial_weight);\n"
       "}\n",
       SHADER_HEADER_INTEGER
       SHADER_READ_S16_INTEGER ("texture1", "_previous")
-      SHADER_READ_S16_INTEGER ("texture2", "_obmc_weight")
+      SHADER_READ_S16_INTEGER ("texture2", "_spatial_weight")
       SHADER_READ_U8_INTEGER ("texture3", "_upsampled")
       SHADER_CAST_S16_U8_INTEGER
       SHADER_DIVIDE_S16_INTEGER
       SHADER_REF_WEIGHTING_S16_INTEGER
       SHADER_WRITE_S16_INTEGER
+      "#define XY gl_TexCoord[0].xy\n"
       "uniform vec2 offset1;\n"
       "uniform vec2 origin;\n"
       "void main (void) {\n"
-      "  int previous = read_previous_s16 (gl_TexCoord[0].xy);\n"
-      "  int obmc_weight = read_obmc_weight_s16 (gl_TexCoord[0].xy - origin);\n"
-      "  int upsampled = cast_s16_u8 (read_upsampled_u8 (gl_TexCoord[0].xy + offset1));\n"
-      "  write_s16 (previous + ref_weighting_s16 (upsampled) * obmc_weight);\n"
+      "  int previous = read_previous_s16 (XY);\n"
+      "  int spatial_weight = read_spatial_weight_s16 (XY - origin);\n"
+      "  int upsampled = cast_s16_u8 (read_upsampled_u8 (XY + offset1));\n"
+      "  write_s16 (previous + ref_weighting_s16 (upsampled) * spatial_weight);\n"
       "}\n" },
   { SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_3a,
       "obmc_render_ref_prec_3a/normal",
       SHADER_HEADER
       SHADER_READ_S16 ("texture1", "_previous")
-      SHADER_READ_S16 ("texture2", "_obmc_weight")
+      SHADER_READ_S16 ("texture2", "_spatial_weight")
       SHADER_READ_U8 ("texture3", "_upsampled1")
       SHADER_READ_U8 ("texture4", "_upsampled2")
       SHADER_CAST_S16_U8
       SHADER_DIVIDE_S16
       SHADER_WRITE_S16
+      "#define XY gl_TexCoord[0].xy\n"
       "uniform vec2 offset1;\n"
       "uniform vec2 offset2;\n"
       "uniform vec2 origin;\n"
       "void main (void) {\n"
-      "  float previous = read_previous_s16 (gl_TexCoord[0].xy);\n"
-      "  float obmc_weight = read_obmc_weight_s16 (gl_TexCoord[0].xy - origin);\n"
-      "  float upsampled1 = cast_s16_u8 (read_upsampled1_u8 (gl_TexCoord[0].xy + offset1));\n"
-      "  float upsampled2 = cast_s16_u8 (read_upsampled2_u8 (gl_TexCoord[0].xy + offset2));\n"
+      "  float previous = read_previous_s16 (XY);\n"
+      "  float spatial_weight = read_spatial_weight_s16 (XY - origin);\n"
+      "  float upsampled1 = cast_s16_u8 (read_upsampled1_u8 (XY + offset1));\n"
+      "  float upsampled2 = cast_s16_u8 (read_upsampled2_u8 (XY + offset2));\n"
       "  float average = divide_s16 (upsampled1 + upsampled2 + 1.0, 2.0);\n"
-      "  write_s16 (previous + average * obmc_weight);\n"
+      "  write_s16 (previous + average * spatial_weight);\n"
       "}\n",
       SHADER_HEADER_INTEGER
       SHADER_READ_S16_INTEGER ("texture1", "_previous")
-      SHADER_READ_S16_INTEGER ("texture2", "_obmc_weight")
+      SHADER_READ_S16_INTEGER ("texture2", "_spatial_weight")
       SHADER_READ_U8_INTEGER ("texture3", "_upsampled1")
       SHADER_READ_U8_INTEGER ("texture4", "_upsampled2")
       SHADER_CAST_S16_U8_INTEGER
       SHADER_DIVIDE_S16_INTEGER
       SHADER_WRITE_S16_INTEGER
+      "#define XY gl_TexCoord[0].xy\n"
       "uniform vec2 offset1;\n"
       "uniform vec2 offset2;\n"
       "uniform vec2 origin;\n"
       "void main (void) {\n"
-      "  int previous = read_previous_s16 (gl_TexCoord[0].xy);\n"
-      "  int obmc_weight = read_obmc_weight_s16 (gl_TexCoord[0].xy - origin);\n"
-      "  int upsampled1 = cast_s16_u8 (read_upsampled1_u8 (gl_TexCoord[0].xy + offset1));\n"
-      "  int upsampled2 = cast_s16_u8 (read_upsampled2_u8 (gl_TexCoord[0].xy + offset2));\n"
+      "  int previous = read_previous_s16 (XY);\n"
+      "  int spatial_weight = read_spatial_weight_s16 (XY - origin);\n"
+      "  int upsampled1 = cast_s16_u8 (read_upsampled1_u8 (XY + offset1));\n"
+      "  int upsampled2 = cast_s16_u8 (read_upsampled2_u8 (XY + offset2));\n"
       "  int average = divide_s16 (upsampled1 + upsampled2 + 1, 2);\n"
-      "  write_s16 (previous + average * obmc_weight);\n"
+      "  write_s16 (previous + average * spatial_weight);\n"
       "}\n" },
   { SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_3a_WEIGHT,
       "obmc_render_ref_prec_3a/weight",
       SHADER_HEADER
       SHADER_READ_S16 ("texture1", "_previous")
-      SHADER_READ_S16 ("texture2", "_obmc_weight")
+      SHADER_READ_S16 ("texture2", "_spatial_weight")
       SHADER_READ_U8 ("texture3", "_upsampled1")
       SHADER_READ_U8 ("texture4", "_upsampled2")
       SHADER_CAST_S16_U8
       SHADER_DIVIDE_S16
       SHADER_REF_WEIGHTING_S16
       SHADER_WRITE_S16
+      "#define XY gl_TexCoord[0].xy\n"
       "uniform vec2 offset1;\n"
       "uniform vec2 offset2;\n"
       "uniform vec2 origin;\n"
       "void main (void) {\n"
-      "  float previous = read_previous_s16 (gl_TexCoord[0].xy);\n"
-      "  float obmc_weight = read_obmc_weight_s16 (gl_TexCoord[0].xy - origin);\n"
-      "  float upsampled1 = cast_s16_u8 (read_upsampled1_u8 (gl_TexCoord[0].xy + offset1));\n"
-      "  float upsampled2 = cast_s16_u8 (read_upsampled2_u8 (gl_TexCoord[0].xy + offset2));\n"
+      "  float previous = read_previous_s16 (XY);\n"
+      "  float spatial_weight = read_spatial_weight_s16 (XY - origin);\n"
+      "  float upsampled1 = cast_s16_u8 (read_upsampled1_u8 (XY + offset1));\n"
+      "  float upsampled2 = cast_s16_u8 (read_upsampled2_u8 (XY + offset2));\n"
       "  float average = divide_s16 (upsampled1 + upsampled2 + 1.0, 2.0);\n"
-      "  write_s16 (previous + ref_weighting_s16 (average) * obmc_weight);\n"
+      "  write_s16 (previous + ref_weighting_s16 (average) * spatial_weight);\n"
       "}\n",
       SHADER_HEADER_INTEGER
       SHADER_READ_S16_INTEGER ("texture1", "_previous")
-      SHADER_READ_S16_INTEGER ("texture2", "_obmc_weight")
+      SHADER_READ_S16_INTEGER ("texture2", "_spatial_weight")
       SHADER_READ_U8_INTEGER ("texture3", "_upsampled1")
       SHADER_READ_U8_INTEGER ("texture4", "_upsampled2")
       SHADER_CAST_S16_U8_INTEGER
       SHADER_DIVIDE_S16_INTEGER
       SHADER_REF_WEIGHTING_S16_INTEGER
       SHADER_WRITE_S16_INTEGER
+      "#define XY gl_TexCoord[0].xy\n"
       "uniform vec2 offset1;\n"
       "uniform vec2 offset2;\n"
       "uniform vec2 origin;\n"
       "void main (void) {\n"
-      "  int previous = read_previous_s16 (gl_TexCoord[0].xy);\n"
-      "  int obmc_weight = read_obmc_weight_s16 (gl_TexCoord[0].xy - origin);\n"
-      "  int upsampled1 = cast_s16_u8 (read_upsampled1_u8 (gl_TexCoord[0].xy + offset1));\n"
-      "  int upsampled2 = cast_s16_u8 (read_upsampled2_u8 (gl_TexCoord[0].xy + offset2));\n"
+      "  int previous = read_previous_s16 (XY);\n"
+      "  int spatial_weight = read_spatial_weight_s16 (XY - origin);\n"
+      "  int upsampled1 = cast_s16_u8 (read_upsampled1_u8 (XY + offset1));\n"
+      "  int upsampled2 = cast_s16_u8 (read_upsampled2_u8 (XY + offset2));\n"
       "  int average = divide_s16 (upsampled1 + upsampled2 + 1, 2);\n"
-      "  write_s16 (previous + ref_weighting_s16 (average) * obmc_weight);\n"
+      "  write_s16 (previous + ref_weighting_s16 (average) * spatial_weight);\n"
       "}\n" },
   { SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_3b,
       "obmc_render_ref_prec_3b/normal",
       SHADER_HEADER
       SHADER_READ_S16 ("texture1", "_previous")
-      SHADER_READ_S16 ("texture2", "_obmc_weight")
+      SHADER_READ_S16 ("texture2", "_spatial_weight")
       SHADER_READ_U8 ("texture3", "_upsampled1")
       SHADER_READ_U8 ("texture4", "_upsampled2")
       SHADER_READ_U8 ("texture5", "_upsampled3")
@@ -1559,31 +1569,27 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
       SHADER_CROSSFOOT_S16
       SHADER_DIVIDE_S16
       SHADER_WRITE_S16
+      "#define XY gl_TexCoord[0].xy\n"
       "uniform vec2 offset1;\n"
       "uniform vec2 offset2;\n"
       "uniform vec2 offset3;\n"
       "uniform vec2 offset4;\n"
       "uniform vec2 origin;\n"
-      "uniform vec2 remaining1;\n"
+      "uniform vec4 linear_weight1;\n"
       "void main (void) {\n"
-      "  float previous = read_previous_s16 (gl_TexCoord[0].xy);\n"
-      "  float obmc_weight = read_obmc_weight_s16 (gl_TexCoord[0].xy - origin);\n"
-      "  vec4 weight;\n"
+      "  float previous = read_previous_s16 (XY);\n"
+      "  float spatial_weight = read_spatial_weight_s16 (XY - origin);\n"
       "  vec4 upsampled;\n"
-      "  weight.r = (4.0 - float (remaining1.y)) * (4.0 - float (remaining1.x));\n"
-      "  weight.g = (4.0 - float (remaining1.y)) * float (remaining1.x);\n"
-      "  weight.b = float (remaining1.y) * (4.0 - float (remaining1.x));\n"
-      "  weight.a = float (remaining1.y) * float (remaining1.x);\n"
-      "  upsampled.r = cast_s16_u8 (read_upsampled1_u8 (gl_TexCoord[0].xy + offset1));\n"
-      "  upsampled.g = cast_s16_u8 (read_upsampled2_u8 (gl_TexCoord[0].xy + offset2));\n"
-      "  upsampled.b = cast_s16_u8 (read_upsampled3_u8 (gl_TexCoord[0].xy + offset3));\n"
-      "  upsampled.a = cast_s16_u8 (read_upsampled4_u8 (gl_TexCoord[0].xy + offset4));\n"
-      "  float average = divide_s16 (crossfoot_s16 (upsampled * weight) + 8.0, 16.0);\n"
-      "  write_s16 (previous + average * obmc_weight);\n"
+      "  upsampled.r = cast_s16_u8 (read_upsampled1_u8 (XY + offset1));\n"
+      "  upsampled.g = cast_s16_u8 (read_upsampled2_u8 (XY + offset2));\n"
+      "  upsampled.b = cast_s16_u8 (read_upsampled3_u8 (XY + offset3));\n"
+      "  upsampled.a = cast_s16_u8 (read_upsampled4_u8 (XY + offset4));\n"
+      "  float average = divide_s16 (crossfoot_s16 (upsampled * vec4 (linear_weight1)) + 8.0, 16.0);\n"
+      "  write_s16 (previous + average * spatial_weight);\n"
       "}\n",
       SHADER_HEADER_INTEGER
       SHADER_READ_S16_INTEGER ("texture1", "_previous")
-      SHADER_READ_S16_INTEGER ("texture2", "_obmc_weight")
+      SHADER_READ_S16_INTEGER ("texture2", "_spatial_weight")
       SHADER_READ_U8_INTEGER ("texture3", "_upsampled1")
       SHADER_READ_U8_INTEGER ("texture4", "_upsampled2")
       SHADER_READ_U8_INTEGER ("texture5", "_upsampled3")
@@ -1592,33 +1598,29 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
       SHADER_CROSSFOOT_S16_INTEGER
       SHADER_DIVIDE_S16_INTEGER
       SHADER_WRITE_S16_INTEGER
+      "#define XY gl_TexCoord[0].xy\n"
       "uniform vec2 offset1;\n"
       "uniform vec2 offset2;\n"
       "uniform vec2 offset3;\n"
       "uniform vec2 offset4;\n"
       "uniform vec2 origin;\n"
-      "uniform vec2 remaining1;\n"
+      "uniform vec4 linear_weight1;\n"
       "void main (void) {\n"
-      "  int previous = read_previous_s16 (gl_TexCoord[0].xy);\n"
-      "  int obmc_weight = read_obmc_weight_s16 (gl_TexCoord[0].xy - origin);\n"
-      "  ivec4 weight;\n"
+      "  int previous = read_previous_s16 (XY);\n"
+      "  int spatial_weight = read_spatial_weight_s16 (XY - origin);\n"
       "  ivec4 upsampled;\n"
-      "  weight.r = (4 - int (remaining1.y)) * (4 - int (remaining1.x));\n"
-      "  weight.g = (4 - int (remaining1.y)) * int (remaining1.x);\n"
-      "  weight.b = int (remaining1.y) * (4 - int (remaining1.x));\n"
-      "  weight.a = int (remaining1.y) * int (remaining1.x);\n"
-      "  upsampled.r = cast_s16_u8 (read_upsampled1_u8 (gl_TexCoord[0].xy + offset1));\n"
-      "  upsampled.g = cast_s16_u8 (read_upsampled2_u8 (gl_TexCoord[0].xy + offset2));\n"
-      "  upsampled.b = cast_s16_u8 (read_upsampled3_u8 (gl_TexCoord[0].xy + offset3));\n"
-      "  upsampled.a = cast_s16_u8 (read_upsampled4_u8 (gl_TexCoord[0].xy + offset4));\n"
-      "  int average = divide_s16 (crossfoot_s16 (upsampled * weight) + 8, 16);\n"
-      "  write_s16 (previous + average * obmc_weight);\n"
+      "  upsampled.r = cast_s16_u8 (read_upsampled1_u8 (XY + offset1));\n"
+      "  upsampled.g = cast_s16_u8 (read_upsampled2_u8 (XY + offset2));\n"
+      "  upsampled.b = cast_s16_u8 (read_upsampled3_u8 (XY + offset3));\n"
+      "  upsampled.a = cast_s16_u8 (read_upsampled4_u8 (XY + offset4));\n"
+      "  int average = divide_s16 (crossfoot_s16 (upsampled * ivec4 (linear_weight1)) + 8, 16);\n"
+      "  write_s16 (previous + average * spatial_weight);\n"
       "}\n" },
   { SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_3b_WEIGHT,
       "obmc_render_ref_prec_3b/weight",
       SHADER_HEADER
       SHADER_READ_S16 ("texture1", "_previous")
-      SHADER_READ_S16 ("texture2", "_obmc_weight")
+      SHADER_READ_S16 ("texture2", "_spatial_weight")
       SHADER_READ_U8 ("texture3", "_upsampled1")
       SHADER_READ_U8 ("texture4", "_upsampled2")
       SHADER_READ_U8 ("texture5", "_upsampled3")
@@ -1628,31 +1630,27 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
       SHADER_DIVIDE_S16
       SHADER_REF_WEIGHTING_S16
       SHADER_WRITE_S16
+      "#define XY gl_TexCoord[0].xy\n"
       "uniform vec2 offset1;\n"
       "uniform vec2 offset2;\n"
       "uniform vec2 offset3;\n"
       "uniform vec2 offset4;\n"
       "uniform vec2 origin;\n"
-      "uniform vec2 remaining1;\n"
+      "uniform vec4 linear_weight1;\n"
       "void main (void) {\n"
-      "  float previous = read_previous_s16 (gl_TexCoord[0].xy);\n"
-      "  float obmc_weight = read_obmc_weight_s16 (gl_TexCoord[0].xy - origin);\n"
-      "  vec4 weight;\n"
+      "  float previous = read_previous_s16 (XY);\n"
+      "  float spatial_weight = read_spatial_weight_s16 (XY - origin);\n"
       "  vec4 upsampled;\n"
-      "  weight.r = (4.0 - float (remaining1.y)) * (4.0 - float (remaining1.x));\n"
-      "  weight.g = (4.0 - float (remaining1.y)) * float (remaining1.x);\n"
-      "  weight.b = float (remaining1.y) * (4.0 - float (remaining1.x));\n"
-      "  weight.a = float (remaining1.y) * float (remaining1.x);\n"
-      "  upsampled.r = cast_s16_u8 (read_upsampled1_u8 (gl_TexCoord[0].xy + offset1));\n"
-      "  upsampled.g = cast_s16_u8 (read_upsampled2_u8 (gl_TexCoord[0].xy + offset2));\n"
-      "  upsampled.b = cast_s16_u8 (read_upsampled3_u8 (gl_TexCoord[0].xy + offset3));\n"
-      "  upsampled.a = cast_s16_u8 (read_upsampled4_u8 (gl_TexCoord[0].xy + offset4));\n"
-      "  float average = divide_s16 (crossfoot_s16 (upsampled * weight) + 8.0, 16.0);\n"
-      "  write_s16 (previous + ref_weighting_s16 (average) * obmc_weight);\n"
+      "  upsampled.r = cast_s16_u8 (read_upsampled1_u8 (XY + offset1));\n"
+      "  upsampled.g = cast_s16_u8 (read_upsampled2_u8 (XY + offset2));\n"
+      "  upsampled.b = cast_s16_u8 (read_upsampled3_u8 (XY + offset3));\n"
+      "  upsampled.a = cast_s16_u8 (read_upsampled4_u8 (XY + offset4));\n"
+      "  float average = divide_s16 (crossfoot_s16 (upsampled * vec4 (linear_weight1)) + 8.0, 16.0);\n"
+      "  write_s16 (previous + ref_weighting_s16 (average) * spatial_weight);\n"
       "}\n",
       SHADER_HEADER_INTEGER
       SHADER_READ_S16_INTEGER ("texture1", "_previous")
-      SHADER_READ_S16_INTEGER ("texture2", "_obmc_weight")
+      SHADER_READ_S16_INTEGER ("texture2", "_spatial_weight")
       SHADER_READ_U8_INTEGER ("texture3", "_upsampled1")
       SHADER_READ_U8_INTEGER ("texture4", "_upsampled2")
       SHADER_READ_U8_INTEGER ("texture5", "_upsampled3")
@@ -1662,115 +1660,115 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
       SHADER_DIVIDE_S16_INTEGER
       SHADER_REF_WEIGHTING_S16_INTEGER
       SHADER_WRITE_S16_INTEGER
+      "#define XY gl_TexCoord[0].xy\n"
       "uniform vec2 offset1;\n"
       "uniform vec2 offset2;\n"
       "uniform vec2 offset3;\n"
       "uniform vec2 offset4;\n"
       "uniform vec2 origin;\n"
-      "uniform vec2 remaining1;\n"
+      "uniform vec4 linear_weight1;\n"
       "void main (void) {\n"
-      "  int previous = read_previous_s16 (gl_TexCoord[0].xy);\n"
-      "  int obmc_weight = read_obmc_weight_s16 (gl_TexCoord[0].xy - origin);\n"
-      "  ivec4 weight;\n"
+      "  int previous = read_previous_s16 (XY);\n"
+      "  int spatial_weight = read_spatial_weight_s16 (XY - origin);\n"
       "  ivec4 upsampled;\n"
-      "  weight.r = (4 - int (remaining1.y)) * (4 - int (remaining1.x));\n"
-      "  weight.g = (4 - int (remaining1.y)) * int (remaining1.x);\n"
-      "  weight.b = int (remaining1.y) * (4 - int (remaining1.x));\n"
-      "  weight.a = int (remaining1.y) * int (remaining1.x);\n"
-      "  upsampled.r = cast_s16_u8 (read_upsampled1_u8 (gl_TexCoord[0].xy + offset1));\n"
-      "  upsampled.g = cast_s16_u8 (read_upsampled2_u8 (gl_TexCoord[0].xy + offset2));\n"
-      "  upsampled.b = cast_s16_u8 (read_upsampled3_u8 (gl_TexCoord[0].xy + offset3));\n"
-      "  upsampled.a = cast_s16_u8 (read_upsampled4_u8 (gl_TexCoord[0].xy + offset4));\n"
-      "  int average = divide_s16 (crossfoot_s16 (upsampled * weight) + 8, 16);\n"
-      "  write_s16 (previous + ref_weighting_s16 (average) * obmc_weight);\n"
+      "  upsampled.r = cast_s16_u8 (read_upsampled1_u8 (XY + offset1));\n"
+      "  upsampled.g = cast_s16_u8 (read_upsampled2_u8 (XY + offset2));\n"
+      "  upsampled.b = cast_s16_u8 (read_upsampled3_u8 (XY + offset3));\n"
+      "  upsampled.a = cast_s16_u8 (read_upsampled4_u8 (XY + offset4));\n"
+      "  int average = divide_s16 (crossfoot_s16 (upsampled * ivec4 (linear_weight1)) + 8, 16);\n"
+      "  write_s16 (previous + ref_weighting_s16 (average) * spatial_weight);\n"
       "}\n" },
-  { SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_0,
-      "obmc_render_biref_prec_0/normal",
+  { SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_0_0,
+      "obmc_render_biref_prec_0_0/normal",
       SHADER_HEADER
       SHADER_READ_S16 ("texture1", "_previous")
-      SHADER_READ_S16 ("texture2", "_obmc_weight")
+      SHADER_READ_S16 ("texture2", "_spatial_weight")
       SHADER_READ_U8 ("texture3", "_upsampled_ref1")
       SHADER_READ_U8 ("texture4", "_upsampled_ref2")
       SHADER_CAST_S16_U8
       SHADER_DIVIDE_S16
       SHADER_WRITE_S16
+      "#define XY gl_TexCoord[0].xy\n"
       "uniform vec2 offset1;\n"
       "uniform vec2 offset2;\n"
       "uniform vec2 origin;\n"
       "void main (void) {\n"
-      "  float previous = read_previous_s16 (gl_TexCoord[0].xy);\n"
-      "  float obmc_weight = read_obmc_weight_s16 (gl_TexCoord[0].xy - origin);\n"
-      "  float upsampled_ref1 = cast_s16_u8 (read_upsampled_ref1_u8 (gl_TexCoord[0].xy + offset1));\n"
-      "  float upsampled_ref2 = cast_s16_u8 (read_upsampled_ref2_u8 (gl_TexCoord[0].xy + offset2));\n"
+      "  float previous = read_previous_s16 (XY);\n"
+      "  float spatial_weight = read_spatial_weight_s16 (XY - origin);\n"
+      "  float upsampled_ref1 = cast_s16_u8 (read_upsampled_ref1_u8 (XY + offset1));\n"
+      "  float upsampled_ref2 = cast_s16_u8 (read_upsampled_ref2_u8 (XY + offset2));\n"
       "  float average = divide_s16 (upsampled_ref1 + upsampled_ref2 + 1.0, 2.0);\n"
-      "  write_s16 (previous + average * obmc_weight);\n"
+      "  write_s16 (previous + average * spatial_weight);\n"
       "}\n",
       SHADER_HEADER_INTEGER
       SHADER_READ_S16_INTEGER ("texture1", "_previous")
-      SHADER_READ_S16_INTEGER ("texture2", "_obmc_weight")
+      SHADER_READ_S16_INTEGER ("texture2", "_spatial_weight")
       SHADER_READ_U8_INTEGER ("texture3", "_upsampled_ref1")
       SHADER_READ_U8_INTEGER ("texture4", "_upsampled_ref2")
       SHADER_CAST_S16_U8_INTEGER
       SHADER_DIVIDE_S16_INTEGER
       SHADER_WRITE_S16_INTEGER
+      "#define XY gl_TexCoord[0].xy\n"
       "uniform vec2 offset1;\n"
       "uniform vec2 offset2;\n"
       "uniform vec2 origin;\n"
       "void main (void) {\n"
-      "  int previous = read_previous_s16 (gl_TexCoord[0].xy);\n"
-      "  int obmc_weight = read_obmc_weight_s16 (gl_TexCoord[0].xy - origin);\n"
-      "  int upsampled_ref1 = cast_s16_u8 (read_upsampled_ref1_u8 (gl_TexCoord[0].xy + offset1));\n"
-      "  int upsampled_ref2 = cast_s16_u8 (read_upsampled_ref2_u8 (gl_TexCoord[0].xy + offset2));\n"
+      "  int previous = read_previous_s16 (XY);\n"
+      "  int spatial_weight = read_spatial_weight_s16 (XY - origin);\n"
+      "  int upsampled_ref1 = cast_s16_u8 (read_upsampled_ref1_u8 (XY + offset1));\n"
+      "  int upsampled_ref2 = cast_s16_u8 (read_upsampled_ref2_u8 (XY + offset2));\n"
       "  int average = divide_s16 (upsampled_ref1 + upsampled_ref2 + 1, 2);\n"
-      "  write_s16 (previous + average * obmc_weight);\n"
+      "  write_s16 (previous + average * spatial_weight);\n"
       "}\n" },
-  { SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_0_WEIGHT,
-      "obmc_render_biref_prec_0/weight",
+  { SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_0_0_WEIGHT,
+      "obmc_render_biref_prec_0_0/weight",
       SHADER_HEADER
       SHADER_READ_S16 ("texture1", "_previous")
-      SHADER_READ_S16 ("texture2", "_obmc_weight")
+      SHADER_READ_S16 ("texture2", "_spatial_weight")
       SHADER_READ_U8 ("texture3", "_upsampled_ref1")
       SHADER_READ_U8 ("texture4", "_upsampled_ref2")
       SHADER_DIVIDE_S16
       SHADER_BIREF_WEIGHTING_S16
       SHADER_CAST_S16_U8
       SHADER_WRITE_S16
+      "#define XY gl_TexCoord[0].xy\n"
       "uniform vec2 offset1;\n"
       "uniform vec2 offset2;\n"
       "uniform vec2 origin;\n"
       "void main (void) {\n"
-      "  float previous = read_previous_s16 (gl_TexCoord[0].xy);\n"
-      "  float obmc_weight = read_obmc_weight_s16 (gl_TexCoord[0].xy - origin);\n"
-      "  float upsampled_ref1 = cast_s16_u8 (read_upsampled_ref1_u8 (gl_TexCoord[0].xy + offset1));\n"
-      "  float upsampled_ref2 = cast_s16_u8 (read_upsampled_ref2_u8 (gl_TexCoord[0].xy + offset2));\n"
+      "  float previous = read_previous_s16 (XY);\n"
+      "  float spatial_weight = read_spatial_weight_s16 (XY - origin);\n"
+      "  float upsampled_ref1 = cast_s16_u8 (read_upsampled_ref1_u8 (XY + offset1));\n"
+      "  float upsampled_ref2 = cast_s16_u8 (read_upsampled_ref2_u8 (XY + offset2));\n"
       "  float weighted = biref_weighting_s16 (upsampled_ref1, upsampled_ref2);\n"
-      "  write_s16 (previous + weighted * obmc_weight);\n"
+      "  write_s16 (previous + weighted * spatial_weight);\n"
       "}\n",
       SHADER_HEADER_INTEGER
       SHADER_READ_S16_INTEGER ("texture1", "_previous")
-      SHADER_READ_S16_INTEGER ("texture2", "_obmc_weight")
+      SHADER_READ_S16_INTEGER ("texture2", "_spatial_weight")
       SHADER_READ_U8_INTEGER ("texture3", "_upsampled_ref1")
       SHADER_READ_U8_INTEGER ("texture4", "_upsampled_ref2")
       SHADER_DIVIDE_S16_INTEGER
       SHADER_BIREF_WEIGHTING_S16_INTEGER
       SHADER_CAST_S16_U8_INTEGER
       SHADER_WRITE_S16_INTEGER
+      "#define XY gl_TexCoord[0].xy\n"
       "uniform vec2 offset1;\n"
       "uniform vec2 offset2;\n"
       "uniform vec2 origin;\n"
       "void main (void) {\n"
-      "  int previous = read_previous_s16 (gl_TexCoord[0].xy);\n"
-      "  int obmc_weight = read_obmc_weight_s16 (gl_TexCoord[0].xy - origin);\n"
-      "  int upsampled_ref1 = cast_s16_u8 (read_upsampled_ref1_u8 (gl_TexCoord[0].xy + offset1));\n"
-      "  int upsampled_ref2 = cast_s16_u8 (read_upsampled_ref2_u8 (gl_TexCoord[0].xy + offset2));\n"
+      "  int previous = read_previous_s16 (XY);\n"
+      "  int spatial_weight = read_spatial_weight_s16 (XY - origin);\n"
+      "  int upsampled_ref1 = cast_s16_u8 (read_upsampled_ref1_u8 (XY + offset1));\n"
+      "  int upsampled_ref2 = cast_s16_u8 (read_upsampled_ref2_u8 (XY + offset2));\n"
       "  int weighted = biref_weighting_s16 (upsampled_ref1, upsampled_ref2);\n"
-      "  write_s16 (previous + weighted * obmc_weight);\n"
+      "  write_s16 (previous + weighted * spatial_weight);\n"
       "}\n" },
-  { SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a,
-      "obmc_render_biref_prec_3a/normal",
+  { SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_3a,
+      "obmc_render_biref_prec_3a_3a/normal",
       SHADER_HEADER
       SHADER_READ_S16 ("texture1", "_previous")
-      SHADER_READ_S16 ("texture2", "_obmc_weight")
+      SHADER_READ_S16 ("texture2", "_spatial_weight")
       SHADER_READ_U8 ("texture3", "_upsampled1_ref1")
       SHADER_READ_U8 ("texture4", "_upsampled2_ref1")
       SHADER_READ_U8 ("texture5", "_upsampled1_ref2")
@@ -1785,19 +1783,19 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
       "uniform vec2 origin;\n"
       "void main (void) {\n"
       "  float previous = read_previous_s16 (gl_TexCoord[0].xy);\n"
-      "  float obmc_weight = read_obmc_weight_s16 (gl_TexCoord[0].xy - origin);\n"
+      "  float spatial_weight = read_spatial_weight_s16 (gl_TexCoord[0].xy - origin);\n"
       "  float upsampled1_ref1 = cast_s16_u8 (read_upsampled1_ref1_u8 (gl_TexCoord[0].xy + offset1));\n"
       "  float upsampled2_ref1 = cast_s16_u8 (read_upsampled2_ref1_u8 (gl_TexCoord[0].xy + offset2));\n"
+      "  float average_ref1 = divide_s16 (upsampled1_ref1 + upsampled2_ref1 + 1.0, 2.0);\n"
       "  float upsampled1_ref2 = cast_s16_u8 (read_upsampled1_ref2_u8 (gl_TexCoord[0].xy + offset3));\n"
       "  float upsampled2_ref2 = cast_s16_u8 (read_upsampled2_ref2_u8 (gl_TexCoord[0].xy + offset4));\n"
-      "  float average_ref1 = divide_s16 (upsampled1_ref1 + upsampled2_ref1 + 1.0, 2.0);\n"
       "  float average_ref2 = divide_s16 (upsampled1_ref2 + upsampled2_ref2 + 1.0, 2.0);\n"
       "  float average = divide_s16 (average_ref1 + average_ref2 + 1.0, 2.0);\n"
-      "  write_s16 (previous + average * obmc_weight);\n"
+      "  write_s16 (previous + average * spatial_weight);\n"
       "}\n",
       SHADER_HEADER_INTEGER
       SHADER_READ_S16_INTEGER ("texture1", "_previous")
-      SHADER_READ_S16_INTEGER ("texture2", "_obmc_weight")
+      SHADER_READ_S16_INTEGER ("texture2", "_spatial_weight")
       SHADER_READ_U8_INTEGER ("texture3", "_upsampled1_ref1")
       SHADER_READ_U8_INTEGER ("texture4", "_upsampled2_ref1")
       SHADER_READ_U8_INTEGER ("texture5", "_upsampled1_ref2")
@@ -1812,21 +1810,21 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
       "uniform vec2 origin;\n"
       "void main (void) {\n"
       "  int previous = read_previous_s16 (gl_TexCoord[0].xy);\n"
-      "  int obmc_weight = read_obmc_weight_s16 (gl_TexCoord[0].xy - origin);\n"
+      "  int spatial_weight = read_spatial_weight_s16 (gl_TexCoord[0].xy - origin);\n"
       "  int upsampled1_ref1 = cast_s16_u8 (read_upsampled1_ref1_u8 (gl_TexCoord[0].xy + offset1));\n"
       "  int upsampled2_ref1 = cast_s16_u8 (read_upsampled2_ref1_u8 (gl_TexCoord[0].xy + offset2));\n"
+      "  int average_ref1 = divide_s16 (upsampled1_ref1 + upsampled2_ref1 + 1, 2);\n"
       "  int upsampled1_ref2 = cast_s16_u8 (read_upsampled1_ref2_u8 (gl_TexCoord[0].xy + offset3));\n"
       "  int upsampled2_ref2 = cast_s16_u8 (read_upsampled2_ref2_u8 (gl_TexCoord[0].xy + offset4));\n"
-      "  int average_ref1 = divide_s16 (upsampled1_ref1 + upsampled2_ref1 + 1, 2);\n"
       "  int average_ref2 = divide_s16 (upsampled1_ref2 + upsampled2_ref2 + 1, 2);\n"
       "  int average = divide_s16 (average_ref1 + average_ref2 + 1, 2);\n"
-      "  write_s16 (previous + average * obmc_weight);\n"
+      "  write_s16 (previous + average * spatial_weight);\n"
       "}\n" },
-  { SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_WEIGHT,
-      "obmc_render_biref_prec_3a/weight",
+  { SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_3a_WEIGHT,
+      "obmc_render_biref_prec_3a_3a/weight",
       SHADER_HEADER
       SHADER_READ_S16 ("texture1", "_previous")
-      SHADER_READ_S16 ("texture2", "_obmc_weight")
+      SHADER_READ_S16 ("texture2", "_spatial_weight")
       SHADER_READ_U8 ("texture3", "_upsampled1_ref1")
       SHADER_READ_U8 ("texture4", "_upsampled2_ref1")
       SHADER_READ_U8 ("texture5", "_upsampled1_ref2")
@@ -1842,19 +1840,19 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
       "uniform vec2 origin;\n"
       "void main (void) {\n"
       "  float previous = read_previous_s16 (gl_TexCoord[0].xy);\n"
-      "  float obmc_weight = read_obmc_weight_s16 (gl_TexCoord[0].xy - origin);\n"
+      "  float spatial_weight = read_spatial_weight_s16 (gl_TexCoord[0].xy - origin);\n"
       "  float upsampled1_ref1 = cast_s16_u8 (read_upsampled1_ref1_u8 (gl_TexCoord[0].xy + offset1));\n"
       "  float upsampled2_ref1 = cast_s16_u8 (read_upsampled2_ref1_u8 (gl_TexCoord[0].xy + offset2));\n"
+      "  float average_ref1 = divide_s16 (upsampled1_ref1 + upsampled2_ref1 + 1.0, 2.0);\n"
       "  float upsampled1_ref2 = cast_s16_u8 (read_upsampled1_ref2_u8 (gl_TexCoord[0].xy + offset3));\n"
       "  float upsampled2_ref2 = cast_s16_u8 (read_upsampled2_ref2_u8 (gl_TexCoord[0].xy + offset4));\n"
-      "  float average_ref1 = divide_s16 (upsampled1_ref1 + upsampled2_ref1 + 1.0, 2.0);\n"
       "  float average_ref2 = divide_s16 (upsampled1_ref2 + upsampled2_ref2 + 1.0, 2.0);\n"
       "  float weighted = biref_weighting_s16 (average_ref1, average_ref2);\n"
-      "  write_s16 (previous + weighted * obmc_weight);\n"
+      "  write_s16 (previous + weighted * spatial_weight);\n"
       "}\n",
       SHADER_HEADER_INTEGER
       SHADER_READ_S16_INTEGER ("texture1", "_previous")
-      SHADER_READ_S16_INTEGER ("texture2", "_obmc_weight")
+      SHADER_READ_S16_INTEGER ("texture2", "_spatial_weight")
       SHADER_READ_U8_INTEGER ("texture3", "_upsampled1_ref1")
       SHADER_READ_U8_INTEGER ("texture4", "_upsampled2_ref1")
       SHADER_READ_U8_INTEGER ("texture5", "_upsampled1_ref2")
@@ -1870,21 +1868,21 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
       "uniform vec2 origin;\n"
       "void main (void) {\n"
       "  int previous = read_previous_s16 (gl_TexCoord[0].xy);\n"
-      "  int obmc_weight = read_obmc_weight_s16 (gl_TexCoord[0].xy - origin);\n"
+      "  int spatial_weight = read_spatial_weight_s16 (gl_TexCoord[0].xy - origin);\n"
       "  int upsampled1_ref1 = cast_s16_u8 (read_upsampled1_ref1_u8 (gl_TexCoord[0].xy + offset1));\n"
       "  int upsampled2_ref1 = cast_s16_u8 (read_upsampled2_ref1_u8 (gl_TexCoord[0].xy + offset2));\n"
+      "  int average_ref1 = divide_s16 (upsampled1_ref1 + upsampled2_ref1 + 1, 2);\n"
       "  int upsampled1_ref2 = cast_s16_u8 (read_upsampled1_ref2_u8 (gl_TexCoord[0].xy + offset3));\n"
       "  int upsampled2_ref2 = cast_s16_u8 (read_upsampled2_ref2_u8 (gl_TexCoord[0].xy + offset4));\n"
-      "  int average_ref1 = divide_s16 (upsampled1_ref1 + upsampled2_ref1 + 1, 2);\n"
       "  int average_ref2 = divide_s16 (upsampled1_ref2 + upsampled2_ref2 + 1, 2);\n"
       "  int weighted = biref_weighting_s16 (average_ref1, average_ref2);\n"
-      "  write_s16 (previous + weighted * obmc_weight);\n"
+      "  write_s16 (previous + weighted * spatial_weight);\n"
       "}\n" },
-  { SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b,
-      "obmc_render_biref_prec_3b/normal",
+  { SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_3b,
+      "obmc_render_biref_prec_3b_3b/normal",
       SHADER_HEADER
       SHADER_READ_S16 ("texture1", "_previous")
-      SHADER_READ_S16 ("texture2", "_obmc_weight")
+      SHADER_READ_S16 ("texture2", "_spatial_weight")
       SHADER_READ_U8 ("texture3", "_upsampled1_ref1")
       SHADER_READ_U8 ("texture4", "_upsampled2_ref1")
       SHADER_READ_U8 ("texture5", "_upsampled3_ref1")
@@ -1897,6 +1895,7 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
       SHADER_CROSSFOOT_S16
       SHADER_DIVIDE_S16
       SHADER_WRITE_S16
+      "#define XY gl_TexCoord[0].xy\n"
       "uniform vec2 offset1;\n"
       "uniform vec2 offset2;\n"
       "uniform vec2 offset3;\n"
@@ -1906,39 +1905,29 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
       "uniform vec2 offset7;\n"
       "uniform vec2 offset8;\n"
       "uniform vec2 origin;\n"
-      "uniform vec2 remaining1;\n"
-      "uniform vec2 remaining2;\n"
+      "uniform vec4 linear_weight1;\n"
+      "uniform vec4 linear_weight2;\n"
       "void main (void) {\n"
-      "  float previous = read_previous_s16 (gl_TexCoord[0].xy);\n"
-      "  float obmc_weight = read_obmc_weight_s16 (gl_TexCoord[0].xy - origin);\n"
-      "  vec4 weight_ref1;\n"
-      "  vec4 weight_ref2;\n"
+      "  float previous = read_previous_s16 (XY);\n"
+      "  float spatial_weight = read_spatial_weight_s16 (XY - origin);\n"
       "  vec4 upsampled_ref1;\n"
       "  vec4 upsampled_ref2;\n"
-      "  weight_ref1.r = (4.0 - float (remaining1.y)) * (4.0 - float (remaining1.x));\n"
-      "  weight_ref1.g = (4.0 - float (remaining1.y)) * float (remaining1.x);\n"
-      "  weight_ref1.b = float (remaining1.y) * (4.0 - float (remaining1.x));\n"
-      "  weight_ref1.a = float (remaining1.y) * float (remaining1.x);\n"
-      "  weight_ref2.r = (4.0 - float (remaining2.y)) * (4.0 - float (remaining2.x));\n"
-      "  weight_ref2.g = (4.0 - float (remaining2.y)) * float (remaining2.x);\n"
-      "  weight_ref2.b = float (remaining2.y) * (4.0 - float (remaining2.x));\n"
-      "  weight_ref2.a = float (remaining2.y) * float (remaining2.x);\n"
-      "  upsampled_ref1.r = cast_s16_u8 (read_upsampled1_ref1_u8 (gl_TexCoord[0].xy + offset1));\n"
-      "  upsampled_ref1.g = cast_s16_u8 (read_upsampled2_ref1_u8 (gl_TexCoord[0].xy + offset2));\n"
-      "  upsampled_ref1.b = cast_s16_u8 (read_upsampled3_ref1_u8 (gl_TexCoord[0].xy + offset3));\n"
-      "  upsampled_ref1.a = cast_s16_u8 (read_upsampled4_ref1_u8 (gl_TexCoord[0].xy + offset4));\n"
-      "  upsampled_ref2.r = cast_s16_u8 (read_upsampled1_ref2_u8 (gl_TexCoord[0].xy + offset5));\n"
-      "  upsampled_ref2.g = cast_s16_u8 (read_upsampled2_ref2_u8 (gl_TexCoord[0].xy + offset6));\n"
-      "  upsampled_ref2.b = cast_s16_u8 (read_upsampled3_ref2_u8 (gl_TexCoord[0].xy + offset7));\n"
-      "  upsampled_ref2.a = cast_s16_u8 (read_upsampled4_ref2_u8 (gl_TexCoord[0].xy + offset8));\n"
-      "  float average_ref1 = divide_s16 (crossfoot_s16 (upsampled_ref1 * weight_ref1) + 8.0, 16.0);\n"
-      "  float average_ref2 = divide_s16 (crossfoot_s16 (upsampled_ref2 * weight_ref2) + 8.0, 16.0);\n"
+      "  upsampled_ref1.r = cast_s16_u8 (read_upsampled1_ref1_u8 (XY + offset1));\n"
+      "  upsampled_ref1.g = cast_s16_u8 (read_upsampled2_ref1_u8 (XY + offset2));\n"
+      "  upsampled_ref1.b = cast_s16_u8 (read_upsampled3_ref1_u8 (XY + offset3));\n"
+      "  upsampled_ref1.a = cast_s16_u8 (read_upsampled4_ref1_u8 (XY + offset4));\n"
+      "  upsampled_ref2.r = cast_s16_u8 (read_upsampled1_ref2_u8 (XY + offset5));\n"
+      "  upsampled_ref2.g = cast_s16_u8 (read_upsampled2_ref2_u8 (XY + offset6));\n"
+      "  upsampled_ref2.b = cast_s16_u8 (read_upsampled3_ref2_u8 (XY + offset7));\n"
+      "  upsampled_ref2.a = cast_s16_u8 (read_upsampled4_ref2_u8 (XY + offset8));\n"
+      "  float average_ref1 = divide_s16 (crossfoot_s16 (upsampled_ref1 * vec4 (linear_weight1)) + 8.0, 16.0);\n"
+      "  float average_ref2 = divide_s16 (crossfoot_s16 (upsampled_ref2 * vec4 (linear_weight2)) + 8.0, 16.0);\n"
       "  float average = divide_s16 (average_ref1 + average_ref2 + 1.0, 2.0);\n"
-      "  write_s16 (previous + average * obmc_weight);\n"
+      "  write_s16 (previous + average * spatial_weight);\n"
       "}\n",
       SHADER_HEADER_INTEGER
       SHADER_READ_S16_INTEGER ("texture1", "_previous")
-      SHADER_READ_S16_INTEGER ("texture2", "_obmc_weight")
+      SHADER_READ_S16_INTEGER ("texture2", "_spatial_weight")
       SHADER_READ_U8_INTEGER ("texture3", "_upsampled1_ref1")
       SHADER_READ_U8_INTEGER ("texture4", "_upsampled2_ref1")
       SHADER_READ_U8_INTEGER ("texture5", "_upsampled3_ref1")
@@ -1951,6 +1940,7 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
       SHADER_CROSSFOOT_S16_INTEGER
       SHADER_DIVIDE_S16_INTEGER
       SHADER_WRITE_S16_INTEGER
+      "#define XY gl_TexCoord[0].xy\n"
       "uniform vec2 offset1;\n"
       "uniform vec2 offset2;\n"
       "uniform vec2 offset3;\n"
@@ -1960,41 +1950,31 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
       "uniform vec2 offset7;\n"
       "uniform vec2 offset8;\n"
       "uniform vec2 origin;\n"
-      "uniform vec2 remaining1;\n"
-      "uniform vec2 remaining2;\n"
+      "uniform vec4 linear_weight1;\n"
+      "uniform vec4 linear_weight2;\n"
       "void main (void) {\n"
-      "  int previous = read_previous_s16 (gl_TexCoord[0].xy);\n"
-      "  int obmc_weight = read_obmc_weight_s16 (gl_TexCoord[0].xy - origin);\n"
-      "  ivec4 weight_ref1;\n"
-      "  ivec4 weight_ref2;\n"
+      "  int previous = read_previous_s16 (XY);\n"
+      "  int spatial_weight = read_spatial_weight_s16 (XY - origin);\n"
       "  ivec4 upsampled_ref1;\n"
       "  ivec4 upsampled_ref2;\n"
-      "  weight_ref1.r = (4 - int (remaining1.y)) * (4 - int (remaining1.x));\n"
-      "  weight_ref1.g = (4 - int (remaining1.y)) * int (remaining1.x);\n"
-      "  weight_ref1.b = int (remaining1.y) * (4 - int (remaining1.x));\n"
-      "  weight_ref1.a = int (remaining1.y) * int (remaining1.x);\n"
-      "  weight_ref2.r = (4 - int (remaining2.y)) * (4 - int (remaining2.x));\n"
-      "  weight_ref2.g = (4 - int (remaining2.y)) * int (remaining2.x);\n"
-      "  weight_ref2.b = int (remaining2.y) * (4 - int (remaining2.x));\n"
-      "  weight_ref2.a = int (remaining2.y) * int (remaining2.x);\n"
-      "  upsampled_ref1.r = cast_s16_u8 (read_upsampled1_ref1_u8 (gl_TexCoord[0].xy + offset1));\n"
-      "  upsampled_ref1.g = cast_s16_u8 (read_upsampled2_ref1_u8 (gl_TexCoord[0].xy + offset2));\n"
-      "  upsampled_ref1.b = cast_s16_u8 (read_upsampled3_ref1_u8 (gl_TexCoord[0].xy + offset3));\n"
-      "  upsampled_ref1.a = cast_s16_u8 (read_upsampled4_ref1_u8 (gl_TexCoord[0].xy + offset4));\n"
-      "  upsampled_ref2.r = cast_s16_u8 (read_upsampled1_ref2_u8 (gl_TexCoord[0].xy + offset5));\n"
-      "  upsampled_ref2.g = cast_s16_u8 (read_upsampled2_ref2_u8 (gl_TexCoord[0].xy + offset6));\n"
-      "  upsampled_ref2.b = cast_s16_u8 (read_upsampled3_ref2_u8 (gl_TexCoord[0].xy + offset7));\n"
-      "  upsampled_ref2.a = cast_s16_u8 (read_upsampled4_ref2_u8 (gl_TexCoord[0].xy + offset8));\n"
-      "  int average_ref1 = divide_s16 (crossfoot_s16 (upsampled_ref1 * weight_ref1) + 8, 16);\n"
-      "  int average_ref2 = divide_s16 (crossfoot_s16 (upsampled_ref2 * weight_ref2) + 8, 16);\n"
+      "  upsampled_ref1.r = cast_s16_u8 (read_upsampled1_ref1_u8 (XY + offset1));\n"
+      "  upsampled_ref1.g = cast_s16_u8 (read_upsampled2_ref1_u8 (XY + offset2));\n"
+      "  upsampled_ref1.b = cast_s16_u8 (read_upsampled3_ref1_u8 (XY + offset3));\n"
+      "  upsampled_ref1.a = cast_s16_u8 (read_upsampled4_ref1_u8 (XY + offset4));\n"
+      "  upsampled_ref2.r = cast_s16_u8 (read_upsampled1_ref2_u8 (XY + offset5));\n"
+      "  upsampled_ref2.g = cast_s16_u8 (read_upsampled2_ref2_u8 (XY + offset6));\n"
+      "  upsampled_ref2.b = cast_s16_u8 (read_upsampled3_ref2_u8 (XY + offset7));\n"
+      "  upsampled_ref2.a = cast_s16_u8 (read_upsampled4_ref2_u8 (XY + offset8));\n"
+      "  int average_ref1 = divide_s16 (crossfoot_s16 (upsampled_ref1 * ivec4 (linear_weight1)) + 8, 16);\n"
+      "  int average_ref2 = divide_s16 (crossfoot_s16 (upsampled_ref2 * ivec4 (linear_weight2)) + 8, 16);\n"
       "  int average = divide_s16 (average_ref1 + average_ref2 + 1, 2);\n"
-      "  write_s16 (previous + average * obmc_weight);\n"
+      "  write_s16 (previous + average * spatial_weight);\n"
       "}\n" },
-  { SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_WEIGHT,
-      "obmc_render_biref_prec_3b/weight",
+  { SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_3b_WEIGHT,
+      "obmc_render_biref_prec_3b_3b/weight",
       SHADER_HEADER
       SHADER_READ_S16 ("texture1", "_previous")
-      SHADER_READ_S16 ("texture2", "_obmc_weight")
+      SHADER_READ_S16 ("texture2", "_spatial_weight")
       SHADER_READ_U8 ("texture3", "_upsampled1_ref1")
       SHADER_READ_U8 ("texture4", "_upsampled2_ref1")
       SHADER_READ_U8 ("texture5", "_upsampled3_ref1")
@@ -2008,6 +1988,7 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
       SHADER_CAST_S16_U8
       SHADER_CROSSFOOT_S16
       SHADER_WRITE_S16
+      "#define XY gl_TexCoord[0].xy\n"
       "uniform vec2 offset1;\n"
       "uniform vec2 offset2;\n"
       "uniform vec2 offset3;\n"
@@ -2017,39 +1998,29 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
       "uniform vec2 offset7;\n"
       "uniform vec2 offset8;\n"
       "uniform vec2 origin;\n"
-      "uniform vec2 remaining1;\n"
-      "uniform vec2 remaining2;\n"
+      "uniform vec4 linear_weight1;\n"
+      "uniform vec4 linear_weight2;\n"
       "void main (void) {\n"
-      "  float previous = read_previous_s16 (gl_TexCoord[0].xy);\n"
-      "  float obmc_weight = read_obmc_weight_s16 (gl_TexCoord[0].xy - origin);\n"
-      "  vec4 weight_ref1;\n"
-      "  vec4 weight_ref2;\n"
+      "  float previous = read_previous_s16 (XY);\n"
+      "  float spatial_weight = read_spatial_weight_s16 (XY - origin);\n"
       "  vec4 upsampled_ref1;\n"
       "  vec4 upsampled_ref2;\n"
-      "  weight_ref1.r = (4.0 - float (remaining1.y)) * (4.0 - float (remaining1.x));\n"
-      "  weight_ref1.g = (4.0 - float (remaining1.y)) * float (remaining1.x);\n"
-      "  weight_ref1.b = float (remaining1.y) * (4.0 - float (remaining1.x));\n"
-      "  weight_ref1.a = float (remaining1.y) * float (remaining1.x);\n"
-      "  weight_ref2.r = (4.0 - float (remaining2.y)) * (4.0 - float (remaining2.x));\n"
-      "  weight_ref2.g = (4.0 - float (remaining2.y)) * float (remaining2.x);\n"
-      "  weight_ref2.b = float (remaining2.y) * (4.0 - float (remaining2.x));\n"
-      "  weight_ref2.a = float (remaining2.y) * float (remaining2.x);\n"
-      "  upsampled_ref1.r = cast_s16_u8 (read_upsampled1_ref1_u8 (gl_TexCoord[0].xy + offset1));\n"
-      "  upsampled_ref1.g = cast_s16_u8 (read_upsampled2_ref1_u8 (gl_TexCoord[0].xy + offset2));\n"
-      "  upsampled_ref1.b = cast_s16_u8 (read_upsampled3_ref1_u8 (gl_TexCoord[0].xy + offset3));\n"
-      "  upsampled_ref1.a = cast_s16_u8 (read_upsampled4_ref1_u8 (gl_TexCoord[0].xy + offset4));\n"
-      "  upsampled_ref2.r = cast_s16_u8 (read_upsampled1_ref2_u8 (gl_TexCoord[0].xy + offset5));\n"
-      "  upsampled_ref2.g = cast_s16_u8 (read_upsampled2_ref2_u8 (gl_TexCoord[0].xy + offset6));\n"
-      "  upsampled_ref2.b = cast_s16_u8 (read_upsampled3_ref2_u8 (gl_TexCoord[0].xy + offset7));\n"
-      "  upsampled_ref2.a = cast_s16_u8 (read_upsampled4_ref2_u8 (gl_TexCoord[0].xy + offset8));\n"
-      "  float average_ref1 = divide_s16 (crossfoot_s16 (upsampled_ref1 * weight_ref1) + 8.0, 16.0);\n"
-      "  float average_ref2 = divide_s16 (crossfoot_s16 (upsampled_ref2 * weight_ref2) + 8.0, 16.0);\n"
+      "  upsampled_ref1.r = cast_s16_u8 (read_upsampled1_ref1_u8 (XY + offset1));\n"
+      "  upsampled_ref1.g = cast_s16_u8 (read_upsampled2_ref1_u8 (XY + offset2));\n"
+      "  upsampled_ref1.b = cast_s16_u8 (read_upsampled3_ref1_u8 (XY + offset3));\n"
+      "  upsampled_ref1.a = cast_s16_u8 (read_upsampled4_ref1_u8 (XY + offset4));\n"
+      "  upsampled_ref2.r = cast_s16_u8 (read_upsampled1_ref2_u8 (XY + offset5));\n"
+      "  upsampled_ref2.g = cast_s16_u8 (read_upsampled2_ref2_u8 (XY + offset6));\n"
+      "  upsampled_ref2.b = cast_s16_u8 (read_upsampled3_ref2_u8 (XY + offset7));\n"
+      "  upsampled_ref2.a = cast_s16_u8 (read_upsampled4_ref2_u8 (XY + offset8));\n"
+      "  float average_ref1 = divide_s16 (crossfoot_s16 (upsampled_ref1 * vec4 (linear_weight1)) + 8.0, 16.0);\n"
+      "  float average_ref2 = divide_s16 (crossfoot_s16 (upsampled_ref2 * vec4 (linear_weight2)) + 8.0, 16.0);\n"
       "  float weighted = biref_weighting_s16 (average_ref1, average_ref2);\n"
-      "  write_s16 (previous + weighted * obmc_weight);\n"
+      "  write_s16 (previous + weighted * spatial_weight);\n"
       "}\n",
       SHADER_HEADER_INTEGER
       SHADER_READ_S16_INTEGER ("texture1", "_previous")
-      SHADER_READ_S16_INTEGER ("texture2", "_obmc_weight")
+      SHADER_READ_S16_INTEGER ("texture2", "_spatial_weight")
       SHADER_READ_U8_INTEGER ("texture3", "_upsampled1_ref1")
       SHADER_READ_U8_INTEGER ("texture4", "_upsampled2_ref1")
       SHADER_READ_U8_INTEGER ("texture5", "_upsampled3_ref1")
@@ -2063,6 +2034,7 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
       SHADER_CAST_S16_U8_INTEGER
       SHADER_CROSSFOOT_S16_INTEGER
       SHADER_WRITE_S16_INTEGER
+      "#define XY gl_TexCoord[0].xy\n"
       "uniform vec2 offset1;\n"
       "uniform vec2 offset2;\n"
       "uniform vec2 offset3;\n"
@@ -2072,35 +2044,25 @@ static struct ShaderCode schro_opengl_shader_code_list[] = {
       "uniform vec2 offset7;\n"
       "uniform vec2 offset8;\n"
       "uniform vec2 origin;\n"
-      "uniform vec2 remaining1;\n"
-      "uniform vec2 remaining2;\n"
+      "uniform vec4 linear_weight1;\n"
+      "uniform vec4 linear_weight2;\n"
       "void main (void) {\n"
-      "  int previous = read_previous_s16 (gl_TexCoord[0].xy);\n"
-      "  int obmc_weight = read_obmc_weight_s16 (gl_TexCoord[0].xy - origin);\n"
-      "  ivec4 weight_ref1;\n"
-      "  ivec4 weight_ref2;\n"
+      "  int previous = read_previous_s16 (XY);\n"
+      "  int spatial_weight = read_spatial_weight_s16 (XY - origin);\n"
       "  ivec4 upsampled_ref1;\n"
       "  ivec4 upsampled_ref2;\n"
-      "  weight_ref1.r = (4 - int (remaining1.y)) * (4 - int (remaining1.x));\n"
-      "  weight_ref1.g = (4 - int (remaining1.y)) * int (remaining1.x);\n"
-      "  weight_ref1.b = int (remaining1.y) * (4 - int (remaining1.x));\n"
-      "  weight_ref1.a = int (remaining1.y) * int (remaining1.x);\n"
-      "  weight_ref2.r = (4 - int (remaining2.y)) * (4 - int (remaining2.x));\n"
-      "  weight_ref2.g = (4 - int (remaining2.y)) * int (remaining2.x);\n"
-      "  weight_ref2.b = int (remaining2.y) * (4 - int (remaining2.x));\n"
-      "  weight_ref2.a = int (remaining2.y) * int (remaining2.x);\n"
-      "  upsampled_ref1.r = cast_s16_u8 (read_upsampled1_ref1_u8 (gl_TexCoord[0].xy + offset1));\n"
-      "  upsampled_ref1.g = cast_s16_u8 (read_upsampled2_ref1_u8 (gl_TexCoord[0].xy + offset2));\n"
-      "  upsampled_ref1.b = cast_s16_u8 (read_upsampled3_ref1_u8 (gl_TexCoord[0].xy + offset3));\n"
-      "  upsampled_ref1.a = cast_s16_u8 (read_upsampled4_ref1_u8 (gl_TexCoord[0].xy + offset4));\n"
-      "  upsampled_ref2.r = cast_s16_u8 (read_upsampled1_ref2_u8 (gl_TexCoord[0].xy + offset5));\n"
-      "  upsampled_ref2.g = cast_s16_u8 (read_upsampled2_ref2_u8 (gl_TexCoord[0].xy + offset6));\n"
-      "  upsampled_ref2.b = cast_s16_u8 (read_upsampled3_ref2_u8 (gl_TexCoord[0].xy + offset7));\n"
-      "  upsampled_ref2.a = cast_s16_u8 (read_upsampled4_ref2_u8 (gl_TexCoord[0].xy + offset8));\n"
-      "  int average_ref1 = divide_s16 (crossfoot_s16 (upsampled_ref1 * weight_ref1) + 8, 16);\n"
-      "  int average_ref2 = divide_s16 (crossfoot_s16 (upsampled_ref2 * weight_ref2) + 8, 16);\n"
+      "  upsampled_ref1.r = cast_s16_u8 (read_upsampled1_ref1_u8 (XY + offset1));\n"
+      "  upsampled_ref1.g = cast_s16_u8 (read_upsampled2_ref1_u8 (XY + offset2));\n"
+      "  upsampled_ref1.b = cast_s16_u8 (read_upsampled3_ref1_u8 (XY + offset3));\n"
+      "  upsampled_ref1.a = cast_s16_u8 (read_upsampled4_ref1_u8 (XY + offset4));\n"
+      "  upsampled_ref2.r = cast_s16_u8 (read_upsampled1_ref2_u8 (XY + offset5));\n"
+      "  upsampled_ref2.g = cast_s16_u8 (read_upsampled2_ref2_u8 (XY + offset6));\n"
+      "  upsampled_ref2.b = cast_s16_u8 (read_upsampled3_ref2_u8 (XY + offset7));\n"
+      "  upsampled_ref2.a = cast_s16_u8 (read_upsampled4_ref2_u8 (XY + offset8));\n"
+      "  int average_ref1 = divide_s16 (crossfoot_s16 (upsampled_ref1 * ivec4 (linear_weight1)) + 8, 16);\n"
+      "  int average_ref2 = divide_s16 (crossfoot_s16 (upsampled_ref2 * ivec4 (linear_weight2)) + 8, 16);\n"
       "  int weighted = biref_weighting_s16 (average_ref1, average_ref2);\n"
-      "  write_s16 (previous + weighted * obmc_weight);\n"
+      "  write_s16 (previous + weighted * spatial_weight);\n"
       "}\n" },
 
   { -1, NULL }
