@@ -407,6 +407,10 @@ class Shader:
     index = 1
 
     for key in self.texture_order:
+      if key not in self.read_calls.keys ():
+        error ("texture " + repr (key) + " is not read in shader " \
+            + repr (self.index))
+
       read_call = self.read_calls[key]
       string += "      " + read_call[0] + postfix + " (\"texture" \
           + str (index) + "\", \"_" + read_call[2] + "\")\n"

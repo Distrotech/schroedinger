@@ -918,6 +918,149 @@ shader obmc_render_biref_prec_0_0: #############################################
 
 
 # FIXME: combine to obmc_render_biref
+shader obmc_render_biref_prec_0_3a: ############################################
+  versions:
+    normal SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_0_3a
+    weight SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_0_3a_WEIGHT
+
+  defines:
+    XY gl_TexCoord[0].xy
+
+  uniforms:
+    vec2 offset1 # ref1
+    vec2 offset2 # ref2
+    vec2 offset3 # ref2
+    vec2 origin # block origin
+
+  textures:
+    s16 previous
+    s16 spatial_weight
+    u8 upsampled_ref1
+    u8 upsampled1_ref2
+    u8 upsampled2_ref2
+
+  func void main (void):
+    var_s16 previous = read_previous_s16 (XY)
+    var_s16 spatial_weight = read_spatial_weight_s16 (XY - origin)
+    var_s16 upsampled_ref1 = cast_s16_u8 (read_upsampled_ref1_u8 (XY + offset1))
+
+    var_s16 upsampled1_ref2 \
+        = cast_s16_u8 (read_upsampled1_ref2_u8 (XY + offset2))
+    var_s16 upsampled2_ref2 \
+        = cast_s16_u8 (read_upsampled2_ref2_u8 (XY + offset3))
+    var_s16 average_ref2 = divide_s16 (upsampled1_ref2 + upsampled2_ref2 + 1, 2)
+
+    normal:
+      var_s16 average = divide_s16 (upsampled_ref1 + average_ref2 + 1, 2)
+
+      write_s16 (previous + average * spatial_weight)
+
+    weight:
+      var_s16 weighted = biref_weighting_s16 (upsampled_ref1, average_ref2)
+
+      write_s16 (previous + weighted * spatial_weight)
+
+
+
+# FIXME: combine to obmc_render_biref
+shader obmc_render_biref_prec_0_3b: ############################################
+  versions:
+    normal SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_0_3b
+    weight SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_0_3b_WEIGHT
+
+  defines:
+    XY gl_TexCoord[0].xy
+
+  uniforms:
+    vec2 offset1 # ref1
+    vec2 offset2 # ref2
+    vec2 offset3 # ref2
+    vec2 offset4 # ref2
+    vec2 offset5 # ref2
+    vec2 origin # block origin
+    vec4 linear_weight1 # FIXME: bind as ivec4
+
+  textures:
+    s16 previous
+    s16 spatial_weight
+    u8 upsampled_ref1
+    u8 upsampled1_ref2
+    u8 upsampled2_ref2
+    u8 upsampled3_ref2
+    u8 upsampled4_ref2
+
+  func void main (void):
+    var_s16 previous = read_previous_s16 (XY)
+    var_s16 spatial_weight = read_spatial_weight_s16 (XY - origin)
+    var_s16 upsampled_ref1 = cast_s16_u8 (read_upsampled_ref1_u8 (XY + offset1))
+    var4_s16 upsampled_ref2
+
+    upsampled_ref2.r = cast_s16_u8 (read_upsampled1_ref2_u8 (XY + offset2))
+    upsampled_ref2.g = cast_s16_u8 (read_upsampled2_ref2_u8 (XY + offset3))
+    upsampled_ref2.b = cast_s16_u8 (read_upsampled3_ref2_u8 (XY + offset4))
+    upsampled_ref2.a = cast_s16_u8 (read_upsampled4_ref2_u8 (XY + offset5))
+
+    var_s16 average_ref2 = divide_s16 (crossfoot_s16 (upsampled_ref2 \
+        * var4_s16 (linear_weight1)) + 8, 16)
+
+    normal:
+      var_s16 average = divide_s16 (upsampled_ref1 + average_ref2 + 1, 2)
+
+      write_s16 (previous + average * spatial_weight)
+
+    weight:
+      var_s16 weighted = biref_weighting_s16 (upsampled_ref1, average_ref2)
+
+      write_s16 (previous + weighted * spatial_weight)
+
+
+
+# FIXME: combine to obmc_render_biref
+shader obmc_render_biref_prec_3a_0: ############################################
+  versions:
+    normal SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_0
+    weight SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_0_WEIGHT
+
+  uniforms:
+    vec2 offset1 # ref1
+    vec2 offset2 # ref1
+    vec2 offset3 # ref2
+    vec2 origin # block origin
+
+  textures:
+    s16 previous
+    s16 spatial_weight
+    u8 upsampled1_ref1
+    u8 upsampled2_ref1
+    u8 upsampled_ref2
+
+  func void main (void):
+    var_s16 previous = read_previous_s16 (gl_TexCoord[0].xy)
+    var_s16 spatial_weight \
+        = read_spatial_weight_s16 (gl_TexCoord[0].xy - origin)
+
+    var_s16 upsampled1_ref1 \
+        = cast_s16_u8 (read_upsampled1_ref1_u8 (gl_TexCoord[0].xy + offset1))
+    var_s16 upsampled2_ref1 \
+        = cast_s16_u8 (read_upsampled2_ref1_u8 (gl_TexCoord[0].xy + offset2))
+    var_s16 average_ref1 = divide_s16 (upsampled1_ref1 + upsampled2_ref1 + 1, 2)
+
+    var_s16 upsampled_ref2 \
+        = cast_s16_u8 (read_upsampled_ref2_u8 (gl_TexCoord[0].xy + offset3))
+
+    normal:
+      var_s16 average = divide_s16 (average_ref1 + upsampled_ref2 + 1, 2)
+
+      write_s16 (previous + average * spatial_weight)
+
+    weight:
+      var_s16 weighted = biref_weighting_s16 (average_ref1, upsampled_ref2)
+
+      write_s16 (previous + weighted * spatial_weight)
+
+
+
+# FIXME: combine to obmc_render_biref
 shader obmc_render_biref_prec_3a_3a: ###########################################
   versions:
     normal SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_3a
@@ -953,6 +1096,183 @@ shader obmc_render_biref_prec_3a_3a: ###########################################
         = cast_s16_u8 (read_upsampled1_ref2_u8 (gl_TexCoord[0].xy + offset3))
     var_s16 upsampled2_ref2 \
         = cast_s16_u8 (read_upsampled2_ref2_u8 (gl_TexCoord[0].xy + offset4))
+    var_s16 average_ref2 = divide_s16 (upsampled1_ref2 + upsampled2_ref2 + 1, 2)
+
+    normal:
+      var_s16 average = divide_s16 (average_ref1 + average_ref2 + 1, 2)
+
+      write_s16 (previous + average * spatial_weight)
+
+    weight:
+      var_s16 weighted = biref_weighting_s16 (average_ref1, average_ref2)
+
+      write_s16 (previous + weighted * spatial_weight)
+
+
+
+# FIXME: combine to obmc_render_biref
+shader obmc_render_biref_prec_3a_3b: ###########################################
+  versions:
+    normal SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_3b
+    weight SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_3b_WEIGHT
+
+  uniforms:
+    vec2 offset1 # ref1
+    vec2 offset2 # ref1
+    vec2 offset3 # ref2
+    vec2 offset4 # ref2
+    vec2 offset5 # ref2
+    vec2 offset6 # ref2
+    vec2 origin # block origin
+    vec4 linear_weight1 # FIXME: bind as ivec4
+
+  textures:
+    s16 previous
+    s16 spatial_weight
+    u8 upsampled1_ref1
+    u8 upsampled2_ref1
+    u8 upsampled1_ref2
+    u8 upsampled2_ref2
+    u8 upsampled3_ref2
+    u8 upsampled4_ref2
+
+  func void main (void):
+    var_s16 previous = read_previous_s16 (gl_TexCoord[0].xy)
+    var_s16 spatial_weight \
+        = read_spatial_weight_s16 (gl_TexCoord[0].xy - origin)
+    var4_s16 upsampled_ref2
+
+    var_s16 upsampled1_ref1 \
+        = cast_s16_u8 (read_upsampled1_ref1_u8 (gl_TexCoord[0].xy + offset1))
+    var_s16 upsampled2_ref1 \
+        = cast_s16_u8 (read_upsampled2_ref1_u8 (gl_TexCoord[0].xy + offset2))
+    var_s16 average_ref1 = divide_s16 (upsampled1_ref1 + upsampled2_ref1 + 1, 2)
+
+    upsampled_ref2.r \
+        = cast_s16_u8 (read_upsampled1_ref2_u8 (gl_TexCoord[0].xy + offset3))
+    upsampled_ref2.g \
+        = cast_s16_u8 (read_upsampled2_ref2_u8 (gl_TexCoord[0].xy + offset4))
+    upsampled_ref2.b \
+        = cast_s16_u8 (read_upsampled3_ref2_u8 (gl_TexCoord[0].xy + offset5))
+    upsampled_ref2.a \
+        = cast_s16_u8 (read_upsampled4_ref2_u8 (gl_TexCoord[0].xy + offset6))
+
+    var_s16 average_ref2 = divide_s16 (crossfoot_s16 (upsampled_ref2 \
+        * var4_s16 (linear_weight1)) + 8, 16)
+
+    normal:
+      var_s16 average = divide_s16 (average_ref1 + average_ref2 + 1, 2)
+
+      write_s16 (previous + average * spatial_weight)
+
+    weight:
+      var_s16 weighted = biref_weighting_s16 (average_ref1, average_ref2)
+
+      write_s16 (previous + weighted * spatial_weight)
+
+
+
+# FIXME: combine to obmc_render_biref
+shader obmc_render_biref_prec_3b_0: ############################################
+  versions:
+    normal SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_0
+    weight SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_0_WEIGHT
+
+  defines:
+    XY gl_TexCoord[0].xy
+
+  uniforms:
+    vec2 offset1 # ref1
+    vec2 offset2 # ref1
+    vec2 offset3 # ref1
+    vec2 offset4 # ref1
+    vec2 offset5 # ref2
+    vec2 origin # block origin
+    vec4 linear_weight1 # FIXME: bind as ivec4
+
+  textures:
+    s16 previous
+    s16 spatial_weight
+    u8 upsampled1_ref1
+    u8 upsampled2_ref1
+    u8 upsampled3_ref1
+    u8 upsampled4_ref1
+    u8 upsampled_ref2
+
+  func void main (void):
+    var_s16 previous = read_previous_s16 (XY)
+    var_s16 spatial_weight = read_spatial_weight_s16 (XY - origin)
+    var4_s16 upsampled_ref1
+
+    upsampled_ref1.r = cast_s16_u8 (read_upsampled1_ref1_u8 (XY + offset1))
+    upsampled_ref1.g = cast_s16_u8 (read_upsampled2_ref1_u8 (XY + offset2))
+    upsampled_ref1.b = cast_s16_u8 (read_upsampled3_ref1_u8 (XY + offset3))
+    upsampled_ref1.a = cast_s16_u8 (read_upsampled4_ref1_u8 (XY + offset4))
+
+    var_s16 average_ref1 = divide_s16 (crossfoot_s16 (upsampled_ref1 \
+        * var4_s16 (linear_weight1)) + 8, 16)
+
+    var_s16 upsampled_ref2 = cast_s16_u8 (read_upsampled_ref2_u8 (XY + offset5))
+
+    normal:
+      var_s16 average = divide_s16 (average_ref1 + upsampled_ref2 + 1, 2)
+
+      write_s16 (previous + average * spatial_weight)
+
+    weight:
+      var_s16 weighted = biref_weighting_s16 (average_ref1, upsampled_ref2)
+
+      write_s16 (previous + weighted * spatial_weight)
+
+
+
+# FIXME: combine to obmc_render_biref
+shader obmc_render_biref_prec_3b_3a: ###########################################
+  versions:
+    normal SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_3a
+    weight SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_3a_WEIGHT
+
+  defines:
+    XY gl_TexCoord[0].xy
+
+  uniforms:
+    vec2 offset1 # ref1
+    vec2 offset2 # ref1
+    vec2 offset3 # ref1
+    vec2 offset4 # ref1
+    vec2 offset5 # ref2
+    vec2 offset6 # ref2
+    vec2 origin # block origin
+    vec4 linear_weight1 # FIXME: bind as ivec4
+
+  textures:
+    s16 previous
+    s16 spatial_weight
+    u8 upsampled1_ref1
+    u8 upsampled2_ref1
+    u8 upsampled3_ref1
+    u8 upsampled4_ref1
+    u8 upsampled1_ref2
+    u8 upsampled2_ref2
+
+  func void main (void):
+    var_s16 previous = read_previous_s16 (XY)
+    var_s16 spatial_weight = read_spatial_weight_s16 (XY - origin)
+    var4_s16 upsampled_ref1
+    var4_s16 upsampled_ref2
+
+    upsampled_ref1.r = cast_s16_u8 (read_upsampled1_ref1_u8 (XY + offset1))
+    upsampled_ref1.g = cast_s16_u8 (read_upsampled2_ref1_u8 (XY + offset2))
+    upsampled_ref1.b = cast_s16_u8 (read_upsampled3_ref1_u8 (XY + offset3))
+    upsampled_ref1.a = cast_s16_u8 (read_upsampled4_ref1_u8 (XY + offset4))
+
+    var_s16 average_ref1 = divide_s16 (crossfoot_s16 (upsampled_ref1 \
+        * var4_s16 (linear_weight1)) + 8, 16)
+
+    var_s16 upsampled1_ref2 \
+        = cast_s16_u8 (read_upsampled1_ref2_u8 (XY + offset5))
+    var_s16 upsampled2_ref2 \
+        = cast_s16_u8 (read_upsampled2_ref2_u8 (XY + offset6))
     var_s16 average_ref2 = divide_s16 (upsampled1_ref2 + upsampled2_ref2 + 1, 2)
 
     normal:
@@ -1012,13 +1332,14 @@ shader obmc_render_biref_prec_3b_3b: ###########################################
     upsampled_ref1.b = cast_s16_u8 (read_upsampled3_ref1_u8 (XY + offset3))
     upsampled_ref1.a = cast_s16_u8 (read_upsampled4_ref1_u8 (XY + offset4))
 
+    var_s16 average_ref1 = divide_s16 (crossfoot_s16 (upsampled_ref1 \
+        * var4_s16 (linear_weight1)) + 8, 16)
+
     upsampled_ref2.r = cast_s16_u8 (read_upsampled1_ref2_u8 (XY + offset5))
     upsampled_ref2.g = cast_s16_u8 (read_upsampled2_ref2_u8 (XY + offset6))
     upsampled_ref2.b = cast_s16_u8 (read_upsampled3_ref2_u8 (XY + offset7))
     upsampled_ref2.a = cast_s16_u8 (read_upsampled4_ref2_u8 (XY + offset8))
 
-    var_s16 average_ref1 = divide_s16 (crossfoot_s16 (upsampled_ref1 \
-        * var4_s16 (linear_weight1)) + 8, 16)
     var_s16 average_ref2 = divide_s16 (crossfoot_s16 (upsampled_ref2 \
         * var4_s16 (linear_weight2)) + 8, 16)
 
