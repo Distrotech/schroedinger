@@ -42,7 +42,9 @@ typedef enum {
   SCHRO_ENCODER_FRAME_STATE_RECONSTRUCT = (1<<4),
   SCHRO_ENCODER_FRAME_STATE_POSTANALYSE = (1<<5),
   SCHRO_ENCODER_FRAME_STATE_DONE = (1<<6),
-  SCHRO_ENCODER_FRAME_STATE_FREE = (1<<9)
+  SCHRO_ENCODER_FRAME_STATE_FREE = (1<<9),
+  SCHRO_ENCODER_FRAME_STATE_SC_DETECT_1 = (1<<15),
+  SCHRO_ENCODER_FRAME_STATE_SC_DETECT_2 = (1<<16)
 } SchroEncoderFrameStateEnum;
 #endif
 
@@ -113,6 +115,12 @@ struct _SchroEncoderFrame {
   SchroFrame *downsampled_frames[5];
   SchroUpsampledFrame *reconstructed_frame;
   SchroUpsampledFrame *upsampled_original_frame;
+
+  int sc_mad; /* shot change mean absolute difference */
+  double sc_threshold; /* shot change threshold */
+  int sc_mad_available;
+  double sc_mad_score;
+  SchroEncoderFrame* sc_prev_frame;
 
   SchroBuffer *sequence_header_buffer;
   SchroList *inserted_buffers;
@@ -433,13 +441,13 @@ void schro_encoder_encode_subband (SchroEncoderFrame *frame, int component, int 
 void schro_encoder_encode_subband_noarith (SchroEncoderFrame *frame, int component, int index);
 
 void schro_encoder_analyse_picture (SchroEncoderFrame *frame);
+#if 0
+/* these should probably be static and not visible here */
 void schro_encoder_predict_rough_picture (SchroEncoderFrame *frame);
 void schro_encoder_predict_pel_picture (SchroEncoderFrame *frame);
 void schro_encoder_predict_subpel_picture (SchroEncoderFrame *frame);
-
-void schro_encoder_fullpel_predict_picture (SchroEncoderFrame* frame);
 void schro_encoder_mode_decision (SchroEncoderFrame* frame);
-
+#endif
 void schro_encoder_encode_picture (SchroEncoderFrame *frame);
 void schro_encoder_reconstruct_picture (SchroEncoderFrame *frame);
 void schro_encoder_postanalyse_picture (SchroEncoderFrame *frame);
