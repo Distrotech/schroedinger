@@ -1,5 +1,5 @@
 package org.diracvideo.Schroedinger;
-
+import java.awt.Dimension;
 /** Motion
  *
  * An ill-named class representing an object
@@ -13,14 +13,13 @@ class Motion {
     Arithmetic ar[];
     int xbsep, ybsep, xblen, yblen, width, height;
     int xoffset, yoffset, max_fast_x, max_fast_y;
-    short obmc[];
+    short obmc[], weight_x[], weight_y[];
     Block block;
     
     public Motion(Parameters p, Picture r[]) {
 	par = p;
 	refs = r;
 	vecs = new Vector[par.x_num_blocks * par.y_num_blocks];
-	
 	tmp = new short[64*64*3];
     }
     
@@ -144,6 +143,7 @@ class Motion {
 	    max_fast_x = (width - xblen) << par.mv_precision;
 	    max_fast_y = (height - yblen) << par.mv_precision;
 	    initOBMCWeight();
+	    block = new Block(new Dimension(xblen, yblen));
 	    int max_x_blocks = Math.min(par.x_num_blocks - 1,
 					(width - xoffset)/xbsep);
 	    int max_y_blocks = Math.min(par.y_num_blocks - 1,
@@ -163,7 +163,7 @@ class Motion {
 	Vector mv = getVector(i,j);
 	switch(mv.pred_mode) {
 	case 0:
-	    getDCBlock(i, j, k, x, y);
+	    getDCBlock(i, j, k);
 	    break;
 	case 1:
 	    getRef1Block(i, j, k, x, y);
@@ -180,15 +180,46 @@ class Motion {
     }
 
     private void accumalateBlock(int x, int y, Block frame) {
-
+	for(int j = 0; j < yblen; j++) {
+	    int inLine = block.line(j);
+	    int outLine = frame.index(x, y + j);
+	    int w_y = weight_y[j];
+	    if(y + j < yoffset) {
+		w_y += weight_y[2*yoffset - j - 1];
+	    }
+	    if(y + j >= par.y_num_blocks * ybsep - yoffset) {
+		w_y += weight_y[2*(yblen - yoffset) - j - 1];
+	    }
+	    if(y + j < 0 || y + j >= frame.s.height) continue;
+	    for(int i = 0; i < xblen; i++) {
+		if(x + i < 0 || x + i >= frame.s.width) continue;
+		int w_x = weight_x[i];
+		if(x + i < xoffset) {
+		    w_x += weight_x[2*xoffset - i - 1];
+		}
+		if(x + i >= par.x_num_blocks * xbsep - xoffset) {
+		    w_x += weight_x[2*(xblen - xoffset) - i - 1];
+		}
+		frame.d[i + outLine] = (short)(block.d[i + inLine] * w_x * w_y);
+	    }
+	}
     }
 
-    private void getDCBlock(int i, int j, int k, int x, int y) {
-	
+    private void getDCBlock(int x, int y, int k) {
+	int val = getVector(x,y).dc[k];
+	for(int j = 0; j < yblen; j++) {
+	    int offset = block.line(j);
+	    for(int i = 0; i < xblen; i++) {
+		block.d[i + offset] = (short)(val + 128);
+	    }
+	}
     }
 
     private void getRef1Block(int i, int j, int k, int x, int y) {
-	
+	int weight = par.picture_weight_1 + par.picture_weight_2;
+	if(weight == (1 << par.picture_weight_bits)) {
+	    
+	}
     }
 
     private void getRef2Block(int i, int j, int k, int x, int y) {
@@ -200,9 +231,9 @@ class Motion {
     }
 
     private void initOBMCWeight() {
-	int wx, wy;
-	int weight_y[] = new int[yblen],
-	    weight_x[] = new int[xblen];
+	short wx, wy;
+	weight_y = new short[yblen];
+	weight_x = new short[xblen];
 	obmc = new short[yblen*xblen];
 	for(int i = 0; i < xblen; i++) {
 	    if(xoffset == 0) {

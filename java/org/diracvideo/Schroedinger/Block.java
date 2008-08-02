@@ -46,7 +46,7 @@ final class Block {
 	this.o = this.s = d;
 	this.p = new Point(0,0);
     }
-    
+
     /**
      * @return the index to the start of the frame **/
     public int start() {
@@ -73,8 +73,8 @@ final class Block {
 	return line(y) + Util.clamp(x,0, s.width - 1);
     }
 
-    /** Pixel at a given point */
+    /** Pixel at a given point, unchecked */
     public short pixel(int x, int y) {
-	return d[(y + p.y)*o.width + x];
+	return d[(y + p.y)*o.width + (p.x + x)];
     }
 }

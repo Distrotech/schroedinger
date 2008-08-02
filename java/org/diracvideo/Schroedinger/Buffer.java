@@ -9,17 +9,17 @@ final class Buffer {
     public final byte[] d;
 
     public Buffer(byte d[], int b, int e) {
-	this.b = Util.clamp(b,0,d.length - 1);
-	this.e = Util.clamp(e,b,d.length - 1);
+	this.b = Util.clamp(b,0,d.length);
+	this.e = Util.clamp(e,b,d.length);
 	this.d = d;
     }
 
     public Buffer(byte d[], int b) {
-	this(d,b, d.length - 1);
+	this(d,b, d.length);
     }
     
     public Buffer(byte[] d) {
-	this(d,0, d.length - 1);
+	this(d,0, d.length);
     }
 
     /** Get a subbuffer
@@ -32,5 +32,5 @@ final class Buffer {
     public Buffer sub(int b, int e) {
 	return new Buffer(this.d, this.b + b, this.b + e);
     }
-
+    
 }

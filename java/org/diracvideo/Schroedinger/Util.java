@@ -41,12 +41,12 @@ final class Util {
 	return s/numbers.length;
     }
 
-    public final static int getRamp(int x, int offset) {
+    public final static short getRamp(int x, int offset) {
 	if(offset == 1) {
 	    if(x == 0) return 3;
 	    return 5;
 	}
-	return 1 + (6 * x + offset - 1)/(2*offset - 1);
+	return (short)(1 + (6 * x + offset - 1)/(2*offset - 1));
     }
 }
 

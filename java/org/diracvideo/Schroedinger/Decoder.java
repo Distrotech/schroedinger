@@ -23,9 +23,13 @@ public class Decoder {
 	refs = new Queue(4);
 	out = new Queue(4);
     }
+    
+    public synchronized void push(byte d[], int s) throws Exception {
+	push(new Buffer(d,s));
+    }
 
     /** Push:
-     * @param d array containing data from the stream
+     * @param b Buffer containing data from the stream
      *
      * Pushes an array of stream data onto the decoder.
      * Currently each packet should be pushed seperately.
@@ -33,14 +37,14 @@ public class Decoder {
      * We could probably fix that some day.
      */
 
-    public synchronized void push(byte d[]) throws Exception {
+    public synchronized void push(Buffer d) throws Exception {
 	Unpack u = new Unpack(d);
 	int v = u.decodeLit32();
 	if(v != 0x42424344) {
 	    throw new Exception("Cannot handle stream");
 	}
 	int c = u.bits(8);
-	u.decodeLit32();
+	int l = u.decodeLit32();
 	u.decodeLit32();
 	if (0x00 == c) {
 	    major_version = u.decodeUint();
@@ -66,7 +70,7 @@ public class Decoder {
 	    throw new Exception("No Video Format");
 	}
 	int n = u.decodeLit32();
-	Picture p = new Picture(c,n,new Buffer(d,17), this);
+	Picture p = new Picture(c, n, d.sub(17, l - 4), this);
 	p.parse();
 	p.decode();
 	if(p.error == null) {

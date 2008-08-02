@@ -16,7 +16,8 @@ x#13   Fix arithmetic unpacking of Subbands (sign prediction almost done)
 x#14   Implement motion vector structures 
 x#15   Decode motion vectors
 #16    Implement motion decoding
-#17    Make Cortado plugin
+#17    Make initial cortado plugin
+#18    Fix cortado plugin
 #30    Profile decoder and speed it up
 
 
