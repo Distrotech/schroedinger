@@ -325,14 +325,12 @@ public class Picture {
     private Motion motion;
     private BufferedImage img;
     private Buffer[] motion_buffers;
-    public Decoder.Status status = Decoder.Status.OK;
+    public Decoder.Status status;
     public Exception error = null;
     public final int num;
 
 
     /** Picture:
-     * @param c picture parse code
-     * @param n picture number
      * @param b payload buffer
      * @param d decoder of the picture 
      *
@@ -344,20 +342,24 @@ public class Picture {
      * just specified. Each can be called without arguments and should not be 
      * called twice. */
 
-    public Picture(int c, int n, Buffer b, Decoder d) {
-	num = n;
-	code = c;
+    public Picture(Buffer b, Decoder d) {
+	num = b.getInt(13);
+	code = b.getByte(4);
 	buf = b;
 	dec = d;
 	format = d.getVideoFormat();
-	par = new Parameters(c);
+	par = new Parameters(code);
 	coeffs = new SubBand[3][19];
 	motion_buffers = new Buffer[9];
+	status = Decoder.Status.NULL;
     }
 
-    public void parse() {
+    public synchronized void parse() {
+	if(status != Decoder.Status.NULL)
+	    return;
 	try {
 	    Unpack u = new Unpack(buf);
+	    u.skip(136); /* 17 * 8 */
 	    parseHeader(u);
 	    par.calculateIwtSizes(format);
 	    if(!par.is_intra) {
@@ -380,6 +382,7 @@ public class Picture {
 		    parseTransformData(u);
 		}
 	    }
+	    status = Decoder.Status.OK;
 	} catch(Exception e) {
 	    error = e;
 	    status = Decoder.Status.ERROR;
@@ -518,21 +521,23 @@ public class Picture {
 	System.err.println("parseLowDelayTransformData()");
     }
 
-    /** decode
+    /** synchronized decoding
      *
-     * Decodes the picture. Does nothing when error != null */
-    public void decode() {
-	if(error != null) {
+     * Decodes the picture. */
+    public synchronized void decode() {
+	if(status != Decoder.Status.OK)
 	    return;
-	}
+	status = Decoder.Status.WAIT;
 	initializeFrames();
 	if(!zero_residual) {
 	    decodeWaveletTransform();
 	}
 	if(!par.is_intra) {
+	    decodeRefs();
 	    decodeMotionCompensate();
 	}
 	createImage();
+	status = Decoder.Status.DONE;
     }
 
     
@@ -547,6 +552,28 @@ public class Picture {
 		coeffs[c][3*i+3].decodeCoeffs(out);
 	    } 
 	    wav.inverse(frame[c], par.transformDepth);  
+	}
+    }
+
+    private void decodeRefs() {
+	for(int i = 0; i < par.num_refs; i++) {
+	    switch(refs[i].status) {
+	    case DONE:
+		break;
+	    case NULL:
+		refs[i].parse();
+	    case OK:
+		refs[i].decode();
+		i--;
+		break;
+	    case WAIT:
+		synchronized(refs[i]) {} /* wait for the decoding to end */
+		break;
+	    case ERROR:
+		error = refs[i].error;
+		status = Decoder.Status.ERROR;
+		break;
+	    }
 	}
     }
 

@@ -5,6 +5,7 @@ public class VideoFormat {
     public int width, height;
     public int chroma_format;
     
+    public int version_major, version_minor, profile, level;
     public boolean interlaced, top_field_first;
     public int frame_rate_numerator, frame_rate_denominator,
 	aspect_ratio_numerator, aspect_ratio_denominator;
@@ -132,17 +133,17 @@ public class VideoFormat {
     }
 
     /** VideoFormat:
-     * @param u Unpack object
-     *
-     * u should be initialized so that it can read
-     * directly from the `payload' section of the
-     * video format data buffer.
-     * Basically, after initialization, the object is
-     * `finished'. One should only need to call get*Size
-     * and equals(). Most fields are public for maximum
-     * utility. **/
+     * @param b Buffer of a video format as packed in 
+     * the dirac stream */
 
-    public VideoFormat(Unpack u) throws Exception {
+    public VideoFormat(Buffer b) throws Exception {
+	Unpack u = new Unpack(b);
+	u.skip(104); /* 13 * 8 */
+	version_major = u.decodeUint();
+	version_minor = u.decodeUint();
+	profile = u.decodeUint();
+	level = u.decodeUint();
+
 	setDefaultVideoFormat(u.decodeUint());
 	if(u.decodeBool()) { /* frame dimensions */
 	    this.width = u.decodeUint();

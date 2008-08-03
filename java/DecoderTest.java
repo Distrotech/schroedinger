@@ -36,7 +36,7 @@ class PictureDrawer extends Canvas implements Runnable {
     public void paint(Graphics gr) {
 	if(dec.hasPicture()) {
 	    Picture pic = dec.pull();
-//	    System.err.println(pic);
+   //	    System.err.println(pic);
 	    Image img = pic.getImage();
 	    gr.drawImage(img,0,0,null);
 	}
@@ -67,15 +67,16 @@ public final class DecoderTest {
 	    byte[] packet;
 	    while(dec.getVideoFormat() == null) {
 		packet = readPacket(in);
-		dec.push(packet,0);
+		dec.push(packet, 0);
 	    }
 	    win = createWindow(dec);
 	    while(in.available() > 0) {
 		packet = readPacket(in);
 		dec.push(packet, 0);
-		if(dec.status == Decoder.Status.DONE) {
+		if(dec.full())
+		    dec.run();
+		if(dec.done())
 		    break;
-		}
 	    }
 	    dec.status = Decoder.Status.DONE;
 	    in.close();
@@ -96,20 +97,27 @@ public final class DecoderTest {
     }
 
     private static byte[] readPacket(FileInputStream in) throws IOException {
-	byte[] header = new byte[13];
-	in.read(header);
-	Unpack u = new Unpack(header);
-	if(u.decodeLit32() != 0x42424344) {
-	    throw new IOException("Cannot parse dirac stream");
-	} 
-	if(u.bits(8) == 0x10) {
-	    return header;
+	if(true) {
+	    int read = Math.min(100, in.available());
+	    byte packet[] = new byte[read];
+	    in.read(packet);
+	    return packet;
+	} else {
+	    byte[] header = new byte[13];
+	    in.read(header);
+	    Unpack u = new Unpack(header);
+	    if(u.decodeLit32() != 0x42424344) {
+		throw new IOException("Cannot parse dirac stream");
+	    } 
+	    if(u.bits(8) == 0x10) {
+		return header;
+	    }
+	    int size = u.decodeLit32();
+	    byte[] packet = new byte[size];
+	    System.arraycopy(header, 0, packet, 0, 13);
+	    in.read(packet, 13, size - 13);
+	    return packet;
 	}
-	int size = u.decodeLit32();
-	byte[] packet = new byte[size];
-	System.arraycopy(header, 0, packet, 0, 13);
-	in.read(packet, 13, size - 13);
-	return packet;
     }
 
 

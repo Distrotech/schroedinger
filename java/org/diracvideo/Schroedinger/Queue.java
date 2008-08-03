@@ -64,8 +64,23 @@ class Queue {
 	throw new Exception("Reference picture not found");
     }
     
+    public Picture pop() {
+	for(int i = 0; i < pics.length; i++) 
+	    if(pics[i] != null) {
+		Picture r = pics[i];
+		pics[i] = null;
+		used--;
+		return r;
+	    }
+	return null;
+    }
+
     public boolean full() {
 	return (used >= pics.length -1);
+    }
+
+    public boolean empty() {
+	return (used == 0);
     }
 
     public synchronized void flush() {
