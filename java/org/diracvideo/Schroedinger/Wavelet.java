@@ -39,6 +39,7 @@ public class Wavelet {
     public void inverse(Block block, int depth) {
 	inverse(block.d, block.s.width, depth);
     }
+
     /** synthesize:
      *
      * @param d   short[] data array
@@ -47,7 +48,6 @@ public class Wavelet {
      * @param e   end
      *
      *  This method is public for testing purposes only. */
-
     public void synthesize(short d[], int s, int b, int e) {
 	return;
     }
@@ -98,7 +98,7 @@ class LeGall5_3 extends Wavelet {
     }
 }
 
-class DeslauriesDebuc extends Wavelet {
+class DeslauriesDebuc9_7 extends Wavelet {
     public void	synthesize(short d[], int s, int b, int e) {
 	for(int i = b; i < e; i += 2*s) {
 	    if(i - s < b) {
@@ -107,16 +107,30 @@ class DeslauriesDebuc extends Wavelet {
 		d[i] -= (d[i-s] + d[i+s] + 2) >> 2;
 	    }
 	}
-	/*	for(int i = b + s; i < e; i+= 2*s) {
-	    d[i] += (9*d[i-s] + 9*d[i+s] - d[i-3*s] - d[i+3*s] + 8) >> 4;
-	    } */
-	for(int i = b + s; i < e; i += 2*s) {
-	    if(i + s >= e) {
-		d[i] += d[i-s];
+	for(int i = b + s; i < e; i+= 2*s) {
+	    if(i - 3*s >= b) {
+		if(i+3*s < e)
+		    d[i] += (9*d[i-s] + 9*d[i+s] - d[i-3*s] - d[i+3*s] + 8) >> 4;
+		else if(i + s < e) 
+		    d[i] += (9*d[i-s] + 8*d[i+s] - d[i-3*s] + 8) >> 4;
+		else
+		    d[i] += (17*d[i-s] - d[i-3*s] + 8) >> 4;
+	    } else if(i - s >= b) {
+		if(i + 3*s < e) {
+		    d[i] += (8*d[i-s] + 9*d[i+s] - d[i+3*s] + 8) >> 4;
+		} else if(i + s < e) {
+		    d[i] += (8*d[i-s] + 8*d[i+s] + 8) >> 4;
+		} else {
+		    d[i] += (16*d[i-s] + 8) >> 4;
+		}
 	    } else {
-		d[i] += (d[i-s] + d[i+s] + 1) >> 1;
+		if(i + 3*s < e) {
+		    d[i] += (17*d[i+s] - d[i+3*s] + 8) >> 4;
+		} else if(i + s < e) {
+		    d[i] += (16*d[i+s] + 8) >> 4;
+		}
 	    }
-	}
+	} 
     }
 
 }
