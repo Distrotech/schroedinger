@@ -59,3 +59,9 @@ streams.
  size: 0,1,2,3 is default,small,medium,large
  overlap: 0,1,2,3 is default,none,about half, and full
  "medium" translates into 8x8 for SD, 12x12 for HD720, etc.
+
+
+The current queue's pop() method does not preserve coded order.
+This could trigger a bug in which reference pictures are not added
+to the reference queue before pictures are loaded. That's why I'm going to 
+rewrite the queue.    
