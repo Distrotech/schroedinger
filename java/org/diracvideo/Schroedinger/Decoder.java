@@ -132,20 +132,12 @@ public class Decoder {
     }
 
     public synchronized Picture pull() {
-	try {
-	    Picture p = out.get(next_frame_number);
+	Picture p = out.get(next_frame_number);
+	if(p != null)
 	    out.remove(next_frame_number++);
-	    return p;
-	} catch(Throwable e) {
-	    e.printStackTrace();
-	    return fault;
-	}
+	return p;
     }
 
-    public boolean hasPicture() {
-	return out.has(next_frame_number);
-    }
-    
     /** A decoding loop */
     public void run() {
 	while(!out.full() && !in.empty()) {
