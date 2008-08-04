@@ -206,8 +206,13 @@ class SubBand {
 class Parameters {
     /* static array of wavelets */ 
     private static Wavelet[] wavs = {
-	new DeslauriesDebuc(),
+	new DeslauriesDebuc9_7(),
 	new LeGall5_3(),
+	new DeslauriesDebuc13_7(),
+	new HaarNoShift(),
+	new HaarSingleShift(),
+	new Fidelity(),
+	new Daubechies9_7(),
 	new Wavelet()
     };
     

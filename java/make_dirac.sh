@@ -1,7 +1,7 @@
 #!/bin/bash
 
 LD_LIBRARY_PATH=/usr/local/lib
-gst-launch videotestsrc ! schroenc intra_wavelet=0 \
+gst-launch videotestsrc ! schroenc intra_wavelet=2 \
 	inter_wavelet=1 enable_noarith=false transform_depth=4  \
 	gop_structure=1 rate_control=3 mv_precision=0 ! \
 	filesink location=test.drc &

@@ -10,6 +10,7 @@ package org.diracvideo.Schroedinger;
  * and we need no such handholding. */
 
 public class Wavelet {
+    protected static int shift = 1;
     /** inverse:
      * @param data   a short[] array containing the frame
      * @param width  width of the frame
@@ -28,9 +29,10 @@ public class Wavelet {
 	    for(int y = 0; y < data.length; y += w*s) {
 		synthesize(data,s,y, y + w); /* a row */
 	    }
+	    int add = 1 << (shift - 1);
             for(int y = 0; y < data.length; y += s*w) {
                 for(int x = 0; x < w; x += s) {
-	            data[y+x] = (short)((data[y+x]+1)>>1);
+	            data[y+x] = (short)((data[y+x]+add)>>shift);
 		}
 	    }
 	}
@@ -132,5 +134,69 @@ class DeslauriesDebuc9_7 extends Wavelet {
 	    }
 	} 
     }
+}
+
+class DeslauriesDebuc13_7 extends Wavelet {
+
+    public void	synthesize(short d[], int s, int b, int e) {
+	for(int i = b; i < e; i += 2*s) {
+	    if(i - 3*s >= b) {
+		if(i+3*s < e)
+		    d[i] -= (9*d[i-s] + 9*d[i+s] - d[i-3*s] - d[i+3*s] + 16) >> 5;
+		else if(i + s < e) 
+		    d[i] -= (9*d[i-s] + 8*d[i+s] - d[i-3*s] + 16) >> 5;
+		else
+		    d[i] -= (17*d[i-s] - d[i-3*s] + 16) >> 5;
+	    } else if(i - s >= b) {
+		if(i + 3*s < e) {
+		    d[i] -= (8*d[i-s] + 9*d[i+s] - d[i+3*s] + 16) >> 5;
+		} else if(i + s < e) {
+		    d[i] -= (8*d[i-s] + 8*d[i+s] + 16) >> 5;
+		} else {
+		    d[i] -= (16*d[i-s] + 16) >> 5;
+		}
+	    } else {
+		if(i + 3*s < e) {
+		    d[i] -= (17*d[i+s] - d[i+3*s] + 16) >> 5;
+		} else if(i + s < e) {
+		    d[i] -= (16*d[i+s] + 16) >> 5;
+		}
+	    }
+	}
+	for(int i = b + s; i < e; i+= 2*s) {
+	    if(i - 3*s >= b) {
+		if(i+3*s < e)
+		    d[i] += (9*d[i-s] + 9*d[i+s] - d[i-3*s] - d[i+3*s] + 8) >> 4;
+		else if(i + s < e) 
+		    d[i] += (9*d[i-s] + 8*d[i+s] - d[i-3*s] + 8) >> 4;
+		else
+		    d[i] += (17*d[i-s] - d[i-3*s] + 8) >> 4;
+	    } else if(i - s >= b) {
+		if(i + 3*s < e) {
+		    d[i] += (8*d[i-s] + 9*d[i+s] - d[i+3*s] + 8) >> 4;
+		} else if(i + s < e) {
+		    d[i] += (8*d[i-s] + 8*d[i+s] + 8) >> 4;
+		} else {
+		    d[i] += (16*d[i-s] + 8) >> 4;
+		}
+	    } else {
+		if(i + 3*s < e) {
+		    d[i] += (17*d[i+s] - d[i+3*s] + 8) >> 4;
+		} else if(i + s < e) {
+		    d[i] += (16*d[i+s] + 8) >> 4;
+		}
+	    }
+	} 
+    }
 
 }
+
+class HaarNoShift extends Wavelet {
+    protected static int shift = 0;
+}
+
+class HaarSingleShift extends Wavelet {}
+
+class Fidelity extends Wavelet {}
+
+class Daubechies9_7 extends Wavelet {}
