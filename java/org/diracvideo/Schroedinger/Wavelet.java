@@ -210,13 +210,51 @@ class Fidelity extends Wavelet {
     public void synthesize(short d[], int s, int b, int e) {
 	for(int i = b + s; i < e; i += 2*s) {
 	    int sum = 0;
+	    if(i - 7*s >= b) {
+		sum = -2*d[i-7*s] + 10*d[i-5*s] - 25*d[i-3*s] + 81*d[i-s];
+	    } else if(i - 5*s >= b) {
+		sum = 8*d[i-5*s] - 25*d[i-3*s] + 81*d[i-s];
+	    } else if(i - 3*s >= b) {
+		sum = -17*d[i-3*s] + 81*d[i-s];
+	    } else if(i - s >= b) {
+		sum = 64*d[i-s];
+	    }
+	    if(i + 7*s < e) {
+		sum += -2*d[i+7*s] + 10*d[i+5*s] - 25*d[i+3*s] + 81*d[i+s];
+	    } else if(i + 5*s < e) {
+		sum += 8*d[i+5*s] - 25*d[i+3*s] + 81*d[i+s];
+	    } else if(i + 3*s < e) {
+		sum += -17*d[i+3*s] + 81*d[i+s];
+	    } else if(i + s < e) {
+		sum += 64*d[i+s];
+	    }
 	    d[i] += (sum + 128) >> 8;
 	}
 	for(int i = b; i < e; i += 2*s) {
 	    int sum = 0;
+	    if(i - 7*s >= b) {
+		sum = -8*d[i-7*s] + 21*d[i-5*s] - 46*d[i-3*s]  + 161*d[i-s];
+	    } else if(i - 5*s >= b) {
+		sum = 13*d[i-5*s] - 46*d[i-3*s]  + 161*d[i-s];
+	    } else if(i - 3*s >= b) {
+		sum = -33*d[i-3*s]  + 161*d[i-s];
+	    } else if(i - s >= b) {
+		sum = 128*d[i-s];
+	    }
+	    if(i + 7*s < e) {
+		sum += -8*d[i+7*s] + 21*d[i+5*s] - 46*d[i+3*s]  + 161*d[i+s];
+	    } else if(i + 5*s < e) {
+		sum += 13*d[i+5*s] - 46*d[i+3*s]  + 161*d[i+s];
+	    } else if(i + 3*s < e) { 
+		sum += 33*d[i+3*s]  + 161*d[i+s];
+	    } else if(i + s < e) {
+		sum += 128*d[i+s];
+	    }
 	    d[i] -= (sum + 128) >> 8;
 	}
     }
+    
+    public void filtershift(short d[], int w, int s) {}
 }
 
 class Daubechies9_7 extends Wavelet {
