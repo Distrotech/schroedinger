@@ -354,6 +354,8 @@ public class Picture {
 	status = Decoder.Status.NULL;
     }
 
+    public Picture() { num = 0;  }
+
     public synchronized void parse() {
 	if(status != Decoder.Status.NULL)
 	    return;

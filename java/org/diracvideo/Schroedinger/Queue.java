@@ -1,92 +1,91 @@
 package org.diracvideo.Schroedinger;
 
-/**
- * Queue
- *
- * Synchronized Picture Queue.
- * This Queue implmentation is probably slow (linear),
- * but the number of elements is not expected to
- * be very high for any reasonable Queue. 
- * Therefore, I don't care. */
+/** Synchronized Picture Queue. */
 
 class Queue {
-    private Picture[] pics;
-    private int used;
-    
+    Node free, head, tail;
     public Queue(int n) {
-	pics = new Picture[n];
-	used = 0;
+	free = head = tail = null;
+	for(int i = 0; i < n; i++) {
+	    Node nd = new Node();
+	    nd.next = free;
+	    free = nd;
+	}
     }
 
     public synchronized void remove(int n) {
-	for(int i = 0; i < pics.length; i++) {
-	    if(pics[i] != null &&
-	       pics[i].num == n) {
-		pics[i] = null;
-		used--;
+	Node pr = null;
+	for(Node nd = head; nd != null; nd = nd.next) {
+	    if(nd.load.num == n) {
+		if(pr == null) 
+		    head = head.next;
+		else 
+		    pr.next = nd.next;
+		nd.next = free;
+		free = nd;
+		break;
 	    }
+	    pr = nd;
 	}
     }
 
     public synchronized void add(Picture p) {
-	int min = ~(1 << 31), loc = 0;
-	for(int i = 0; i < pics.length; i++) {
-	    if(pics[i] == null) {
-		pics[i] = p;
-		used++;
-		return;
-	    } 
-	    if(min > pics[i].num) {
-		min = pics[i].num;
-		loc = i;
+	if(full()) {
+	    Node nd = head;
+	    nd.load = p;
+	    head = head.next;
+	    tail.next = nd;
+	    tail = nd;
+	} else {
+	    Node nd = free;
+	    free = free.next;
+	    nd.load = p;
+	    nd.next = null;
+	    if(empty()) {
+		head = tail = nd;
+	    } else {
+		tail.next = nd;
+		tail = nd;
 	    }
 	}
-	pics[loc] = p;
     }
 
-    public boolean has(int n) {
-	for(int i = 0; i < pics.length; i++) {
-	    if(pics[i] != null &&
-	       pics[i].num == n) {
-		return true;
-	    }
+    public synchronized Picture get(int n)  {
+	for(Node nd = head; nd != null; nd = nd.next) {
+	    if(nd.load.num == n)
+		return nd.load;
 	}
-	return false;
-    }
-    
-    public synchronized Picture get(int n) throws Exception {
-	for(int i = 0; i < pics.length; i++) {
-	    if(pics[i] != null &&
-	       pics[i].num == n) {
-		return pics[i];
-	    }
-	}
-	throw new Exception("Reference picture not found");
-    }
-    
-    public Picture pop() {
-	for(int i = 0; i < pics.length; i++) 
-	    if(pics[i] != null) {
-		Picture r = pics[i];
-		pics[i] = null;
-		used--;
-		return r;
-	    }
 	return null;
+    }
+    
+    public synchronized Picture pop() {
+	Node nd = head;
+	Picture pic = nd.load;
+	if(pic == null) {
+	    System.err.println("Load = null");
+	    System.exit(1);
+	}
+	head = head.next;
+	nd.next = free;
+	free = nd;
+	nd.load = null;
+	return pic;
     }
 
     public boolean full() {
-	return (used >= pics.length -1);
+	return free == null;
     }
 
     public boolean empty() {
-	return (used == 0);
+	return head == null;
     }
 
     public synchronized void flush() {
-	for(int i = 0; i < pics.length; i++) {
-	    pics[i] = null;
-	}
-	used = 0;
+	
     }
+}
+
+class Node {
+    Picture load;
+    Node next;
 }
