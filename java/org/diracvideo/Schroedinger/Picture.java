@@ -354,6 +354,12 @@ public class Picture {
 	status = Decoder.Status.NULL;
     }
 
+    public Picture() {
+	status = Decoder.Status.DONE;
+	num = -1;
+	img = new BufferedImage(200, 200, BufferedImage.TYPE_INT_RGB);
+    }
+
     public synchronized void parse() {
 	if(status != Decoder.Status.NULL)
 	    return;
@@ -639,6 +645,17 @@ public class Picture {
 	return img;
     }
     
+    public void getSubBlock(int px, int py, int k, int prec, Block ref) {
+	switch(prec) {
+	case 0:
+	    Block source = new Block(frame[k], new Point(px, py), ref.s);
+	    source.copyTo(ref);
+	    break;
+	default:
+	    throw new RuntimeException("Sub-pixel precision not supported yet");
+	}
+    }
+
     public String toString() {
 	StringBuilder b = new StringBuilder();	   
 	b.append(String.format("Picture number: %d with code %02X",

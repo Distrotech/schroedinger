@@ -11,6 +11,7 @@ package org.diracvideo.Schroedinger;
 
 public class Decoder {
     private VideoFormat format;
+    private Picture fault;
     private int next_frame_number;
     public Status status = Status.OK;
     private Buffer next;
@@ -23,6 +24,7 @@ public class Decoder {
 	refs = new Queue(4);
 	in = new Queue(4);
 	out = new Queue(4);
+	fault = new Picture();
     }
     
     /** Push:
@@ -82,6 +84,7 @@ public class Decoder {
 		return;
 	    }
 	    if(next.size() + buf.size() >= n) { 
+		/* complete packet in buffers together */
 		int copy = n - next.size();
 		next = next.cat(buf.sub(0, n - copy));
 		dispatchBuffer(next);
@@ -134,7 +137,8 @@ public class Decoder {
 	    out.remove(next_frame_number++);
 	    return p;
 	} catch(Throwable e) {
-	    return null;
+	    e.printStackTrace();
+	    return fault;
 	}
     }
 
@@ -147,8 +151,9 @@ public class Decoder {
 	while(!out.full() && !in.empty()) {
 	    try {
 		Picture pic = in.pop();
-		if(pic.status == Status.NULL) {
+		if(pic.status == Status.NULL) { 
 		    pic.parse();
+//		    WAS JE EVEN NAAR DE WC??? :)
 		    pic.decode();
 		}
 		if(pic.status == Status.DONE) {

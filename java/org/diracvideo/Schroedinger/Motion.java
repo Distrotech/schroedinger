@@ -12,15 +12,17 @@ class Motion {
     Picture refs[];
     Arithmetic ar[];
     int xbsep, ybsep, xblen, yblen, width, height;
+    int chroma_h_shift, chroma_v_shift;
     int xoffset, yoffset, max_fast_x, max_fast_y;
     short obmc[], weight_x[], weight_y[];
-    Block block;
+    Block block, tmp_ref[];
     
     public Motion(Parameters p, Picture r[]) {
 	par = p;
 	refs = r;
 	vecs = new Vector[par.x_num_blocks * par.y_num_blocks];
 	tmp = new short[64*64*3];
+	tmp_ref = new Block[refs.length];
     }
     
     public void initialize(Buffer bufs[]) {
@@ -124,6 +126,8 @@ class Motion {
     }
 
     public void render(Block frame[], VideoFormat f) {
+	chroma_h_shift = f.chromaHShift();
+	chroma_v_shift = f.chromaVShift();
 	for(int k = 0; k < frame.length; k++) {
 	    if(k == 0) {
 		xbsep = par.xbsep_luma;
@@ -142,20 +146,27 @@ class Motion {
 	    yoffset = (xblen - ybsep)/2;
 	    max_fast_x = (width - xblen) << par.mv_precision;
 	    max_fast_y = (height - yblen) << par.mv_precision;
+	    tmp_ref[0] = new Block(new Dimension(xblen, yblen));
+	    tmp_ref[1] = new Block(new Dimension(xblen, yblen));
 	    initOBMCWeight();
 	    block = new Block(new Dimension(xblen, yblen));
-	    int max_x_blocks = Math.min(par.x_num_blocks - 1,
-					(width - xoffset)/xbsep);
-	    int max_y_blocks = Math.min(par.y_num_blocks - 1,
-					(height - yoffset)/ybsep);
-	    for(int i = 0; i < par.x_num_blocks; i++) {
-		int x = xbsep * i - xoffset;
-		predictBlock(x, -yoffset, k, i, 0);
-		accumalateBlock(x, -yoffset, frame[k]);
+	    for(int j = 0; j < par.y_num_blocks; j++) {
+		int y = ybsep*j - yoffset;
+		for(int i = 0; i < par.x_num_blocks; i++) {
+		    int x = xbsep*i - xoffset;
+		    predictBlock(x, y, k, i, j);
+		    accumalateBlock(x, y, frame[k]);
+		}
 	    }
-	    for(int j = 1; j < max_y_blocks; j++) {
-		
-	    }
+	    short line[] = frame[k].d;
+	    for(int j = 0; j < frame[k].s.height; j++) {
+		int offset = frame[k].line(j);
+		for(int i = 0; i < frame[k].s.width; i++) {
+		    line[offset + i] += 1;
+		    line[offset + i] >>= 1;
+		}
+	    } 
+
 	}
     }
 
@@ -216,9 +227,20 @@ class Motion {
     }
 
     private void getRef1Block(int i, int j, int k, int x, int y) {
+	Vector mv = getVector(i,j);
 	int weight = par.picture_weight_1 + par.picture_weight_2;
+	getBlock(k, 0, i, j, mv.dx[0], mv.dy[0]);
 	if(weight == (1 << par.picture_weight_bits)) {
-	    
+	    tmp_ref[0].copyTo(block);
+	} else {
+	    for(int jj = 0; jj < yblen; jj++) {
+		int blockOffset = block.line(jj);
+		int refOffset = tmp_ref[0].line(jj);
+		for(int ii = 0; ii < xblen; ii++) {
+		    block.d[blockOffset + ii] = (short)Util.roundUpShift( tmp_ref[0].d[refOffset + ii] * weight, 
+									  par.picture_weight_bits);
+		}
+	    }
 	}
     }
 
@@ -228,6 +250,19 @@ class Motion {
 
     private void getBiRefBlock(int i, int j, int k, int x, int y) {
 	
+    }
+
+    private void getBlock(int k, int ref, int i, int j, int dx, int dy) {
+	if(k > 0) {
+	    dx >>= chroma_h_shift;
+	    dy >>= chroma_v_shift;
+	}
+	int x,y,px,py;
+	x = xbsep*i - xoffset;
+	y = ybsep*j - yoffset;
+	px = (x << par.mv_precision) + dx;
+	py = (y << par.mv_precision) + dy;
+	refs[ref].getSubBlock(px, py, k, par.mv_precision, tmp_ref[ref]);
     }
 
     private void initOBMCWeight() {

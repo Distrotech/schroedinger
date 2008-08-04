@@ -22,12 +22,10 @@ clean: cleandoc
 	@rm -f *.drc *.sundae
 	@echo "Done"
 
-doc:
-	javadoc org.diracvideo.Schroedinger
+doc: cleandoc
+	mkdir docs
+	javadoc -d docs org.diracvideo.Schroedinger
 
 cleandoc:
-	@find -name "*.html" -delete
-	@find -name "*.css" -delete
-	@rm -rf resources/
-	@rm -f package-list
+	@rm -rf docs
 

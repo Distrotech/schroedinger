@@ -47,6 +47,12 @@ final class Block {
 	this.p = new Point(0,0);
     }
 
+    public Block(Block par, Point off, Dimension sub) {
+	this(par.d, par.p, sub, par.o);
+	this.p.x += off.x;
+	this.p.y += off.y;
+    }
+
     /**
      * @return the index to the start of the frame **/
     public int start() {
@@ -77,4 +83,11 @@ final class Block {
     public short pixel(int x, int y) {
 	return d[(y + p.y)*o.width + (p.x + x)];
     }
+
+    public void copyTo(Block b) {
+	for(int i = 0; i < s.height; i++) {
+	    System.arraycopy(d, line(i), b.d, b.line(i), b.s.width);
+	}
+    }
+
 }
