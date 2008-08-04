@@ -10,7 +10,6 @@ package org.diracvideo.Schroedinger;
  * and we need no such handholding. */
 
 public class Wavelet {
-    protected static int shift = 1;
     /** inverse:
      * @param data   a short[] array containing the frame
      * @param width  width of the frame
@@ -29,11 +28,14 @@ public class Wavelet {
 	    for(int y = 0; y < data.length; y += w*s) {
 		synthesize(data,s,y, y + w); /* a row */
 	    }
-	    int add = 1 << (shift - 1);
-            for(int y = 0; y < data.length; y += s*w) {
-                for(int x = 0; x < w; x += s) {
-	            data[y+x] = (short)((data[y+x]+add)>>shift);
-		}
+	    filtershift(data, w, s);
+	}
+    }
+
+    public void filtershift(short data[], int w, int s ) {
+	for(int y = 0; y < data.length; y += s*w) {
+	    for(int x = 0; x < w; x += s) {
+		data[y+x] = (short)((data[y+x]+1)>>1);
 	    }
 	}
     }
@@ -50,9 +52,7 @@ public class Wavelet {
      * @param e   end
      *
      *  This method is public for testing purposes only. */
-    public void synthesize(short d[], int s, int b, int e) {
-	return;
-    }
+    public void synthesize(short d[], int s, int b, int e) {  }
 
 
     /** interleave interleaves four subbands.
@@ -62,7 +62,7 @@ public class Wavelet {
      * @return the new subband, 4 times the size of each individual argument
      **/
     public short[] interleave(short ll[], short hl[], 
-				     short lh[], short hh[], int width) {
+			      short lh[], short hh[], int width) {
 	short o[] = new short[ll.length*4];
 	int height = ll.length / width;
 	for(int y = 0; y < height; y++) {
@@ -191,12 +191,65 @@ class DeslauriesDebuc13_7 extends Wavelet {
 
 }
 
-class HaarNoShift extends Wavelet {
-    protected static int shift = 0;
+class HaarNoShift extends HaarSingleShift {
+    public void filtershift(short d[], int w, int s) {}
 }
 
-class HaarSingleShift extends Wavelet {}
+class HaarSingleShift extends Wavelet {
+    public void synthesize(short d[], int s, int b, int e) {
+	for(int i = b; i < e - s; i += 2*s) {
+	    d[i] -= (d[i+s] + 1) >> 1;
+	}
+	for(int i = b + s; i < e; i += 2*s) {
+	    d[i] += d[i-s];
+	}
+    }
+}
 
-class Fidelity extends Wavelet {}
+class Fidelity extends Wavelet {
+    public void synthesize(short d[], int s, int b, int e) {
+	for(int i = b + s; i < e; i += 2*s) {
+	    int sum = 0;
+	    d[i] += (sum + 128) >> 8;
+	}
+	for(int i = b; i < e; i += 2*s) {
+	    int sum = 0;
+	    d[i] -= (sum + 128) >> 8;
+	}
+    }
+}
 
-class Daubechies9_7 extends Wavelet {}
+class Daubechies9_7 extends Wavelet {
+    public void synthesize(short d[], int s, int b, int e) {
+	for(int i = b; i < e; i += 2*s) {
+	    if(i - s < b) {
+		d[i] -= (3634*d[i+s] + 2048) >> 12;
+	    } else {
+		d[i] -= (1817*d[i-s] + 1817*d[i+s] + 2048) >> 12;
+	    }
+	}
+	for(int i = b + s; i < e; i += 2*s) {
+	    if(i + s >= e) {
+		d[i] -= (7232*d[i-s] + 2048) >> 12;
+	    } else {
+		d[i] -= (3616*d[i-s] + 3616*d[i+s] + 2048) >> 12;
+	    }
+	}
+	for(int i = b; i < e; i += 2*s) {
+	    if(i - s < b) {
+		d[i] += (434*d[i+s] + 2048) >> 12;
+	    } else {
+		d[i] += (217*d[i-s] + 217*d[i+s] + 2048) >> 12;
+	    }
+	}
+
+	for(int i = b + s; i < e; i += 2*s) {
+	    if(i + s >= e) {
+		d[i] += (12996*d[i-s] + 2048) >> 12;
+	    } else {
+		d[i] += (6497*d[i-s] + 6497*d[i+s] + 2048) >> 12;
+	    }
+	}
+    }
+
+}
