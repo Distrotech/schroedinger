@@ -486,17 +486,20 @@ schro_encoder_init_frame (SchroEncoderFrame *frame)
     case SCHRO_ENCODER_GOP_INTRA_ONLY:
       frame->need_downsampling = FALSE;
       frame->need_average_luma = FALSE;
+      frame->need_mad = FALSE;
       break;
     case SCHRO_ENCODER_GOP_ADAPTIVE:
     case SCHRO_ENCODER_GOP_BACKREF:
     case SCHRO_ENCODER_GOP_CHAINED_BACKREF:
       frame->need_downsampling = TRUE;
       frame->need_average_luma = TRUE;
+      frame->need_mad = TRUE;
       break;
     case SCHRO_ENCODER_GOP_BIREF:
     case SCHRO_ENCODER_GOP_CHAINED_BIREF:
       frame->need_downsampling = TRUE;
       frame->need_average_luma = TRUE;
+      frame->need_mad = TRUE;
       break;
   }
 }

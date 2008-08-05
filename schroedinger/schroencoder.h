@@ -94,6 +94,7 @@ struct _SchroEncoderFrame {
   unsigned int need_upsampling;
   unsigned int need_filtering;
   unsigned int need_average_luma;
+  unsigned int need_mad;
 
   /* bits indicating that a particular analysis has happened.  Mainly
    * for verification */
@@ -103,6 +104,7 @@ struct _SchroEncoderFrame {
   unsigned int have_downsampling;
   unsigned int have_upsampling;
   unsigned int have_average_luma;
+  unsigned int have_mad;
 
   /* other stuff */
 
@@ -118,9 +120,9 @@ struct _SchroEncoderFrame {
 
   int sc_mad; /* shot change mean absolute difference */
   double sc_threshold; /* shot change threshold */
-  int sc_mad_available;
   double sc_mad_score;
   SchroEncoderFrame* sc_prev_frame;
+  int sc_mad_available;
 
   SchroBuffer *sequence_header_buffer;
   SchroList *inserted_buffers;
@@ -439,8 +441,8 @@ double schro_encoder_perceptual_weight_manos_sakrison (double cpd);
 void schro_encoder_init_subbands (SchroEncoderFrame *frame);
 void schro_encoder_encode_subband (SchroEncoderFrame *frame, int component, int index);
 void schro_encoder_encode_subband_noarith (SchroEncoderFrame *frame, int component, int index);
-
 void schro_encoder_analyse_picture (SchroEncoderFrame *frame);
+
 #if 0
 /* these should probably be static and not visible here */
 void schro_encoder_predict_rough_picture (SchroEncoderFrame *frame);

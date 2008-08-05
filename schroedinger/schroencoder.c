@@ -1048,7 +1048,6 @@ schro_encoder_frame_complete (SchroEncoderFrame *frame)
   }
 }
 
-
 void
 schro_encoder_analyse_picture (SchroEncoderFrame *frame)
 {
@@ -1108,6 +1107,7 @@ schro_encoder_sc_detect_1 (SchroEncoderFrame* frame)
 
   frame->sc_mad = schro_metric_absdiff_u8 (comp1->data, comp1->stride, comp2->data, comp2->stride,
       comp1->width, comp1->height);
+  frame->have_mad = 1;
 
   schro_encoder_frame_unref (frame->sc_prev_frame);
   frame->sc_prev_frame = NULL;
@@ -2966,6 +2966,7 @@ calculate_sc_score (SchroEncoder* encoder)
   for (i=SC_THRESHOLD_RANGE; encoder->frame_queue->n - SC_THRESHOLD_RANGE > i; ++i) {
     int mad_max = 0, mad_min = INT_MAX;
     frame = encoder->frame_queue->elements[i].data;
+    if (frame->sc_mad_available) continue;
     if (0>frame->sc_threshold) {
       memset (mad_array, -1, sizeof(mad_array));
       mad_array[SC_THRESHOLD_RANGE] = frame->sc_mad;
@@ -2985,6 +2986,7 @@ calculate_sc_score (SchroEncoder* encoder)
   /* and now calculate the score */
   for (i=SC_THRESHOLD_RANGE+3; encoder->frame_queue->n - SC_THRESHOLD_RANGE - 3>i; ++i) {
     frame = encoder->frame_queue->elements[i].data;
+    if (frame->sc_mad_available) continue;
     f = encoder->frame_queue->elements[i-3].data;
     f2 = encoder->frame_queue->elements[i+3].data;
     frame->sc_mad_score = frame->sc_mad - (f->sc_threshold + f2->sc_threshold) / 2;
@@ -3030,17 +3032,19 @@ schro_encoder_async_schedule (SchroEncoder *encoder, SchroExecDomain exec_domain
     }
   }
 
+  /* calculate MAD for entire queue of frames */
   for (i=0; encoder->frame_queue->n > i; ++i) {
     frame = encoder->frame_queue->elements[i].data;
     SCHRO_DEBUG("phase I of shot change detection for i=%d picture=%d state=%d busy=%d"
         , i, frame->frame_number, frame->state, frame->busy);
     if (frame->busy) continue;
-      if (0 == i) {
+    if (0 == i || 0 == frame->need_mad) {
+      /* we can't calculate a MAD for first frame in the queue */
       frame->state |= SCHRO_ENCODER_FRAME_STATE_SC_DETECT_1;
       continue;
     }
-     SchroEncoderFrame* prev_frame = encoder->frame_queue->elements[i-1].data;
-     todo = frame->needed_state & (~frame->state);
+    SchroEncoderFrame* prev_frame = encoder->frame_queue->elements[i-1].data;
+    todo = frame->needed_state & (~frame->state);
     if (todo & SCHRO_ENCODER_FRAME_STATE_SC_DETECT_1
         && prev_frame->state & SCHRO_ENCODER_FRAME_STATE_ANALYSE
         && frame->state & SCHRO_ENCODER_FRAME_STATE_ANALYSE) {
@@ -3051,6 +3055,7 @@ schro_encoder_async_schedule (SchroEncoder *encoder, SchroExecDomain exec_domain
     }
   }
 
+  /* calculate new scene change score */
   for (i=0; encoder->frame_queue->n > i; ++i) {
     frame = encoder->frame_queue->elements[i].data;
     if (!(frame->state & SCHRO_ENCODER_FRAME_STATE_SC_DETECT_1)) {
