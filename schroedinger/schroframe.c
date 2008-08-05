@@ -14,6 +14,15 @@
 #include <stdlib.h>
 #include <string.h>
 
+/**
+ * schro_frame_new:
+ * 
+ * Creates a new SchroFrame object.  The created frame is uninitialized
+ * and has no data storage associated with it.  The caller must fill
+ * in the required information.
+ *
+ * Returns: a new SchroFrame object
+ */
 SchroFrame *
 schro_frame_new (void)
 {
@@ -25,6 +34,13 @@ schro_frame_new (void)
   return frame;
 }
 
+/**
+ * schro_frame_new_and_alloc:
+ *
+ * Creates a new SchroFrame object with the requested size and format.
+ *
+ * Returns: a new SchroFrame object
+ */
 SchroFrame *
 schro_frame_new_and_alloc (SchroMemoryDomain *domain, SchroFrameFormat format,
     int width, int height)
@@ -34,7 +50,7 @@ schro_frame_new_and_alloc (SchroMemoryDomain *domain, SchroFrameFormat format,
   int h_shift, v_shift;
   int chroma_width;
   int chroma_height;
-  
+
   SCHRO_ASSERT(width > 0);
   SCHRO_ASSERT(height > 0);
 
@@ -134,6 +150,17 @@ schro_frame_new_and_alloc (SchroMemoryDomain *domain, SchroFrameFormat format,
   return frame;
 }
 
+/**
+ * schro_frame_new_from_data_YUY2:
+ *
+ * Creates a new SchroFrame object with the requested size using
+ * the data pointed to by @data.  The data must be in YUY2 format.
+ * The data must remain for the lifetime of the SchroFrame object.
+ * It is recommended to use schro_frame_set_free_callback() for
+ * notification when the data is no longer needed.
+ *
+ * Returns: a new SchroFrame object
+ */
 SchroFrame *
 schro_frame_new_from_data_YUY2 (void *data, int width, int height)
 {
@@ -156,6 +183,17 @@ schro_frame_new_from_data_YUY2 (void *data, int width, int height)
   return frame;
 }
 
+/**
+ * schro_frame_new_from_data_YUY2:
+ *
+ * Creates a new SchroFrame object with the requested size using
+ * the data pointed to by @data.  The data must be in UYVY format.
+ * The data must remain for the lifetime of the SchroFrame object.
+ * It is recommended to use schro_frame_set_free_callback() for
+ * notification when the data is no longer needed.
+ *
+ * Returns: a new SchroFrame object
+ */
 SchroFrame *
 schro_frame_new_from_data_UYVY (void *data, int width, int height)
 {
@@ -178,6 +216,19 @@ schro_frame_new_from_data_UYVY (void *data, int width, int height)
   return frame;
 }
 
+/**
+ * schro_frame_new_from_data_YUY2:
+ *
+ * Creates a new SchroFrame object with the requested size using
+ * the data pointed to by @data.  The data must be in UYVY format,
+ * although the row stride is allowed to be different than what
+ * would normally be calculated from @width.
+ * The data must remain for the lifetime of the SchroFrame object.
+ * It is recommended to use schro_frame_set_free_callback() for
+ * notification when the data is no longer needed.
+ *
+ * Returns: a new SchroFrame object
+ */
 SchroFrame *
 schro_frame_new_from_data_UYVY_full (void *data, int width, int height, int stride)
 {
@@ -200,6 +251,17 @@ schro_frame_new_from_data_UYVY_full (void *data, int width, int height, int stri
   return frame;
 }
 
+/**
+ * schro_frame_new_from_data_AYUV:
+ *
+ * Creates a new SchroFrame object with the requested size using
+ * the data pointed to by @data.  The data must be in AYUV format.
+ * The data must remain for the lifetime of the SchroFrame object.
+ * It is recommended to use schro_frame_set_free_callback() for
+ * notification when the data is no longer needed.
+ *
+ * Returns: a new SchroFrame object
+ */
 SchroFrame *
 schro_frame_new_from_data_AYUV (void *data, int width, int height)
 {
@@ -222,6 +284,17 @@ schro_frame_new_from_data_AYUV (void *data, int width, int height)
   return frame;
 }
 
+/**
+ * schro_frame_new_from_data_I420:
+ *
+ * Creates a new SchroFrame object with the requested size using
+ * the data pointed to by @data.  The data must be in I420 format.
+ * The data must remain for the lifetime of the SchroFrame object.
+ * It is recommended to use schro_frame_set_free_callback() for
+ * notification when the data is no longer needed.
+ *
+ * Returns: a new SchroFrame object
+ */
 SchroFrame *
 schro_frame_new_from_data_I420 (void *data, int width, int height)
 {
@@ -267,6 +340,17 @@ schro_frame_new_from_data_I420 (void *data, int width, int height)
   return frame;
 }
 
+/**
+ * schro_frame_new_from_data_YV12:
+ *
+ * Creates a new SchroFrame object with the requested size using
+ * the data pointed to by @data.  The data must be in YV12 format.
+ * The data must remain for the lifetime of the SchroFrame object.
+ * It is recommended to use schro_frame_set_free_callback() for
+ * notification when the data is no longer needed.
+ *
+ * Returns: a new SchroFrame object
+ */
 SchroFrame *
 schro_frame_new_from_data_YV12 (void *data, int width, int height)
 {
@@ -312,6 +396,14 @@ schro_frame_new_from_data_YV12 (void *data, int width, int height)
   return frame;
 }
 
+/**
+ * schro_frame_dup:
+ *
+ * Creates a new SchroFrame object with the same dimensions and format
+ * as @frame, and copies the data from the @frame to the new object.
+ *
+ * Returns: a new SchroFrame object
+ */
 SchroFrame *
 schro_frame_dup (SchroFrame *frame)
 {
@@ -324,6 +416,15 @@ schro_frame_dup (SchroFrame *frame)
   return dup_frame;
 }
 
+/**
+ * schro_frame_clone:
+ *
+ * Creates a new SchroFrame object with the same dimensions and format
+ * as @frame.  This function leaves the data in the new object
+ * uninitialized.
+ *
+ * Returns: a new SchroFrame object
+ */
 SchroFrame *
 schro_frame_clone (SchroMemoryDomain *domain, SchroFrame *frame)
 {
@@ -331,6 +432,14 @@ schro_frame_clone (SchroMemoryDomain *domain, SchroFrame *frame)
       frame->format, frame->width, frame->height);
 }
 
+/**
+ * schro_frame_ref:
+ * @frame: a frame object
+ *
+ * Increases the reference count of @frame.
+ *
+ * Returns: the value of @frame
+ */
 SchroFrame *
 schro_frame_ref (SchroFrame *frame)
 {
@@ -338,28 +447,68 @@ schro_frame_ref (SchroFrame *frame)
   return frame;
 }
 
+/**
+ * schro_frame_unref:
+ * @frame: a frame object
+ *
+ * Decreases the reference count of @frame.  If the new reference
+ * count is 0, the frame is freed.  If a frame free callback was
+ * set, this function is called.
+ *
+ * Returns: the value of @frame
+ */
 void
 schro_frame_unref (SchroFrame *frame)
 {
+  int i;
+
   SCHRO_ASSERT(frame->refcount > 0);
+
   frame->refcount--;
   if (frame->refcount == 0) {
     if (frame->free) {
       frame->free (frame, frame->priv);
     }
 
-    if (frame->regions[0]) {
-      if (frame->domain) {
-        schro_memory_domain_memfree(frame->domain, frame->regions[0]);
-      } else {
-        free (frame->regions[0]);
+#ifdef HAVE_OPENGL
+    if (SCHRO_FRAME_IS_OPENGL (frame)) {
+      schro_opengl_frame_cleanup (frame);
+    }
+#endif
+
+    for(i=0;i<3;i++) {
+      if (frame->regions[i]) {
+        if (frame->domain) {
+          schro_memory_domain_memfree(frame->domain, frame->regions[i]);
+        } else {
+          free (frame->regions[i]);
+        }
       }
+    }
+
+    if (frame->virt_frame1) {
+      schro_frame_unref (frame->virt_frame1);
+    }
+    if (frame->virt_frame2) {
+      schro_frame_unref (frame->virt_frame2);
+    }
+    if (frame->virt_priv) {
+      schro_free (frame->virt_priv);
     }
 
     schro_free(frame);
   }
 }
 
+/**
+ * schro_frame_set_free_callback:
+ * @frame: a frame object
+ * @free_func: the function to call when the frame is freed
+ * @priv: callback key
+ *
+ * Sets a function that will be called when the object reference
+ * count drops to zero and the object is freed.
+ */
 void schro_frame_set_free_callback (SchroFrame *frame,
     SchroFrameFreeFunc free_func, void *priv)
 {
@@ -412,6 +561,14 @@ static struct binary_struct schro_frame_convert_func_list[] = {
   { 0 }
 };
 
+/**
+ * schro_frame_convert:
+ * @dest: destination frame
+ * @src: source frame
+ *
+ * Copies data from the source frame to the destination frame, converting
+ * formats if necessary.  Only a few conversions are supported.
+ */
 void
 schro_frame_convert (SchroFrame *dest, SchroFrame *src)
 {
@@ -448,6 +605,15 @@ static struct binary_struct schro_frame_add_func_list[] = {
   { 0 }
 };
 
+/**
+ * schro_frame_add:
+ * @dest: destination frame
+ * @src: source frame
+ *
+ * Adds data from the source frame to the destination frame.  The
+ * frames must have the same chroma subsampling, and only a few
+ * combinations of bit depths are supported.
+ */
 void
 schro_frame_add (SchroFrame *dest, SchroFrame *src)
 {
@@ -483,6 +649,15 @@ static struct binary_struct schro_frame_subtract_func_list[] = {
   { 0 }
 };
 
+/**
+ * schro_frame_subtract:
+ * @dest: destination frame
+ * @src: source frame
+ *
+ * Subtracts data from the source frame to the destination frame.  The
+ * frames must have the same chroma subsampling, and only a few
+ * combinations of bit depths are supported.
+ */
 void
 schro_frame_subtract (SchroFrame *dest, SchroFrame *src)
 {
@@ -973,6 +1148,15 @@ schro_frame_subtract_s16_u8 (SchroFrame *dest, SchroFrame *src)
   }
 }
 
+/**
+ * schro_frame_iwt_transform:
+ * @frame: frame
+ * @params: transform parameters
+ * @tmp: temporary storage
+ *
+ * Performs an in-place integer wavelet transform on @frame.  The
+ * frame must have a bit depth of 16.
+ */
 void
 schro_frame_iwt_transform (SchroFrame *frame, SchroParams *params,
     int16_t *tmp)
@@ -1010,6 +1194,15 @@ schro_frame_iwt_transform (SchroFrame *frame, SchroParams *params,
   }
 }
 
+/**
+ * schro_frame_inverse_iwt_transform:
+ * @frame: frame
+ * @params: transform parameters
+ * @tmp: temporary storage
+ *
+ * Performs an in-place inverse integer wavelet transform on @frame.  The
+ * frame must have a bit depth of 16.
+ */
 void
 schro_frame_inverse_iwt_transform (SchroFrame *frame, SchroParams *params,
     int16_t *tmp)
@@ -1047,7 +1240,14 @@ schro_frame_inverse_iwt_transform (SchroFrame *frame, SchroParams *params,
   }
 }
 
-
+/**
+ * schro_frame_shift_left:
+ * @frame: frame
+ * @shift: number of bits to shift
+ *
+ * Shifts each value in @frame to the left by @shift bits.  This
+ * operation happens in-place.
+ */
 void schro_frame_shift_left (SchroFrame *frame, int shift)
 {
   SchroFrameData *comp;
@@ -1067,6 +1267,14 @@ void schro_frame_shift_left (SchroFrame *frame, int shift)
   }
 }
 
+/**
+ * schro_frame_shift_right:
+ * @frame: frame
+ * @shift: number of bits to shift
+ *
+ * Shifts each value in @frame to the right by @shift bits.  This
+ * operation happens in-place.
+ */
 void schro_frame_shift_right (SchroFrame *frame, int shift)
 {
   SchroFrameData *comp;
@@ -1086,7 +1294,15 @@ void schro_frame_shift_right (SchroFrame *frame, int shift)
   }
 }
 
-
+/**
+ * schro_frame_edge_extend:
+ * @frame: frame
+ * @width: width of subpicture
+ * @height: height of subpicture
+ *
+ * Extends the edges of the subpicture defined from 0,0 to @width,@height
+ * to the size of @frame.
+ */
 void
 schro_frame_edge_extend (SchroFrame *frame, int width, int height)
 {
@@ -1234,90 +1450,54 @@ schro_frame_zero_extend (SchroFrame *frame, int width, int height)
 }
 
 static void
-mas12_edgeextend_u8 (uint8_t *dest, uint8_t *src, const int16_t *taps,
-    const int16_t *offsetshift, int n, int i)
-{
-  int j;
-  int x;
-
-  x = 0;
-  for(j=0;j<12;j++){
-    //x += taps[j]*src[CLAMP(i*2 + j - 5, 0, n-1)];
-    x += taps[j]*src[CLAMP(i + j, 0, n-1)];
-  }
-  dest[0] = CLAMP((x + 128) >> 8,0,255);
-}
-
-static void
-downsample_horiz_u8 (uint8_t *dest, int n_dest, uint8_t *src, int n_src,
-    const int16_t *taps, const int16_t *offsetshift)
+downsample_horiz_u8 (uint8_t *dest, int n_dest, uint8_t *src, int n_src)
 {
   int i;
 
-  if (n_dest < 7) {
-    for(i=0;i<n_dest;i++){
-      mas12_edgeextend_u8 (dest + i, src, taps, offsetshift, n_src, 2*i - 5);
-    }
-  } else {
-    mas12_edgeextend_u8 (dest + 0, src, taps, offsetshift, n_src, -5);
-    mas12_edgeextend_u8 (dest + 1, src, taps, offsetshift, n_src, -3);
-    mas12_edgeextend_u8 (dest + 2, src, taps, offsetshift, n_src, -1);
-
-    oil_mas12_addc_rshift_decim2_u8 (dest + 3, src + 1, taps, offsetshift,
-        n_dest - 7);
-
-    mas12_edgeextend_u8 (dest + n_dest - 4, src, taps, offsetshift, n_src, 2*n_dest - 13);
-    mas12_edgeextend_u8 (dest + n_dest - 3, src, taps, offsetshift, n_src, 2*n_dest - 11);
-    mas12_edgeextend_u8 (dest + n_dest - 2, src, taps, offsetshift, n_src, 2*n_dest - 9);
-    mas12_edgeextend_u8 (dest + n_dest - 1, src, taps, offsetshift, n_src, 2*n_dest - 7);
+  for(i=0;i<n_dest;i++){
+    int x = 0;
+    x += -1*src[CLAMP(i*2 - 1, 0, n_src-1)];
+    x +=  9*src[CLAMP(i*2 + 0, 0, n_src-1)];
+    x +=  9*src[CLAMP(i*2 + 1, 0, n_src-1)];
+    x += -1*src[CLAMP(i*2 + 2, 0, n_src-1)];
+    dest[i] = CLAMP((x+8)>>4, 0, 255);
   }
+}
 
+static void
+downsample_vert_u8 (uint8_t *dest, int n_dest, uint8_t *src1,
+    uint8_t *src2, uint8_t *src3, uint8_t *src4)
+{
+  int i;
+
+  for(i=0;i<n_dest;i++){
+    int x = 0;
+    x += -1*src1[i];
+    x +=  9*src2[i];
+    x +=  9*src3[i];
+    x += -1*src4[i];
+    dest[i] = CLAMP((x+8)>>4, 0, 255);
+  }
 }
 
 static void
 schro_frame_component_downsample (SchroFrameData *dest,
     SchroFrameData *src)
 {
-  const int16_t taps[12] = { 4, -4, -8, 4, 46, 86, 86, 46, 4, -8, -4, 4 };
-  const int16_t offsetshift[2] = { 128, 8 };
-  int i,j;
-  uint8_t *tmp, *tmp0, *tmp1;
-  uint8_t *tmplist[12];
+  int i;
+  uint8_t *tmp;
 
-  tmp = schro_malloc(dest->width * 12);
-  for(i=0;i<12;i++){
-    tmplist[i] = tmp + dest->width * i;
-  }
+  tmp = schro_malloc(src->width);
 
-  for(i=0;i<7;i++){
-    downsample_horiz_u8 (tmplist[i+5], dest->width,
-        src->data + src->stride * CLAMP(i, 0, src->height - 1), src->width,
-        taps, offsetshift);
-  }
-  for(i=0;i<5;i++){
-    oil_memcpy (tmplist[i], tmplist[5], dest->width);
-  }
-  oil_mas12across_addc_rshift_u8 (dest->data + dest->stride * 0, tmplist,
-      taps, offsetshift, dest->width);
-
-  for (j=1;j<dest->height;j++){
-    tmp0 = tmplist[0];
-    tmp1 = tmplist[1];
-    for(i=0;i<10;i++){
-      tmplist[i] = tmplist[i+2];
-    }
-    tmplist[10] = tmp0;
-    tmplist[11] = tmp1;
-
-    downsample_horiz_u8 (tmplist[10], dest->width,
-        src->data + src->stride * CLAMP(j*2+5,0,src->height-1), src->width,
-        taps, offsetshift);
-    downsample_horiz_u8 (tmplist[11], dest->width,
-        src->data + src->stride * CLAMP(j*2+6,0,src->height-1), src->width,
-        taps, offsetshift);
-    
-    oil_mas12across_addc_rshift_u8 (dest->data + dest->stride * j, tmplist,
-        taps, offsetshift, dest->width);
+  for(i=0;i<dest->height;i++){
+    downsample_vert_u8 (tmp, src->width,
+        SCHRO_FRAME_DATA_GET_LINE(src, CLAMP(i*2-1,0,src->height - 1)),
+        SCHRO_FRAME_DATA_GET_LINE(src, CLAMP(i*2+0,0,src->height - 1)),
+        SCHRO_FRAME_DATA_GET_LINE(src, CLAMP(i*2+1,0,src->height - 1)),
+        SCHRO_FRAME_DATA_GET_LINE(src, CLAMP(i*2+2,0,src->height - 1)));
+    downsample_horiz_u8 (
+        SCHRO_FRAME_DATA_GET_LINE(dest, i), dest->width,
+        tmp, src->width);
   }
 
   schro_free (tmp);
@@ -1580,23 +1760,6 @@ schro_frame_md5 (SchroFrame *frame, uint32_t *state)
       (state[2]>>24)&0xff,
       state[3]&0xff, (state[3]>>8)&0xff, (state[3]>>16)&0xff,
       (state[3]>>24)&0xff);
-}
-
-void
-schro_frame_mark (SchroFrame *frame, int value)
-{
-  uint8_t *line;
-  int y;
-  int i;
-
-  for(y=0;y<MIN(10,frame->components[0].height);y++){
-    line = OFFSET(frame->components[0].data,
-        frame->components[0].stride * y);
-    for(i=0;i<10;i++){
-      line[i] = value;
-    }
-  }
-
 }
 
 void

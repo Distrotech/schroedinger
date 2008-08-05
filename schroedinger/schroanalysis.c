@@ -10,26 +10,32 @@ void
 schro_encoder_frame_downsample (SchroEncoderFrame *frame)
 {
   int i;
+  SchroFrame *last;
 
   SCHRO_DEBUG("downsampling frame %d", frame->frame_number);
 
-  for(i=0;i<5;i++){
+  last = frame->filtered_frame;
+  for(i=0;i<frame->encoder->downsample_levels;i++){
     frame->downsampled_frames[i] =
       schro_frame_new_and_alloc (NULL, frame->filtered_frame->format,
           ROUND_UP_SHIFT(frame->filtered_frame->width, i+1),
           ROUND_UP_SHIFT(frame->filtered_frame->height, i+1));
+    schro_frame_downsample (frame->downsampled_frames[i], last);
+    last = frame->downsampled_frames[i];
   }
+}
 
-  schro_frame_downsample (frame->downsampled_frames[0],
-      frame->filtered_frame);
-  schro_frame_downsample (frame->downsampled_frames[1],
-      frame->downsampled_frames[0]);
-  schro_frame_downsample (frame->downsampled_frames[2],
-      frame->downsampled_frames[1]);
-  schro_frame_downsample (frame->downsampled_frames[3],
-      frame->downsampled_frames[2]);
-  schro_frame_downsample (frame->downsampled_frames[4],
-      frame->downsampled_frames[3]);
+void
+schro_encoder_frame_upsample (SchroEncoderFrame* frame)
+{
+  SCHRO_ASSERT (frame);
+  SCHRO_DEBUG ("upsampling frame %d", frame->frame_number);
+
+  if (frame->upsampled_original_frame) {
+    return;
+  }
+  frame->upsampled_original_frame = schro_upsampled_frame_new (frame->original_frame);
+  schro_upsampled_frame_upsample (frame->upsampled_original_frame);
 }
 
 static double
@@ -38,7 +44,7 @@ schro_frame_component_squared_error (SchroFrameData *a,
 {
   int j;
   double sum;
-  
+
   SCHRO_ASSERT(a->width == b->width);
   SCHRO_ASSERT(a->height == b->height);
 
