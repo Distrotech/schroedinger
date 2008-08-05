@@ -221,7 +221,7 @@ class Motion {
 	for(int j = 0; j < yblen; j++) {
 	    int offset = block.line(j);
 	    for(int i = 0; i < xblen; i++) {
-		block.d[i + offset] = (short)(val + 128);
+		block.d[i + offset] += (short)(val + 128);
 	    }
 	}
     }

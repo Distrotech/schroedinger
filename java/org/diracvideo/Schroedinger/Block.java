@@ -9,7 +9,7 @@ import java.awt.Dimension;
  * of elements in the data array. I would call it
  * Frame but that conflicts with java.awt.Frame. */
 
-final class Block {
+public final class Block {
     public final short[] d;
     public final Point p;
     public final Dimension s, o;
@@ -47,10 +47,9 @@ final class Block {
 	this.p = new Point(0,0);
     }
 
-    public Block(Block par, Point off, Dimension sub) {
-	this(par.d, par.p, sub, par.o);
-	this.p.x += off.x;
-	this.p.y += off.y;
+    public Block sub(Point off, Dimension sub) {
+	Point pnt = new Point(p.x + off.x, p.y + off.y);
+	return new Block(d, pnt, sub, o);
     }
 
     /**
@@ -85,9 +84,33 @@ final class Block {
     }
 
     public void copyTo(Block b) {
+	try {
+	    for(int i = 0; i < s.height; i++) {
+		System.arraycopy(d, line(i), b.d, b.line(i), b.s.width);
+	    }
+	} catch(IndexOutOfBoundsException x) {}
+    }
+    
+
+    /** A test method which fills the block with a checkers pattern */
+    public void checkers(int m) {
+	m = (1 << m);
 	for(int i = 0; i < s.height; i++) {
-	    System.arraycopy(d, line(i), b.d, b.line(i), b.s.width);
+	    for(int j = 0; j < s.width; j++) {
+		d[index(i,j)] = (short)(((i&m)^(j&m))*255);
+	    }
 	}
     }
-
+    
+    public boolean equals(Block o) {
+	if(s.width != o.s.width)
+	    return false;
+	if(s.height != o.s.height) 
+	    return false;
+	for(int i = 0; i < s.height; i++)
+	    for(int j = 0; j < s.width; j++) 
+		if(pixel(i,j) != o.pixel(i,j))
+		    return false;
+	return true;
+    }
 }

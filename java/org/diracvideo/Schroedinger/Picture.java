@@ -573,10 +573,10 @@ public class Picture {
 		break;
 	    case NULL:
 		refs[i].parse();
-	    case OK:
 		refs[i].decode();
 		i--;
 		break;
+	    case OK:
 	    case WAIT:
 		synchronized(refs[i]) {} /* wait for the decoding to end */
 		break;
@@ -595,10 +595,6 @@ public class Picture {
 	    for(int x = 0; x < par.x_num_blocks; x += 4)
 		motion.decodeMacroBlock(x,y);
 	motion.render(frame, format);
-    }
-
-    public short getPixel(int x, int y, int k) {
-	return frame[k].pixel(x,y);
     }
 
     private void initializeFrames() {
@@ -653,7 +649,7 @@ public class Picture {
     public void getSubBlock(int px, int py, int k, int prec, Block ref) {
 	switch(prec) {
 	case 0:
-	    Block source = new Block(frame[k], new Point(px, py), ref.s);
+	    Block source = frame[k].sub(new Point(px, py), ref.s);
 	    source.copyTo(ref);
 	    break;
 	default:
