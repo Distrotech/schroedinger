@@ -6,6 +6,7 @@
 #include <schroedinger/opengl/schroopengl.h>
 #include <schroedinger/opengl/schroopenglcanvas.h>
 #include <schroedinger/opengl/schroopenglshader.h>
+#include <schroedinger/opengl/schroopenglshadercode.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -109,7 +110,7 @@ schro_opengl_shader_strip_false_positives (char* infolog)
 
 static int
 schro_opengl_shader_check_status (GLhandleARB handle, GLenum status,
-    const char* code, const char* name)
+    const char* name, const char* code)
 {
   GLint result;
   GLint length;
@@ -147,20 +148,24 @@ schro_opengl_shader_check_status (GLhandleARB handle, GLenum status,
 }
 
 static SchroOpenGLShader *
-schro_opengl_shader_new (const char* code, const char* name)
+schro_opengl_shader_new (int index, const char* name, const char* code)
 {
   SchroOpenGLShader *shader;
   GLhandleARB handle;
   int ok;
 
   shader = schro_malloc0 (sizeof (SchroOpenGLShader));
+
+  shader->index = index;
+  shader->uniforms = schro_malloc0 (sizeof (SchroOpenGLUniforms));
+
   handle = glCreateShaderObjectARB (GL_FRAGMENT_SHADER_ARB);
 
   glShaderSourceARB (handle, 1, (const char**)&code, 0);
   glCompileShaderARB (handle);
 
   ok = schro_opengl_shader_check_status (handle, GL_OBJECT_COMPILE_STATUS_ARB,
-      code, name);
+      name, code);
 
   SCHRO_ASSERT (ok);
 
@@ -171,84 +176,18 @@ schro_opengl_shader_new (const char* code, const char* name)
   glLinkProgramARB (shader->program);
 
   ok = schro_opengl_shader_check_status (shader->program,
-      GL_OBJECT_LINK_STATUS_ARB, code, name);
+      GL_OBJECT_LINK_STATUS_ARB, name, code);
 
   SCHRO_ASSERT (ok);
 
   glValidateProgramARB (shader->program);
 
   ok = schro_opengl_shader_check_status (shader->program,
-      GL_OBJECT_VALIDATE_STATUS_ARB, code, name);
+      GL_OBJECT_VALIDATE_STATUS_ARB, name, code);
 
   SCHRO_ASSERT (ok);
 
-  #define UNIFORM_LOCATION_SAMPLER(_name, _index) \
-      do { \
-        if (strstr (code, "uniform sampler2DRect "#_name";") || \
-            strstr (code, "uniform usampler2DRect "#_name";") || \
-            strstr (code, "uniform isampler2DRect "#_name";")) { \
-          glUniform1iARB (glGetUniformLocationARB (shader->program, #_name), \
-               _index); \
-        } \
-      } while (0)
-
-  glUseProgramObjectARB (shader->program);
-
-  UNIFORM_LOCATION_SAMPLER (texture1,  0);
-  UNIFORM_LOCATION_SAMPLER (texture2,  1);
-  UNIFORM_LOCATION_SAMPLER (texture3,  2);
-  UNIFORM_LOCATION_SAMPLER (texture4,  3);
-  UNIFORM_LOCATION_SAMPLER (texture5,  4);
-  UNIFORM_LOCATION_SAMPLER (texture6,  5);
-  UNIFORM_LOCATION_SAMPLER (texture7,  6);
-  UNIFORM_LOCATION_SAMPLER (texture8,  7);
-  UNIFORM_LOCATION_SAMPLER (texture9,  8);
-  UNIFORM_LOCATION_SAMPLER (texture10, 9);
-
-  SCHRO_OPENGL_CHECK_ERROR
-
-  #undef UNIFORM_LOCATION
-
-  #define UNIFORM_LOCATION(_type, _name, _member) \
-      do { \
-        if (strstr (code, "uniform "#_type" "#_name";")) { \
-          shader->_member = glGetUniformLocationARB (shader->program, #_name); \
-        } else { \
-          shader->_member = -1; \
-        } \
-      } while (0)
-
-  UNIFORM_LOCATION (vec2,  offset1,        offsets[0]);
-  UNIFORM_LOCATION (vec2,  offset2,        offsets[1]);
-  UNIFORM_LOCATION (vec2,  offset3,        offsets[2]);
-  UNIFORM_LOCATION (vec2,  offset4,        offsets[3]);
-  UNIFORM_LOCATION (vec2,  offset5,        offsets[4]);
-  UNIFORM_LOCATION (vec2,  offset6,        offsets[5]);
-  UNIFORM_LOCATION (vec2,  offset7,        offsets[6]);
-  UNIFORM_LOCATION (vec2,  offset8,        offsets[7]);
-  UNIFORM_LOCATION (vec2,  origin,         origin);
-  UNIFORM_LOCATION (vec2,  edge1,          edges[0]);
-  UNIFORM_LOCATION (vec2,  edge2,          edges[1]);
-  UNIFORM_LOCATION (vec2,  size,           size);
-  UNIFORM_LOCATION (vec2,  four_decrease,  four_decrease);
-  UNIFORM_LOCATION (vec2,  three_decrease, three_decrease);
-  UNIFORM_LOCATION (vec2,  two_decrease,   two_decrease);
-  UNIFORM_LOCATION (vec2,  one_decrease,   one_decrease);
-  UNIFORM_LOCATION (vec2,  one_increase,   one_increase);
-  UNIFORM_LOCATION (vec2,  two_increase,   two_increase);
-  UNIFORM_LOCATION (vec2,  three_increase, three_increase);
-  UNIFORM_LOCATION (vec2,  four_increase,  four_increase);
-  UNIFORM_LOCATION (vec4,  linear_weight1, linear_weights[0]);
-  UNIFORM_LOCATION (vec4,  linear_weight2, linear_weights[1]);
-  UNIFORM_LOCATION (float, dc,             dc);
-  UNIFORM_LOCATION (float, ref_weight1,    ref_weights[0]);
-  UNIFORM_LOCATION (float, ref_weight2,    ref_weights[1]);
-  UNIFORM_LOCATION (float, ref_addend,     ref_addend);
-  UNIFORM_LOCATION (float, ref_divisor,    ref_divisor);
-
-  SCHRO_OPENGL_CHECK_ERROR
-
-  #undef UNIFORM_LOCATION_SAMPLER
+  schro_opengl_shader_resolve_uniform_locations (shader);
 
   if (GLEW_EXT_gpu_shader4) {
     if (strstr (code, "varying out uvec4 fragcolor_u8;")) {
@@ -257,8 +196,6 @@ schro_opengl_shader_new (const char* code, const char* name)
       glBindFragDataLocationEXT (shader->program, 0, "fragcolor_s16");
     }
   }
-
-  glUseProgramObjectARB (0);
 
   return shader;
 }
@@ -270,10 +207,9 @@ schro_opengl_shader_free (SchroOpenGLShader *shader)
 
   glDeleteObjectARB (shader->program);
 
+  schro_free (shader->uniforms);
   schro_free (shader);
 }
-
-#include "schroopenglshadercompiler.output"
 
 struct _SchroOpenGLShaderLibrary {
   SchroOpenGL *opengl;
@@ -294,18 +230,24 @@ schro_opengl_shader_library_new (SchroOpenGL *opengl)
   schro_opengl_canvas_check_flags ();
 
   for (i = 0; i < SCHRO_OPENGL_SHADER_COUNT; ++i) {
-    SCHRO_ASSERT (schro_opengl_shader_code_list[i].index == i);
+    SCHRO_ASSERT (_schro_opengl_shader_code_list[i].index == i);
 
     if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_U8_AS_UI8) &&
         (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_S16_AS_UI16) ||
         SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_S16_AS_U16))) {
       shader_library->shaders[i]
-          = schro_opengl_shader_new (schro_opengl_shader_code_list[i].code_integer,
-          schro_opengl_shader_code_list[i].name);
+          = schro_opengl_shader_new (_schro_opengl_shader_code_list[i].index,
+          _schro_opengl_shader_code_list[i].name,
+          _schro_opengl_shader_code_list[i].code_integer);
+
+      shader_library->shaders[i]->is_integer = TRUE;
     } else {
       shader_library->shaders[i]
-          = schro_opengl_shader_new (schro_opengl_shader_code_list[i].code,
-          schro_opengl_shader_code_list[i].name);
+          = schro_opengl_shader_new (_schro_opengl_shader_code_list[i].index,
+          _schro_opengl_shader_code_list[i].name,
+          _schro_opengl_shader_code_list[i].code);
+
+      shader_library->shaders[i]->is_integer = FALSE;
     }
   }
 

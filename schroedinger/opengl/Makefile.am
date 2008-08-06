@@ -11,10 +11,11 @@ libopengl_la_SOURCES = \
 	schroopenglframe_push.c \
 	schroopenglmotion.c \
 	schroopenglshader.c \
+	schroopenglshadercode.c \
 	schroopenglwavelet.c
 
 libopengl_la_CFLAGS = $(SCHRO_CFLAGS) $(LIBOIL_CFLAGS) $(OPENGL_CFLAGS) $(ERROR_CFLAGS) \
-	-DSCHRO_ENABLE_UNSTABLE_API -DSCHRO_OPENGL_UNBIND_TEXTURES=1 -DSCHRO_OPENGL_XLOCKDISPLAY=0
+	-DSCHRO_ENABLE_UNSTABLE_API -DSCHRO_OPENGL_UNBIND_TEXTURES=0 -DSCHRO_OPENGL_XLOCKDISPLAY=0
 
 libopengl_la_LIBADD = $(OPENGL_LIBS)
 

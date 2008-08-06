@@ -7,6 +7,7 @@
 #include <schroedinger/opengl/schroopenglcanvas.h>
 #include <schroedinger/opengl/schroopenglframe.h>
 #include <schroedinger/opengl/schroopenglshader.h>
+#include <schroedinger/opengl/schroopenglshadercode.h>
 #include <liboil/liboil.h>
 
 #define CONVERT_PROTOTYPE(_func) \
@@ -132,12 +133,13 @@ schro_opengl_frame_convert_with_shader (SchroFrame *dest, SchroFrame *src,
 
     schro_opengl_setup_viewport (width, height);
 
+    glUseProgramObjectARB (shader->program);
+
     glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, dest_canvas->framebuffer);
-    glBindTexture (GL_TEXTURE_RECTANGLE_ARB, src_canvas->texture);
+
+    schro_opengl_shader_bind_input (shader, src_canvas->texture);
 
     SCHRO_OPENGL_CHECK_ERROR
-
-    glUseProgramObjectARB (shader->program);
 
     schro_opengl_render_quad (0, 0, width, height);
 
@@ -156,7 +158,8 @@ schro_opengl_frame_convert_with_shader (SchroFrame *dest, SchroFrame *src,
 
 static void
 schro_opengl_frame_unpack_with_shader (SchroFrame *dest, SchroFrame *src,
-    int shader_y_index, int shader_u_index, int shader_v_index)
+    int shader_y_index, int shader_u_index, int shader_v_index,
+    void (*bind_texture)(SchroOpenGLShader *, GLenum texture))
 {
   int i;
   int width, height;
@@ -191,12 +194,13 @@ schro_opengl_frame_unpack_with_shader (SchroFrame *dest, SchroFrame *src,
 
     schro_opengl_setup_viewport (width, height);
 
+    glUseProgramObjectARB (shader->program);
+
     glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, dest_canvas->framebuffer);
-    glBindTexture (GL_TEXTURE_RECTANGLE_ARB, src_canvas->texture);
+
+    bind_texture (shader, src_canvas->texture);
 
     SCHRO_OPENGL_CHECK_ERROR
-
-    glUseProgramObjectARB (shader->program);
 
     schro_opengl_render_quad (0, 0, width, height);
 
@@ -215,7 +219,10 @@ schro_opengl_frame_unpack_with_shader (SchroFrame *dest, SchroFrame *src,
 
 static void
 schro_opengl_frame_pack_with_shader (SchroFrame *dest, SchroFrame *src,
-    int shader_index)
+    int shader_index,
+    void (*bind_y_texture)(SchroOpenGLShader *, GLenum texture),
+    void (*bind_u_texture)(SchroOpenGLShader *, GLenum texture),
+    void (*bind_v_texture)(SchroOpenGLShader *, GLenum texture))
 {
   int width, height;
   SchroOpenGLCanvas *dest_canvas = NULL;
@@ -253,19 +260,13 @@ schro_opengl_frame_pack_with_shader (SchroFrame *dest, SchroFrame *src,
 
   schro_opengl_setup_viewport (width, height);
 
-  glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, dest_canvas->framebuffer);
-
   glUseProgramObjectARB (shader->program);
 
-  glBindTexture (GL_TEXTURE_RECTANGLE_ARB, src_y_canvas->texture);
+  glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, dest_canvas->framebuffer);
 
-  glActiveTextureARB (GL_TEXTURE1_ARB);
-  glBindTexture (GL_TEXTURE_RECTANGLE_ARB, src_u_canvas->texture);
-
-  glActiveTextureARB (GL_TEXTURE2_ARB);
-  glBindTexture (GL_TEXTURE_RECTANGLE_ARB, src_v_canvas->texture);
-
-  glActiveTextureARB (GL_TEXTURE0_ARB);
+  bind_y_texture (shader, src_y_canvas->texture);
+  bind_u_texture (shader, src_u_canvas->texture);
+  bind_v_texture (shader, src_v_canvas->texture);
 
   SCHRO_OPENGL_CHECK_ERROR
 
@@ -321,7 +322,7 @@ schro_opengl_frame_convert_u8_422_yuyv (SchroFrame *dest, SchroFrame *src)
   schro_opengl_frame_unpack_with_shader (dest, src,
       SCHRO_OPENGL_SHADER_CONVERT_U8_Y4_YUYV,
       SCHRO_OPENGL_SHADER_CONVERT_U8_U2_YUYV,
-      SCHRO_OPENGL_SHADER_CONVERT_U8_V2_YUYV);
+      SCHRO_OPENGL_SHADER_CONVERT_U8_V2_YUYV, schro_opengl_shader_bind_yuyv);
 }
 
 static void
@@ -330,7 +331,7 @@ schro_opengl_frame_convert_u8_422_uyvy (SchroFrame *dest, SchroFrame *src)
   schro_opengl_frame_unpack_with_shader (dest, src,
       SCHRO_OPENGL_SHADER_CONVERT_U8_Y4_UYVY,
       SCHRO_OPENGL_SHADER_CONVERT_U8_U2_UYVY,
-      SCHRO_OPENGL_SHADER_CONVERT_U8_V2_UYVY);
+      SCHRO_OPENGL_SHADER_CONVERT_U8_V2_UYVY, schro_opengl_shader_bind_uyvy);
 }
 
 static void
@@ -339,27 +340,30 @@ schro_opengl_frame_convert_u8_444_ayuv (SchroFrame *dest, SchroFrame *src)
   schro_opengl_frame_unpack_with_shader (dest, src,
       SCHRO_OPENGL_SHADER_CONVERT_U8_Y4_AYUV,
       SCHRO_OPENGL_SHADER_CONVERT_U8_U4_AYUV,
-      SCHRO_OPENGL_SHADER_CONVERT_U8_V4_AYUV);
+      SCHRO_OPENGL_SHADER_CONVERT_U8_V4_AYUV, schro_opengl_shader_bind_ayuv);
 }
 
 static void
 schro_opengl_frame_convert_yuyv_u8_422 (SchroFrame *dest, SchroFrame *src)
 {
   schro_opengl_frame_pack_with_shader (dest, src,
-      SCHRO_OPENGL_SHADER_CONVERT_YUYV_U8_422);
+      SCHRO_OPENGL_SHADER_CONVERT_YUYV_U8_422, schro_opengl_shader_bind_y4,
+      schro_opengl_shader_bind_u2, schro_opengl_shader_bind_v2);
 }
 
 static void
 schro_opengl_frame_convert_uyvy_u8_422 (SchroFrame *dest, SchroFrame *src)
 {
   schro_opengl_frame_pack_with_shader (dest, src,
-      SCHRO_OPENGL_SHADER_CONVERT_UYVY_U8_422);
+      SCHRO_OPENGL_SHADER_CONVERT_UYVY_U8_422, schro_opengl_shader_bind_y4,
+      schro_opengl_shader_bind_u2, schro_opengl_shader_bind_v2);
 }
 
 static void
 schro_opengl_frame_convert_ayuv_u8_444 (SchroFrame *dest, SchroFrame *src)
 {
   schro_opengl_frame_pack_with_shader (dest, src,
-      SCHRO_OPENGL_SHADER_CONVERT_AYUV_U8_444);
+      SCHRO_OPENGL_SHADER_CONVERT_AYUV_U8_444, schro_opengl_shader_bind_y4,
+      schro_opengl_shader_bind_u4, schro_opengl_shader_bind_v4);
 }
 

@@ -731,7 +731,9 @@ main (int argc, char *argv[])
     /*opengl_test_upsample (SCHRO_FRAME_FORMAT_U8_444, 16, 16,
         OPENGL_CUSTOM_PATTERN_RANDOM);*/
 
-    for (i = 0; i < ARRAY_SIZE (opengl_test_motion_ref_list); ++i) {
+    opengl_test_motion_dc (8, 8, 4, 4);
+
+    /*for (i = 0; i < ARRAY_SIZE (opengl_test_motion_ref_list); ++i) {
       opengl_test_motion_ref (opengl_test_motion_ref_list[i].xblen,
           opengl_test_motion_ref_list[i].yblen,
           opengl_test_motion_ref_list[i].xbsep,
@@ -742,7 +744,7 @@ main (int argc, char *argv[])
           opengl_test_motion_ref_list[i].mv_precision,
           opengl_test_motion_ref_list[i].custom_pattern,
           opengl_test_motion_ref_list[i].ref);
-    }
+    }*/
 
     /*opengl_test_convert (SCHRO_FRAME_FORMAT_S16_444, SCHRO_FRAME_FORMAT_S16_444,
         16, 16, 16, 16, 1, OPENGL_CUSTOM_PATTERN_RANDOM);*/

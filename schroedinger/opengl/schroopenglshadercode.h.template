@@ -1,0 +1,33 @@
+
+#ifndef __SCHRO_OPENGL_SHADER_CODE_H__
+#define __SCHRO_OPENGL_SHADER_CODE_H__
+
+#include <schroedinger/schroutils.h>
+#include <schroedinger/opengl/schroopengltypes.h>
+#include <GL/glew.h>
+
+SCHRO_BEGIN_DECLS
+
+===== SHADER INDEX DEFINES =====
+
+struct _SchroOpenGLShaderCode {
+  int index;
+  const char *name;
+  const char *code;
+  const char *code_integer;
+};
+
+extern SchroOpenGLShaderCode _schro_opengl_shader_code_list[];
+
+struct _SchroOpenGLUniforms {
+===== UNIFORM VARIABLES =====
+};
+
+void schro_opengl_shader_resolve_uniform_locations (SchroOpenGLShader* shader);
+
+===== UNIFORM BIND SIGNATURES =====
+
+SCHRO_END_DECLS
+
+#endif
+

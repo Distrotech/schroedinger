@@ -7,6 +7,7 @@
 #include <schroedinger/opengl/schroopenglcanvas.h>
 #include <schroedinger/opengl/schroopenglframe.h>
 #include <schroedinger/opengl/schroopenglshader.h>
+#include <schroedinger/opengl/schroopenglshadercode.h>
 #include <liboil/liboil.h>
 
 typedef void (*SchroOpenGLFrameBinaryFunc) (SchroFrame *dest, SchroFrame *src);
@@ -163,14 +164,15 @@ schro_opengl_frame_combine_with_shader (SchroFrame *dest, SchroFrame *src,
 
     glBindFramebufferEXT (GL_FRAMEBUFFER_EXT,
         dest_canvas->secondary->framebuffer);
-    glBindTexture (GL_TEXTURE_RECTANGLE_ARB, dest_canvas->texture);
 
     switch (SCHRO_FRAME_FORMAT_DEPTH (dest_canvas->format)) {
       case SCHRO_FRAME_FORMAT_DEPTH_U8:
         glUseProgramObjectARB (shader_copy_u8->program);
+        schro_opengl_shader_bind_input (shader_copy_u8, dest_canvas->texture);
         break;
       case SCHRO_FRAME_FORMAT_DEPTH_S16:
         glUseProgramObjectARB (shader_copy_s16->program);
+        schro_opengl_shader_bind_input (shader_copy_s16, dest_canvas->texture);
         break;
       default:
         SCHRO_ASSERT (0);
@@ -183,16 +185,13 @@ schro_opengl_frame_combine_with_shader (SchroFrame *dest, SchroFrame *src,
 
     glFlush ();
 
-    glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, dest_canvas->framebuffer);
-
     glUseProgramObjectARB (shader_combine->program);
 
-    glBindTexture (GL_TEXTURE_RECTANGLE_ARB, dest_canvas->secondary->texture);
+    glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, dest_canvas->framebuffer);
 
-    glActiveTextureARB (GL_TEXTURE1_ARB);
-    glBindTexture (GL_TEXTURE_RECTANGLE_ARB, src_canvas->texture);
-
-    glActiveTextureARB (GL_TEXTURE0_ARB);
+    schro_opengl_shader_bind_input1 (shader_combine,
+        dest_canvas->secondary->texture);
+    schro_opengl_shader_bind_input2 (shader_combine, src_canvas->texture);
 
     schro_opengl_render_quad (0, 0, width, height);
 

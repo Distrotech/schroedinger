@@ -12,6 +12,8 @@ typedef struct _SchroOpenGL SchroOpenGL;
 #endif
 
 typedef struct _SchroOpenGLShader SchroOpenGLShader;
+typedef struct _SchroOpenGLShaderCode SchroOpenGLShaderCode;
+typedef struct _SchroOpenGLUniforms SchroOpenGLUniforms;
 typedef struct _SchroOpenGLShaderLibrary SchroOpenGLShaderLibrary;
 
 typedef struct _SchroOpenGLPixelbuffer SchroOpenGLPixelbuffer;

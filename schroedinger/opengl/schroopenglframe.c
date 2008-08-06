@@ -7,6 +7,7 @@
 #include <schroedinger/opengl/schroopenglcanvas.h>
 #include <schroedinger/opengl/schroopenglframe.h>
 #include <schroedinger/opengl/schroopenglshader.h>
+#include <schroedinger/opengl/schroopenglshadercode.h>
 #include <schroedinger/opengl/schroopenglwavelet.h>
 #include <stdio.h>
 
@@ -283,21 +284,21 @@ schro_opengl_upsampled_frame_render_quad (SchroOpenGLShader *shader, int x,
 
   #define UNIFORM(_number, _operation, __x, __y) \
       do { \
-        if (shader->_number##_##_operation != -1) { \
-          glUniform2fARB (shader->_number##_##_operation, \
+        if (shader->uniforms->_number##_##_operation != -1) { \
+          schro_opengl_shader_bind_##_number##_##_operation (shader, \
               __x < _number##_x ? __x : _number##_x, \
               __y < _number##_y ? __y : _number##_y); \
         } \
       } while (0)
 
-  UNIFORM (four, decrease, x, y);
+  //UNIFORM (four,  decrease, x, y);
   UNIFORM (three, decrease, x, y);
-  UNIFORM (two, decrease, x, y);
-  UNIFORM (one, decrease, x, y);
-  UNIFORM (one, increase, x_inverse, y_inverse);
-  UNIFORM (two, increase, x_inverse, y_inverse);
+  UNIFORM (two,   decrease, x, y);
+  UNIFORM (one,   decrease, x, y);
+  UNIFORM (one,   increase, x_inverse, y_inverse);
+  UNIFORM (two,   increase, x_inverse, y_inverse);
   UNIFORM (three, increase, x_inverse, y_inverse);
-  UNIFORM (four, increase, x_inverse, y_inverse);
+  UNIFORM (four,  increase, x_inverse, y_inverse);
 
   #undef UNIFORM
 
@@ -375,7 +376,8 @@ schro_opengl_upsampled_frame_upsample (SchroUpsampledFrame *upsampled_frame)
 
     /* horizontal filter 0 -> 1 */
     glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, canvases[1]->framebuffer);
-    glBindTexture (GL_TEXTURE_RECTANGLE_ARB, canvases[0]->texture);
+
+    schro_opengl_shader_bind_input (shader, canvases[0]->texture);
 
     SCHRO_OPENGL_CHECK_ERROR
 
@@ -413,7 +415,8 @@ schro_opengl_upsampled_frame_upsample (SchroUpsampledFrame *upsampled_frame)
 
     /* vertical filter 0 -> 2 */
     glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, canvases[2]->framebuffer);
-    glBindTexture (GL_TEXTURE_RECTANGLE_ARB, canvases[0]->texture);
+
+    schro_opengl_shader_bind_input (shader, canvases[0]->texture);
 
     SCHRO_OPENGL_CHECK_ERROR
 
@@ -451,7 +454,8 @@ schro_opengl_upsampled_frame_upsample (SchroUpsampledFrame *upsampled_frame)
 
     /* horizontal filter 2 -> 3 */
     glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, canvases[3]->framebuffer);
-    glBindTexture (GL_TEXTURE_RECTANGLE_ARB, canvases[2]->texture);
+
+    schro_opengl_shader_bind_input (shader, canvases[2]->texture);
 
     SCHRO_OPENGL_CHECK_ERROR
 

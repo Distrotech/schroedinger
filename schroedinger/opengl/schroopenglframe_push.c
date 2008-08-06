@@ -7,6 +7,7 @@
 #include <schroedinger/opengl/schroopenglcanvas.h>
 #include <schroedinger/opengl/schroopenglframe.h>
 #include <schroedinger/opengl/schroopenglshader.h>
+#include <schroedinger/opengl/schroopenglshadercode.h>
 #include <liboil/liboil.h>
 
 static void
@@ -169,6 +170,7 @@ schro_opengl_canvas_push (SchroOpenGLCanvas *dest, SchroFrameData *src)
   GLuint src_texture = 0; // FIXME: don't create a new locale texture here
                           // but use a single global texture for such temporary
                           // purpose
+  GLint texture;
   void *mapped_data = NULL;
   void *tmp_data = NULL;
   SchroOpenGLShader *shader;
@@ -312,6 +314,8 @@ schro_opengl_canvas_push (SchroOpenGLCanvas *dest, SchroFrameData *src)
           dest->pixel_format, dest->push_type, tmp_data);
     }
 
+    SCHRO_OPENGL_CHECK_ERROR
+
     if (dest->push_type == GL_SHORT) {
       glPixelTransferf (GL_RED_SCALE, 1);
       glPixelTransferf (GL_RED_BIAS, 0);
@@ -343,6 +347,10 @@ schro_opengl_canvas_push (SchroOpenGLCanvas *dest, SchroFrameData *src)
       }
 
       glUseProgramObjectARB (shader->program);
+
+      glGetIntegerv (GL_TEXTURE_BINDING_RECTANGLE_ARB, &texture);
+
+      schro_opengl_shader_bind_input (shader, texture);
     }
 
     schro_opengl_render_quad (0, 0, width, height);

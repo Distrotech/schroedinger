@@ -12,12 +12,12 @@ unsigned int _schro_opengl_canvas_flags
     //| SCHRO_OPENGL_CANVAS_STORE_BGRA /* FIXME: currently broken with packed formats in convert */
     | SCHRO_OPENGL_CANVAS_STORE_U8_AS_UI8
     //| SCHRO_OPENGL_CANVAS_STORE_U8_AS_F16 /* FIXME: currently broken in shader */
-    //| SCHRO_OPENGL_CANVAS_STORE_U8_AS_F32 /* FIXME: currently broken in shader */
+    //| SCHRO_OPENGL_CANVAS_STORE_U8_AS_F32
     | SCHRO_OPENGL_CANVAS_STORE_S16_AS_UI16
     //| SCHRO_OPENGL_CANVAS_STORE_S16_AS_I16 /* FIXME: doesn't yield a useable mapping in shader */
     //| SCHRO_OPENGL_CANVAS_STORE_S16_AS_U16
     //| SCHRO_OPENGL_CANVAS_STORE_S16_AS_F16 /* FIXME: currently broken in shader */
-    //| SCHRO_OPENGL_CANVAS_STORE_S16_AS_F32 /* FIXME: currently broken in shader */
+    //| SCHRO_OPENGL_CANVAS_STORE_S16_AS_F32
 
     //| SCHRO_OPENGL_CANVAS_PUSH_RENDER_QUAD
     //| SCHRO_OPENGL_CANVAS_PUSH_SHADER
@@ -236,6 +236,21 @@ schro_opengl_canvas_check_flags (void)
     SCHRO_OPENGL_CANVAS_CLEAR_FLAG (PUSH_S16_AS_U16);
   }
 
+  if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_U8_AS_UI8) &&
+      SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PUSH_U8_AS_F32)) {
+    SCHRO_ERROR ("can't push U8 and F32 and store U8 as UI8, disabling F32 "
+        "push");
+    SCHRO_OPENGL_CANVAS_CLEAR_FLAG (PUSH_U8_AS_F32);
+  }
+
+  if ((SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_S16_AS_UI16) ||
+      SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_S16_AS_I16)) &&
+      SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PUSH_S16_AS_F32)) {
+    SCHRO_ERROR ("can't push S16 and F32 and store S16 as UI16/I16, "
+        "disabling F32 push");
+    SCHRO_OPENGL_CANVAS_CLEAR_FLAG (PUSH_S16_AS_F32);
+  }
+
   /* pull */
   if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PULL_PIXELBUFFER) &&
       (!GLEW_ARB_vertex_buffer_object || !GLEW_ARB_pixel_buffer_object)) {
@@ -248,6 +263,27 @@ schro_opengl_canvas_check_flags (void)
       SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PULL_S16_AS_F32)) {
     SCHRO_ERROR ("can't pull S16 as U16 and F32, disabling U16 pull");
     SCHRO_OPENGL_CANVAS_CLEAR_FLAG (PULL_S16_AS_U16);
+  }
+
+  if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_U8_AS_UI8) &&
+      SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PULL_U8_AS_F32)) {
+    SCHRO_ERROR ("can't pull U8 and F32 and store U8 as UI8, disabling F32 "
+        "pull");
+    SCHRO_OPENGL_CANVAS_CLEAR_FLAG (PULL_U8_AS_F32);
+  }
+
+  if ((SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_S16_AS_UI16) ||
+      SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_S16_AS_I16)) &&
+      SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PULL_S16_AS_F32)) {
+    SCHRO_ERROR ("can't pull S16 and F32 and store S16 as UI16/I16, "
+        "disabling F32 pull");
+    SCHRO_OPENGL_CANVAS_CLEAR_FLAG (PULL_S16_AS_F32);
+  }
+
+  if (!SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PULL_S16_AS_U16) &&
+      !SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PULL_S16_AS_F32)) {
+    SCHRO_ERROR ("can't pull S16 and S16, enabling U16 pull");
+    SCHRO_OPENGL_CANVAS_SET_FLAG (PULL_S16_AS_U16);
   }
 }
 

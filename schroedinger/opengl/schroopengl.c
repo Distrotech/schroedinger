@@ -415,6 +415,7 @@ schro_opengl_unlock_context (SchroOpenGL *opengl)
   GLint texture;
 #endif
   GLint framebuffer;
+  GLint active_texture_unit;
 
   SCHRO_ASSERT (opengl->display != NULL);
   SCHRO_ASSERT (opengl->context_lock_count > 0);
@@ -425,6 +426,10 @@ schro_opengl_unlock_context (SchroOpenGL *opengl)
 
   if (opengl->context_lock_count == 0) {
     if (opengl->is_initialized) {
+      glGetIntegerv (GL_ACTIVE_TEXTURE_ARB, &active_texture_unit);
+
+      SCHRO_ASSERT (active_texture_unit == GL_TEXTURE0_ARB);
+
 #if SCHRO_OPENGL_UNBIND_TEXTURES
       for (i = 0; i < SCHRO_OPENGL_REQUIRED_TEXTURE_UNITS; ++i) {
         glActiveTextureARB (GL_TEXTURE0_ARB + i);

@@ -1,3 +1,11 @@
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+#include <schroedinger/schrodebug.h>
+#include <schroedinger/opengl/schroopenglshader.h>
+#include <schroedinger/opengl/schroopenglshadercode.h>
+
 #define SHADER_HEADER \
     "#version 110\n" \
     "#extension GL_ARB_draw_buffers : require\n" \
@@ -10,63 +18,59 @@
     "#extension GL_EXT_gpu_shader4 : require\n" \
     "#define uint unsigned int\n"
 
-
-
-#define SHADER_READ_U8(_texture, _postfix) \
-    "uniform sampler2DRect "_texture";\n" \
-    "float read"_postfix"_u8 (vec2 coordinate) {\n" \
-    "  float fp = texture2DRect ("_texture", coordinate).r;\n" \
+#define SHADER_READ_U8(_name) \
+    "uniform sampler2DRect "_name";\n" \
+    "float read_"_name"_u8 (vec2 coordinate) {\n" \
+    "  float fp = texture2DRect ("_name", coordinate).r;\n" \
     /* scale from FP range [0..1] to U8 [0..255] range and apply proper
        rounding */ \
     "  return floor (fp * 255.0 + 0.5);\n" \
     "}\n"
 
-#define SHADER_READ_U8_INTEGER(_texture, _postfix) \
-    "uniform usampler2DRect "_texture";\n" \
-    "uint read"_postfix"_u8 (vec2 coordinate) {\n" \
-    "  return texture2DRect ("_texture", coordinate).a;\n" \
+#define SHADER_READ_U8_INTEGER(_name) \
+    "uniform usampler2DRect "_name";\n" \
+    "uint read_"_name"_u8 (vec2 coordinate) {\n" \
+    "  return texture2DRect ("_name", coordinate).a;\n" \
     "}\n"
 
-#define SHADER_READ_U8_RAW(_texture, _postfix) \
-    "uniform sampler2DRect "_texture";\n" \
-    "float read"_postfix"_u8_raw (vec2 coordinate) {\n" \
-    "  return texture2DRect ("_texture", coordinate).r;\n" \
+#define SHADER_READ_U8_RAW(_name) \
+    "uniform sampler2DRect "_name";\n" \
+    "float read_"_name"_u8_raw (vec2 coordinate) {\n" \
+    "  return texture2DRect ("_name", coordinate).r;\n" \
     "}\n"
 
-#define SHADER_READ_U8_RAW_INTEGER(_texture, _postfix) \
-    "uniform usampler2DRect "_texture";\n" \
-    "uint read"_postfix"_u8_raw (vec2 coordinate) {\n" \
-    "  return texture2DRect ("_texture", coordinate).a;\n" \
+#define SHADER_READ_U8_RAW_INTEGER(_name) \
+    "uniform usampler2DRect "_name";\n" \
+    "uint read_"_name"_u8_raw (vec2 coordinate) {\n" \
+    "  return texture2DRect ("_name", coordinate).a;\n" \
     "}\n"
 
-#define SHADER_READ_VEC4_U8(_texture, _postfix) \
-    "uniform sampler2DRect "_texture";\n" \
-    "vec4 read"_postfix"_vec4_u8 (vec2 coordinate) {\n" \
-    "  vec4 fp = texture2DRect ("_texture", coordinate);\n" \
+#define SHADER_READ_VEC4_U8(_name) \
+    "uniform sampler2DRect "_name";\n" \
+    "vec4 read_"_name"_vec4_u8 (vec2 coordinate) {\n" \
+    "  vec4 fp = texture2DRect ("_name", coordinate);\n" \
     /* scale from FP range [0..1] to U8 range [0..255] and apply proper
        rounding */ \
     "  return floor (fp * 255.0 + vec4 (0.5));\n" \
     "}\n"
 
-#define SHADER_READ_VEC4_U8_INTEGER(_texture, _postfix) \
-    "uniform usampler2DRect "_texture";\n" \
-    "uvec4 read"_postfix"_vec4_u8 (vec2 coordinate) {\n" \
-    "  return texture2DRect ("_texture", coordinate);\n" \
+#define SHADER_READ_VEC4_U8_INTEGER(_name) \
+    "uniform usampler2DRect "_name";\n" \
+    "uvec4 read_"_name"_vec4_u8 (vec2 coordinate) {\n" \
+    "  return texture2DRect ("_name", coordinate);\n" \
     "}\n"
 
-#define SHADER_READ_VEC4_U8_RAW(_texture, _postfix) \
-    "uniform sampler2DRect "_texture";\n" \
-    "vec4 read"_postfix"_vec4_u8_raw (vec2 coordinate) {\n" \
-    "  return texture2DRect ("_texture", coordinate);\n" \
+#define SHADER_READ_VEC4_U8_RAW(_name) \
+    "uniform sampler2DRect "_name";\n" \
+    "vec4 read_"_name"_vec4_u8_raw (vec2 coordinate) {\n" \
+    "  return texture2DRect ("_name", coordinate);\n" \
     "}\n"
 
-#define SHADER_READ_VEC4_U8_RAW_INTEGER(_texture, _postfix) \
-    "uniform usampler2DRect "_texture";\n" \
-    "uvec4 read"_postfix"_vec4_u8_raw (vec2 coordinate) {\n" \
-    "  return texture2DRect ("_texture", coordinate);\n" \
+#define SHADER_READ_VEC4_U8_RAW_INTEGER(_name) \
+    "uniform usampler2DRect "_name";\n" \
+    "uvec4 read_"_name"_vec4_u8_raw (vec2 coordinate) {\n" \
+    "  return texture2DRect ("_name", coordinate);\n" \
     "}\n"
-
-
 
 #define SHADER_WRITE_U8 \
     "void write_u8 (float u8) {\n" \
@@ -114,63 +118,59 @@
     "  fragcolor_u8 = u8;\n" \
     "}\n"
 
-
-
-#define SHADER_READ_S16(_texture, _postfix) \
-    "uniform sampler2DRect "_texture";\n" \
-    "float read"_postfix"_s16 (vec2 coordinate) {\n" \
-    "  float fp = texture2DRect ("_texture", coordinate).r;\n" \
+#define SHADER_READ_S16(_name) \
+    "uniform sampler2DRect "_name";\n" \
+    "float read_"_name"_s16 (vec2 coordinate) {\n" \
+    "  float fp = texture2DRect ("_name", coordinate).r;\n" \
     /* scale and bias from FP range [0..1] to S16 range [-32768..32767] */ \
     "  return floor (fp * 65535.0 + 0.5) - 32768.0;\n" \
     "}\n"
 
-#define SHADER_READ_S16_INTEGER(_texture, _postfix) \
-    "uniform isampler2DRect "_texture";\n" \
-    "int read"_postfix"_s16 (vec2 coordinate) {\n" \
+#define SHADER_READ_S16_INTEGER(_name) \
+    "uniform isampler2DRect "_name";\n" \
+    "int read_"_name"_s16 (vec2 coordinate) {\n" \
     /* bias from U16 range [0..65535] to S16 range [-32768..32767] */ \
-    "  return texture2DRect ("_texture", coordinate).a - 32768;\n" \
+    "  return texture2DRect ("_name", coordinate).a - 32768;\n" \
     "}\n"
 
-#define SHADER_READ_S16_RAW(_texture, _postfix) \
-    "uniform sampler2DRect "_texture";\n" \
-    "float read"_postfix"_s16_raw (vec2 coordinate) {\n" \
-    "  return texture2DRect ("_texture", coordinate).r;\n" \
+#define SHADER_READ_S16_RAW(_name) \
+    "uniform sampler2DRect "_name";\n" \
+    "float read_"_name"_s16_raw (vec2 coordinate) {\n" \
+    "  return texture2DRect ("_name", coordinate).r;\n" \
     "}\n"
 
-#define SHADER_READ_S16_RAW_INTEGER(_texture, _postfix) \
-    "uniform isampler2DRect "_texture";\n" \
-    "int read"_postfix"_s16_raw (vec2 coordinate) {\n" \
-    "  return texture2DRect ("_texture", coordinate).a;\n" \
+#define SHADER_READ_S16_RAW_INTEGER(_name) \
+    "uniform isampler2DRect "_name";\n" \
+    "int read_"_name"_s16_raw (vec2 coordinate) {\n" \
+    "  return texture2DRect ("_name", coordinate).a;\n" \
     "}\n"
 
-#define SHADER_READ_VEC4_S16(_texture, _postfix) \
-    "uniform sampler2DRect "_texture";\n" \
-    "vec4 read"_postfix"_vec4_s16 (vec2 coordinate) {\n" \
-    "  vec4 fp = texture2DRect ("_texture", coordinate);\n" \
+#define SHADER_READ_VEC4_S16(_name) \
+    "uniform sampler2DRect "_name";\n" \
+    "vec4 read_"_name"_vec4_s16 (vec2 coordinate) {\n" \
+    "  vec4 fp = texture2DRect ("_name", coordinate);\n" \
     /* scale and bias from FP range [0..1] to S16 range [-32768..32767] */ \
     "  return floor (fp * 65535.0 + vec4 (0.5)) - vec4 (32768.0);\n" \
     "}\n"
 
-#define SHADER_READ_VEC4_S16_INTEGER(_texture, _postfix) \
-    "uniform isampler2DRect "_texture";\n" \
-    "ivec4 read"_postfix"_vec4_s16 (vec2 coordinate) {\n" \
+#define SHADER_READ_VEC4_S16_INTEGER(_name) \
+    "uniform isampler2DRect "_name";\n" \
+    "ivec4 read_"_name"_vec4_s16 (vec2 coordinate) {\n" \
     /* bias from U16 range [0..65535] to S16 range [-32768..32767] */ \
-    "  return texture2DRect ("_texture", coordinate) - vec4 (32768.0);\n" \
+    "  return texture2DRect ("_name", coordinate) - vec4 (32768.0);\n" \
     "}\n"
 
-#define SHADER_READ_VEC4_S16_RAW(_texture, _postfix) \
-    "uniform sampler2DRect "_texture";\n" \
-    "vec4 read"_postfix"_vec4_s16_raw (vec2 coordinate) {\n" \
-    "  return texture2DRect ("_texture", coordinate);\n" \
+#define SHADER_READ_VEC4_S16_RAW(_name) \
+    "uniform sampler2DRect "_name";\n" \
+    "vec4 read_"_name"_vec4_s16_raw (vec2 coordinate) {\n" \
+    "  return texture2DRect ("_name", coordinate);\n" \
     "}\n"
 
-#define SHADER_READ_VEC4_S16_RAW_INTEGER(_texture, _postfix) \
-    "uniform isampler2DRect "_texture";\n" \
-    "ivec4 read"_postfix"_vec4_s16_raw (vec2 coordinate) {\n" \
-    "  return texture2DRect ("_texture", coordinate);\n" \
+#define SHADER_READ_VEC4_S16_RAW_INTEGER(_name) \
+    "uniform isampler2DRect "_name";\n" \
+    "ivec4 read_"_name"_vec4_s16_raw (vec2 coordinate) {\n" \
+    "  return texture2DRect ("_name", coordinate);\n" \
     "}\n"
-
-
 
 #define SHADER_WRITE_S16 \
     "void write_s16 (float s16) {\n" \
@@ -220,35 +220,31 @@
     "  fragcolor_s16 = s16;\n" \
     "}\n"
 
-
-
-#define SHADER_COPY_U8(_texture, _postfix) \
-    "uniform sampler2DRect "_texture";\n" \
-    "void copy"_postfix"_u8 (vec2 coordinate) {\n" \
-    "  gl_FragColor = texture2DRect ("_texture", coordinate);\n" \
+#define SHADER_COPY_U8(_name) \
+    "uniform sampler2DRect "_name";\n" \
+    "void copy_"_name"_u8 (vec2 coordinate) {\n" \
+    "  gl_FragColor = texture2DRect ("_name", coordinate);\n" \
     "}\n"
 
-#define SHADER_COPY_U8_INTEGER(_texture, _postfix) \
-    "uniform usampler2DRect "_texture";\n" \
+#define SHADER_COPY_U8_INTEGER(_name) \
+    "uniform usampler2DRect "_name";\n" \
     "varying out uvec4 fragcolor_u8;\n" \
-    "void copy"_postfix"_u8 (vec2 coordinate) {\n" \
-    "  fragcolor_u8 = texture2DRect ("_texture", coordinate);\n" \
+    "void copy_"_name"_u8 (vec2 coordinate) {\n" \
+    "  fragcolor_u8 = texture2DRect ("_name", coordinate);\n" \
     "}\n"
 
-#define SHADER_COPY_S16(_texture, _postfix) \
-    "uniform sampler2DRect "_texture";\n" \
-    "void copy"_postfix"_s16 (vec2 coordinate) {\n" \
-    "  gl_FragColor = texture2DRect ("_texture", coordinate);\n" \
+#define SHADER_COPY_S16(_name) \
+    "uniform sampler2DRect "_name";\n" \
+    "void copy_"_name"_s16 (vec2 coordinate) {\n" \
+    "  gl_FragColor = texture2DRect ("_name", coordinate);\n" \
     "}\n"
 
-#define SHADER_COPY_S16_INTEGER(_texture, _postfix) \
-    "uniform isampler2DRect "_texture";\n" \
+#define SHADER_COPY_S16_INTEGER(_name) \
+    "uniform isampler2DRect "_name";\n" \
     "varying out ivec4 fragcolor_s16;\n" \
-    "void copy"_postfix"_s16 (vec2 coordinate) {\n" \
-    "  fragcolor_s16 = texture2DRect ("_texture", coordinate);\n" \
+    "void copy_"_name"_s16 (vec2 coordinate) {\n" \
+    "  fragcolor_s16 = texture2DRect ("_name", coordinate);\n" \
     "}\n"
-
-
 
 #define SHADER_CAST_S16_U8 \
     "float cast_s16_u8 (float u8) {\n" \
@@ -269,8 +265,6 @@
     "uint cast_u8_s16 (int s16) {\n" \
     "  return uint (clamp (s16, 0, 255));\n" \
     "}\n"
-
-
 
 #define SHADER_CONVERT_RAW_U8 \
     "float convert_raw_u8 (float u8) {\n" \
@@ -295,8 +289,6 @@
     "  return s16 + 32768;\n" \
     "}\n"
 
-
-
 #define SHADER_DIVIDE_S16 \
     "float divide_s16 (float value, float divisor) {\n" \
     "  return floor (value / divisor);\n" \
@@ -320,8 +312,6 @@
 
 #endif
 
-
-
 #define SHADER_CROSSFOOT_S16 \
     "float crossfoot_s16 (vec4 value) {\n" \
     "  return value.r + value.g + value.b + value.a;\n" \
@@ -332,26 +322,21 @@
     "  return value.r + value.g + value.b + value.a;\n" \
     "}\n"
 
-
-
 #define SHADER_REF_WEIGHTING_S16 \
-    "uniform float ref_weight1;\n" /* ref1_weight + ref2_weight */ \
+    "uniform float ref_weight;\n" /* ref1_weight + ref2_weight */ \
     "uniform float ref_addend;\n" /* 1 << (ref_weight_precision - 1) */ \
     "uniform float ref_divisor;\n" /* 1 << ref_weight_precision */ \
     "float ref_weighting_s16 (float value) {\n" \
-    "  return divide_s16 (value * ref_weight1 + ref_addend, ref_divisor);\n" \
+    "  return divide_s16 (value * ref_weight + ref_addend, ref_divisor);\n" \
     "}\n"
 
 #define SHADER_REF_WEIGHTING_S16_INTEGER \
-    "uniform float ref_weight1;\n" /* ref1_weight + ref2_weight */ /* FIXME: bind as int */ \
-    "uniform float ref_addend;\n" /* 1 << (ref_weight_precision - 1) */ /* FIXME: bind as int */ \
-    "uniform float ref_divisor;\n" /* 1 << ref_weight_precision */ /* FIXME: bind as int */ \
+    "uniform int ref_weight;\n" /* ref1_weight + ref2_weight */ \
+    "uniform int ref_addend;\n" /* 1 << (ref_weight_precision - 1) */ \
+    "uniform int ref_divisor;\n" /* 1 << ref_weight_precision */ \
     "int ref_weighting_s16 (int value) {\n" \
-    "  return divide_s16 (value * int (ref_weight1) + int (ref_addend),\n" \
-    "      int (ref_divisor));\n" \
+    "  return divide_s16 (value * ref_weight + ref_addend, ref_divisor);\n" \
     "}\n"
-
-
 
 #define SHADER_BIREF_WEIGHTING_S16 \
     "uniform float ref_weight1;\n" /* ref1_weight  */ \
@@ -364,22 +349,32 @@
     "}\n"
 
 #define SHADER_BIREF_WEIGHTING_S16_INTEGER \
-    "uniform float ref_weight1;\n" /* ref1_weight */ /* FIXME: bind as int */ \
-    "uniform float ref_weight2;\n" /* ref2_weight */ /* FIXME: bind as int */ \
-    "uniform float ref_addend;\n" /* 1 << (ref_weight_precision - 1) */ /* FIXME: bind as int */ \
-    "uniform float ref_divisor;\n" /* 1 << ref_weight_precision */ /* FIXME: bind as int */ \
+    "uniform int ref_weight1;\n" /* ref1_weight */ \
+    "uniform int ref_weight2;\n" /* ref2_weight */ \
+    "uniform int ref_addend;\n" /* 1 << (ref_weight_precision - 1) */ \
+    "uniform int ref_divisor;\n" /* 1 << ref_weight_precision */ \
     "int biref_weighting_s16 (int value1, int value2) {\n" \
-    "  return divide_s16 (value1 * int (ref_weight1)\n" \
-    "      + value2 * int (ref_weight2) + int (ref_addend),\n" \
-    "      int (ref_divisor));\n" \
+    "  return divide_s16 (value1 * ref_weight1 + value2 * ref_weight2\n" \
+    "      + ref_addend, ref_divisor);\n" \
     "}\n"
 
+SchroOpenGLShaderCode _schro_opengl_shader_code_list[] = {
+===== SHADER CODE =====
 
-
-struct ShaderCode {
-  int index;
-  const char *name;
-  const char *code;
-  const char *code_integer;
+  { -1, NULL }
 };
+
+void
+schro_opengl_shader_resolve_uniform_locations (SchroOpenGLShader* shader)
+{
+  #define GET_UNIFORM_LOCATION(_name) \
+      shader->uniforms->_name \
+          = glGetUniformLocationARB (shader->program, #_name)
+
+===== UNIFORM RESOLVERS =====
+
+  #undef GET_UNIFORM_LOCATION
+}
+
+===== UNIFORM BIND FUNCTIONS =====
 
