@@ -252,9 +252,6 @@ schro_picture_new (SchroDecoder *decoder)
   } else if (decoder->use_opengl) {
     picture->transform_frame = schro_frame_new_and_alloc (decoder->cpu_domain,
         frame_format, iwt_width, iwt_height);
-    picture->planar_output_frame = schro_frame_new_and_alloc (decoder->cpu_domain,
-        schro_params_get_frame_format (8, video_format->chroma_format),
-        video_format->width, video_format->height);
   } else {
     picture->mc_tmp_frame = schro_frame_new_and_alloc (decoder->cpu_domain,
         frame_format, picture_width, picture_height);
@@ -303,7 +300,6 @@ schro_picture_unref (SchroPicture *picture)
     if (picture->transform_frame) schro_frame_unref (picture->transform_frame);
     if (picture->frame) schro_frame_unref (picture->frame);
     if (picture->mc_tmp_frame) schro_frame_unref (picture->mc_tmp_frame);
-    if (picture->planar_output_frame) schro_frame_unref (picture->planar_output_frame);
     if (picture->output_picture) schro_frame_unref (picture->output_picture);
     if (picture->tmpbuf) schro_free (picture->tmpbuf);
     if (picture->motion) schro_motion_free (picture->motion);
@@ -1296,18 +1292,16 @@ schro_decoder_x_combine (SchroPicture *picture)
 #endif
     } else if (picture->decoder->use_opengl) {
 #ifdef HAVE_OPENGL
-      SchroFrame *opengl_frame;
+      SchroFrame *opengl_planar_frame;
 
-      opengl_frame = schro_opengl_frame_new (decoder->opengl,
-          decoder->opengl_domain, picture->planar_output_frame->format,
-          picture->planar_output_frame->width,
-          picture->planar_output_frame->height);
+      opengl_planar_frame = schro_opengl_frame_new (decoder->opengl,
+          decoder->opengl_domain, planar_output_frame->format,
+          planar_output_frame->width, planar_output_frame->height);
 
-      schro_opengl_frame_convert (opengl_frame, output_frame);
-      schro_opengl_frame_pull (picture->planar_output_frame, opengl_frame);
-      schro_frame_unref (opengl_frame);
-      schro_frame_convert (picture->output_picture,
-          picture->planar_output_frame);
+      schro_opengl_frame_convert (opengl_planar_frame, output_frame);
+      schro_opengl_frame_pull (planar_output_frame, opengl_planar_frame);
+      schro_frame_unref (opengl_planar_frame);
+      schro_frame_convert (picture->output_picture, planar_output_frame);
 #else
       SCHRO_ASSERT(0);
 #endif
@@ -1330,16 +1324,15 @@ schro_decoder_x_combine (SchroPicture *picture)
 #endif
     } else if (picture->decoder->use_opengl) {
 #ifdef HAVE_OPENGL
-      SchroFrame *opengl_frame;
+      SchroFrame *opengl_output_frame;
 
-      opengl_frame = schro_opengl_frame_new (decoder->opengl,
+      opengl_output_frame = schro_opengl_frame_new (decoder->opengl,
           decoder->opengl_domain, picture->output_picture->format,
           picture->output_picture->width, picture->output_picture->height);
 
-      schro_opengl_frame_convert (opengl_frame, output_frame);
-      schro_opengl_frame_pull (picture->output_picture, opengl_frame);
-
-      schro_frame_unref (opengl_frame);
+      schro_opengl_frame_convert (opengl_output_frame, output_frame);
+      schro_opengl_frame_pull (picture->output_picture, opengl_output_frame);
+      schro_frame_unref (opengl_output_frame);
 #else
       SCHRO_ASSERT(0);
 #endif

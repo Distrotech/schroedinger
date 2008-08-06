@@ -102,7 +102,6 @@ struct _SchroPicture {
   SchroPictureNumber retired_picture_number;
   SchroPicture *ref0;
   SchroPicture *ref1;
-  SchroFrame *planar_output_frame;
 
   int is_ref;
 
