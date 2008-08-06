@@ -323,7 +323,7 @@ opengl_custom_pattern_generate (SchroFrame *cpu_frame,
           pattern_index % _generators);
 
       schro_frame_convert (cpu_frame, cpu_frame_u8);
-  
+
       schro_frame_unref (cpu_frame_u8);
       break;
     case OPENGL_CUSTOM_PATTERN_RANDOM:

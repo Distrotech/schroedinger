@@ -309,7 +309,7 @@ shader iiwt_s16_filter_deslauriers_dubuc_9_7_hp: ###############################
     XY gl_TexCoord[0].xy
 
   uniforms:
-    # distance between two corresponding texels from subbands L' and H in texels 
+    # distance between two corresponding texels from subbands L' and H in texels
     vec2 offset # = vec2 (width / 2.0, 0.0) or vec2 (0.0, height / 2.0)
     vec2 one_decrease
     vec2 one_increase
@@ -524,7 +524,7 @@ shader iiwt_s16_interleave: ####################################################
       else:
         y = floor (y / 2.0) + offset.y
 
-      # shift y coordinate from texel edge n.0 to texel center n.5 
+      # shift y coordinate from texel edge n.0 to texel center n.5
       vec2 coordinate = vec2 (x, y + 0.5)
 
     horizontal:

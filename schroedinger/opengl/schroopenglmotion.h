@@ -1,4 +1,4 @@
- 
+
 #ifndef __SCHRO_OPENGL_MOTION_H__
 #define __SCHRO_OPENGL_MOTION_H__
 

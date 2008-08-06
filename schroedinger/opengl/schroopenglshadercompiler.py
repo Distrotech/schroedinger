@@ -88,7 +88,7 @@ class Line (Item):
     level = self.level
 
     while level > 0:
-      string += "  " 
+      string += "  "
       level = level - 1
 
     string += "(Line: " + repr (self.number) + ", " + repr (self.level) + ", " \
@@ -113,9 +113,9 @@ class Block (Item):
     level = self.header.level
 
     while level > 0:
-      string += "  " 
+      string += "  "
       level = level - 1
-      
+
     string += "(Block: " + repr (self.versions) + " " \
         + repr (self.header).lstrip () + "\n"
 
@@ -605,7 +605,7 @@ class Shader:
           + block.header.content + "'")
 
     string = ""
-    
+
     if match.group (1) == "if":
       string += "      \"" + indent + "if (" + match.group (2) + ") {\\n\"\n"
     elif match.group (1) == "elif":
