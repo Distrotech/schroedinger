@@ -1,5 +1,6 @@
 package org.diracvideo.Schroedinger;
 import java.awt.Dimension;
+
 /** Motion
  *
  * An ill-named class representing an object
@@ -8,7 +9,6 @@ import java.awt.Dimension;
 class Motion {
     Parameters par;
     Vector vecs[];
-    short tmp[];
     Picture refs[];
     Arithmetic ar[];
     int xbsep, ybsep, xblen, yblen, width, height;
@@ -21,7 +21,6 @@ class Motion {
 	par = p;
 	refs = r;
 	vecs = new Vector[par.x_num_blocks * par.y_num_blocks];
-	tmp = new short[64*64*3];
 	tmp_ref = new Block[refs.length];
     }
     
@@ -132,10 +131,10 @@ class Motion {
 	}
     }
 
-    public void render(Block frame[], VideoFormat f) {
+    public void render(Block out[], VideoFormat f) {
 	chroma_h_shift = f.chromaHShift();
 	chroma_v_shift = f.chromaVShift();
-	for(int k = 0; k < frame.length; k++) {
+	for(int k = 0; k < out.length; k++) {
 	    if(k == 0) {
 		xbsep = par.xbsep_luma;
 		ybsep = par.ybsep_luma;
@@ -147,33 +146,21 @@ class Motion {
 		xblen = par.xblen_luma >> chroma_h_shift;
 		yblen = par.yblen_luma >> chroma_v_shift;
 	    }
-	    width = frame[k].s.width;
-	    height = frame[k].s.height;
+	    width = out[k].s.width;
+	    height = out[k].s.height;
 	    xoffset = (xblen - xbsep)/2;
 	    yoffset = (xblen - ybsep)/2;
-	    max_fast_x = (width - xblen) << par.mv_precision;
-	    max_fast_y = (height - yblen) << par.mv_precision;
-	    tmp_ref[0] = new Block(new Dimension(xblen, yblen));
-	    tmp_ref[1] = new Block(new Dimension(xblen, yblen));
-	    initOBMCWeight();
-	    block = new Block(new Dimension(xblen, yblen));
-	    for(int j = 0; j < par.y_num_blocks; j++) {
-		int y = ybsep*j - yoffset;
-		for(int i = 0; i < par.x_num_blocks; i++) {
-		    int x = xbsep*i - xoffset;
-		    predictBlock(x, y, k, i, j);
-		    accumalateBlock(x, y, frame[k]);
+	    for(int i = 0; i < refs.length; i++) {
+		if(refs[i] == null)
+		    continue;
+		Block ref = refs[i].getComponent(k);
+		if(par.mv_precision > 0) {
+		    tmp_ref[i] = ref.upSample();
+		} else {
+		    tmp_ref[i] = ref;
 		}
 	    }
-	    short line[] = frame[k].d;
-	    for(int j = 0; j < frame[k].s.height; j++) {
-		int offset = frame[k].line(j);
-		for(int i = 0; i < frame[k].s.width; i++) {
-		    line[offset + i] += 1;
-		    line[offset + i] >>= 1;
-		}
-	    } 
-
+	    initOBMCWeight();
 	}
     }
 
@@ -228,7 +215,7 @@ class Motion {
 	for(int j = 0; j < yblen; j++) {
 	    int offset = block.line(j);
 	    for(int i = 0; i < xblen; i++) {
-		block.d[i + offset] += (short)(val + 128);
+		block.d[i + offset] += (short)(val);
 	    }
 	}
     }
@@ -236,20 +223,7 @@ class Motion {
     private void getRef1Block(int i, int j, int k, int x, int y) {
 	Vector mv = getVector(i,j);
 	int weight = par.picture_weight_1 + par.picture_weight_2;
-	getBlock(k, 0, i, j, mv.dx[0], mv.dy[0]);
-	if(weight == (1 << par.picture_weight_bits)) {
-	    tmp_ref[0].copyTo(block);
-	} else {
-	    for(int jj = 0; jj < yblen; jj++) {
-		int blockOffset = block.line(jj);
-		int refOffset = tmp_ref[0].line(jj);
-		for(int ii = 0; ii < xblen; ii++) {
-		    block.d[blockOffset + ii] = 
-			(short)Util.roundUpShift( tmp_ref[0].d[refOffset + ii] * weight, 
-						  par.picture_weight_bits);
-		}
-	    }
-	}
+
     }
 
     private void getRef2Block(int i, int j, int k, int x, int y) {
@@ -258,19 +232,6 @@ class Motion {
 
     private void getBiRefBlock(int i, int j, int k, int x, int y) {
 	
-    }
-
-    private void getBlock(int k, int ref, int i, int j, int dx, int dy) {
-	if(k > 0) {
-	    dx >>= chroma_h_shift;
-	    dy >>= chroma_v_shift;
-	}
-	int x,y,px,py;
-	x = xbsep*i - xoffset;
-	y = ybsep*j - yoffset;
-	px = (x << par.mv_precision) + dx;
-	py = (y << par.mv_precision) + dy;
-	refs[ref].getSubBlock(px, py, k, par.mv_precision, tmp_ref[ref]);
     }
 
     private void initOBMCWeight() {
@@ -470,24 +431,3 @@ class Motion {
 
 }
 
-/** Global
- *
- * The class for global motion estimation */
-class Global {
-    int b0, b1;
-    int a_exp, a00, a01, a10, a11;
-    int c_exp, c0, c1;
-}
-
-
-/** Vector
- *
- * The class representing a single motion vector
- * element.  */
-class Vector {
-    int weight, split, pred_mode;
-    int dx[] = new int[2],
-	dy[] = new int[2];
-    int dc[] = new int[3];
-    boolean using_global;
-}

@@ -52,56 +52,106 @@ public final class Block {
 	return new Block(d, pnt, sub, o);
     }
 
-    /**
-     * @return the index to the start of the frame **/
+    /** @return the index to the start of the frame **/
     public int start() {
 	return (p.y*o.width) + p.x;
     }
 
-    /**
-     * @return the index to the end of the framE (last element + 1) **/
+    /** @return the index to the end of the frame (last element + 1) **/
     public int end() {
 	return line(s.height - 1) + s.width;
     }
     
-
-    /**
-     * @return the line of the frame with index n **/
+    /** @return the line of the frame with index n **/
     public int line(int n) {
-	n = Util.clamp(n,0, s.height - 1) + p.y;
-	return (n*o.width) + p.x;
+	return (n+p.y)*o.width + p.x;
     }
 
     /** The index of a point
      * @return the index for a general point in the frame **/
     public int index(int x, int y) {
-	return line(y) + Util.clamp(x,0, s.width - 1);
+	return line(y) + x;
     }
 
     /** Pixel at a given point, unchecked */
     public short pixel(int x, int y) {
 	return d[(y + p.y)*o.width + (p.x + x)];
     }
-
-    public void copyTo(Block b) {
-	try {
-	    for(int i = 0; i < s.height; i++) {
-		System.arraycopy(d, line(i), b.d, b.line(i), b.s.width);
-	    }
-	} catch(IndexOutOfBoundsException x) {}
+    
+    public void set(int x, int y, short v) {
+	d[(y+p.y)*o.width + (p.x + x)] = v;
     }
     
+    /** copies current block into another
+     *
+     * Since blocks can have offsets out of the 
+     * data, this method takes care to copy only the
+     * `real' part.
+     * The dimensions of b should be at least those
+     * off the block to be copied; if not this method
+     * does nothing. Block to be copied should be `real'.
+     *
+     * @param b  the block to be copied into */
 
-    /** A test method which fills the block with a checkers pattern */
+    public void copyTo(Block b) { 
+	int line, x, y, offset, length;
+	if(s.width > b.s.width ||
+	   s.height > b.s.height)
+	    return;
+	for(y = 0; y < s.height; y++) {
+	    line = (p.y + y)*o.width;
+	    if(line < 0 || line >= d.length) continue;
+	    if(p.x < 0) {
+		x = -p.x;
+		length = Math.min(s.width, b.s.width - x);
+		offset = 0;
+	    } else {
+		length = Math.min(s.width, o.width - p.x);
+		offset = p.x;
+		x = 0;
+	    }
+	    System.arraycopy(d, offset + line, b.d, b.index(x,y), length);
+	}
+    }
+    
+    /** upsample a block
+     * block should be `real'
+     * @return the upsampled block
+     * @see the dirac specification section 15.8.11 */
+    public Block upSample() {
+	Block r = new Block(new Dimension(2*s.width, 2*s.height));
+	short taps[] = {21, -7, 3, -1};
+	for(int y = 0; y < s.height - 1; y++) { /* vertical upsampling */
+	    for(int x = 0; x < s.width - 1; x++) {
+		short val = pixel(x,y);
+		r.set(x*2, y*2, val);
+	    }
+	    for(int x = 0; x < s.width - 1; x++) {
+		short val = 16;
+		for(int i = 0; i < 4; i++) {
+		    val += taps[i]*pixel(x, Math.max(0, y - i));
+		    val += taps[i]*pixel(x, Math.min(s.height - 1, y + i));
+		}
+		r.set(x*2, y*2 + 1, (short)(val >> 5));
+	    }
+	}
+	return r;
+    }
+
+    /** A test method which fills the block with a checkers pattern 
+     * @param m the size of the blocks  */
     public void checkers(int m) {
 	m = (1 << m);
 	for(int i = 0; i < s.height; i++) {
 	    for(int j = 0; j < s.width; j++) {
-		d[index(i,j)] = (short)(((i&m)^(j&m))*255);
+		set(i,j,(short)(((i&m)^(j&m))*255));
 	    }
 	}
     }
-    
+
+    /** a method to test for the equality of two blocks
+     * Two blocks are found to be equal if each of their
+     * points are equal */
     public boolean equals(Block o) {
 	if(s.width != o.s.width)
 	    return false;

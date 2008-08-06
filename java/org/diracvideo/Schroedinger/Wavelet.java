@@ -3,22 +3,18 @@ package org.diracvideo.Schroedinger;
 /** Wavelet:
  *
  * The class for doing wavelet transformations.
- * Should be refactored to provide actual objects
- * (functors) with two methods: transform(short[],int, int)
- * and inverse(short[],int, int)
- * We will not use 2-dimensional arrays as it is slow
- * and we need no such handholding. */
+ * It currently only provides inverse transformations. */
 
 public class Wavelet {
     /** inverse:
-     * @param data   a short[] array containing the frame
-     * @param width  width of the frame
-     * @param depth  transform depth
-     *
      * Inverse is the only method users should ever call, except possibly 
      * for interleave, which interleaves four subbands so that it is ready
      * to be used for inverse(). The actual picture decoding sequence never
-     * calles interleave() though.  **/
+     * calles interleave() though.  
+     *
+     * @param data   a short[] array containing the frame
+     * @param width  width of the frame
+     * @param depth  transform depth     */
     public void inverse(short data[], int w, int depth) {
 	/* data is assumed to be preinterleaved */
 	for(int s = (1 << (depth - 1)); s > 0; s >>= 1) {
@@ -45,22 +41,24 @@ public class Wavelet {
     }
 
     /** synthesize:
+     * This method is public for testing purposes only. 
+     * It is identity (i.e. does nothing) on the 'Wavelet' 
+     * wavelet. It is implemented for other classes though.
      *
      * @param d   short[] data array
      * @param s   stride
      * @param b   begin
-     * @param e   end
-     *
-     *  This method is public for testing purposes only. */
-    public void synthesize(short d[], int s, int b, int e) {  }
+     * @param e   end */
 
+    public void synthesize(short d[], int s, int b, int e) {  }
 
     /** interleave interleaves four subbands.
      * 
      * @param ll array containing the subband data (like hl, lh, hh)
      * @param width: the width of each subband 
-     * @return the new subband, 4 times the size of each individual argument
-     **/
+     * @return the new subband, 4 times the size of each individual argument 
+     * @see the dirac specification section 15.6.1 */
+
     public short[] interleave(short ll[], short hl[], 
 			      short lh[], short hh[], int width) {
 	short o[] = new short[ll.length*4];

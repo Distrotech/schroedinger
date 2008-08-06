@@ -35,7 +35,8 @@ class PictureDrawer extends Canvas implements Runnable {
     
     public void paint(Graphics gr) {
 	Picture pic = dec.pull();
-	if(pic != null) {
+	if(pic != null &&
+	   pic.error == null) {
 	    Image img = pic.getImage();
 	    gr.drawImage(img,0,0,null);
 	}
@@ -86,7 +87,7 @@ public final class DecoderTest {
 	    e.printStackTrace();
 	    ev = 1;
 	} catch(InterruptedException e) {
-	    System.err.println(e);
+	    e.printStackTrace();
 	} catch(Throwable e) {
 	    e.printStackTrace();
 	    ev = 1;

@@ -129,12 +129,12 @@ public class Decoder {
     }
 
     public synchronized void reset(int next_frame) {
-		
+
     }
 
     public synchronized Picture pull() {
 	Picture p = out.get(next_frame_number);
-	if(p != null)
+	if(p != null) 
 	    out.remove(next_frame_number++);
 	return p;
     }
