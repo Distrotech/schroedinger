@@ -368,6 +368,7 @@ public class Picture {
     public synchronized void parse() {
 	if(status != Decoder.Status.NULL)
 	    return;
+	status = Decoder.Status.WAIT;
 	try {
 	    Unpack u = new Unpack(buf);
 	    u.skip(136); /* 17 * 8 */
@@ -590,11 +591,8 @@ public class Picture {
 
     private void decodeMotionCompensate() {
 	motion = new Motion(par, refs);
-	motion.initialize(motion_buffers);
-	for(int y = 0; y < par.y_num_blocks; y += 4)
-	    for(int x = 0; x < par.x_num_blocks; x += 4)
-		motion.decodeMacroBlock(x,y);
-	motion.render(frame, format);
+	motion.decode(motion_buffers);
+	//	motion.render(frame, format);
     }
 
     private void initializeFrames() {

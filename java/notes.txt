@@ -49,7 +49,8 @@ by changing to integer arithmetic and by not using temporary arrays
 On cortado again:
 I've added SchroDec() to the list of plugins in OggDemux, and
 implemented isType(Packet) so cortado should recognize ogg dirac
-streams. 
+streams. I'm not sure that will be quite enough because the cortado
+player seems to be hardwired on vorbis/theora.
 
 
 <ds> one thing that might not be clear from the SchroMotion code -- after the stream is parsed, all motion rendering is done at the block level
@@ -65,3 +66,6 @@ The current queue's pop() method does not preserve coded order.
 This could trigger a bug in which reference pictures are not added
 to the reference queue before pictures are loaded. That's why I'm going to 
 rewrite the queue.    
+
+On the account of me not entirely getting SchroMotion I'm going to do
+part of it my way in another branch.

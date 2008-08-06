@@ -25,7 +25,7 @@ class Motion {
 	tmp_ref = new Block[refs.length];
     }
     
-    public void initialize(Buffer bufs[]) {
+    private void initialize(Buffer bufs[]) {
 	ar = new Arithmetic[9];
 	for(int i = 0; i < 9; i++) {
 	    if(bufs[i] == null)
@@ -34,7 +34,14 @@ class Motion {
 	}
     }
 
-    public void decodeMacroBlock(int x, int y) {
+    public void decode(Buffer bufs[]) {
+	initialize(bufs);
+	for(int y = 0; y < par.y_num_blocks; y += 4)
+	    for(int x = 0; x < par.x_num_blocks; x += 4)
+		decodeMacroBlock(x,y);	
+    }
+
+    private void decodeMacroBlock(int x, int y) {
 	int split = splitPrediction(x,y);
 	Vector mv = getVector(x,y);
 	mv.split = (split + ar[0].decodeUint(Context.SB_F1, Context.SB_DATA))%3;
@@ -135,10 +142,10 @@ class Motion {
 		xblen = par.xblen_luma;
 		yblen = par.yblen_luma;
 	    } else {
-		xbsep = par.xbsep_luma >> f.chromaHShift();
-		ybsep = par.ybsep_luma >> f.chromaVShift();
-		xblen = par.xblen_luma >> f.chromaHShift();
-		yblen = par.yblen_luma >> f.chromaVShift();
+		xbsep = par.xbsep_luma >> chroma_h_shift;
+		ybsep = par.ybsep_luma >> chroma_v_shift;
+		xblen = par.xblen_luma >> chroma_h_shift;
+		yblen = par.yblen_luma >> chroma_v_shift;
 	    }
 	    width = frame[k].s.width;
 	    height = frame[k].s.height;
@@ -237,8 +244,9 @@ class Motion {
 		int blockOffset = block.line(jj);
 		int refOffset = tmp_ref[0].line(jj);
 		for(int ii = 0; ii < xblen; ii++) {
-		    block.d[blockOffset + ii] = (short)Util.roundUpShift( tmp_ref[0].d[refOffset + ii] * weight, 
-									  par.picture_weight_bits);
+		    block.d[blockOffset + ii] = 
+			(short)Util.roundUpShift( tmp_ref[0].d[refOffset + ii] * weight, 
+						  par.picture_weight_bits);
 		}
 	    }
 	}

@@ -86,7 +86,7 @@ public class Decoder {
 	    if(next.size() + buf.size() >= n) { 
 		/* complete packet in buffers together */
 		int copy = n - next.size();
-		next = next.cat(buf.sub(0, n - copy));
+		next = next.cat(buf.sub(0, copy));
 		dispatchBuffer(next);
 		next = null;
 		push(buf.sub(copy));
@@ -101,6 +101,7 @@ public class Decoder {
 
     /* at this point, the buffer must be a complete dirac packet */
     private void dispatchBuffer(Buffer b) throws Exception {
+	assert (b.getInt(5) == b.size()) : "Incorrect buffer sizes";
 	byte c = b.getByte(4);
 	switch(c) {
 	case 0x00:

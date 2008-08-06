@@ -97,7 +97,7 @@ public final class DecoderTest {
 
     private static byte[] readPacket(FileInputStream in) throws IOException {
 	if(true) {
-	    int read = Math.min(100, in.available());
+	    int read = Math.min(in.available(), 100);
 	    byte packet[] = new byte[read];
 	    in.read(packet);
 	    return packet;

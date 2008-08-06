@@ -53,7 +53,7 @@ final class Buffer {
     }
 
     public Buffer cat(Buffer o) {
-	byte n[] = new byte[o.size() + e - b];
+	byte n[] = new byte[o.size() + size()];
 	System.arraycopy(this.d, this.b, n, 0, e - b);
 	System.arraycopy(o.d, o.b, n, e - b, o.e - o.b);
 	return new Buffer(n);
