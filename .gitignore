@@ -25,6 +25,7 @@ schroedinger-1.0.pc
 schroedinger.spec
 .libs
 *.la
-schro-stdint.h
 stamp-h1
 autom4te.cache
+tags
+*~

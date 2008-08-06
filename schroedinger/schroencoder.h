@@ -32,7 +32,10 @@ typedef enum {
   SCHRO_ENCODER_FRAME_STATE_ANALYSE = (1<<1),
   SCHRO_ENCODER_FRAME_STATE_HAVE_GOP = (1<<7),
   SCHRO_ENCODER_FRAME_STATE_HAVE_PARAMS = (1<<8),
-  SCHRO_ENCODER_FRAME_STATE_PREDICT = (1<<2),
+  SCHRO_ENCODER_FRAME_STATE_PREDICT_ROUGH = (1<<2),
+  SCHRO_ENCODER_FRAME_STATE_PREDICT_PEL = (1<<12),
+  SCHRO_ENCODER_FRAME_STATE_PREDICT_SUBPEL = (1<<13),
+  SCHRO_ENCODER_FRAME_STATE_MODE_DECISION = (1<<14),
   SCHRO_ENCODER_FRAME_STATE_HAVE_REFS = (1<<10),
   SCHRO_ENCODER_FRAME_STATE_HAVE_QUANTS = (1<<11),
   SCHRO_ENCODER_FRAME_STATE_ENCODING = (1<<3),
@@ -71,6 +74,10 @@ typedef enum {
 #ifdef SCHRO_ENABLE_UNSTABLE_API
 typedef int (*SchroEngineIterateFunc) (SchroEncoder *encoder);
 
+/* forward declaration */
+struct _SchroMotionEst;
+struct _SchroRoughME;
+
 struct _SchroEncoderFrame {
   /*< private >*/
   int refcount;
@@ -83,6 +90,7 @@ struct _SchroEncoderFrame {
 
   /* Bits telling the engine stages which stuff needs to happen */
   unsigned int need_downsampling;
+  unsigned int need_upsampling;
   unsigned int need_filtering;
   unsigned int need_average_luma;
 
@@ -92,6 +100,7 @@ struct _SchroEncoderFrame {
   unsigned int have_histograms;
   unsigned int have_scene_change_score;
   unsigned int have_downsampling;
+  unsigned int have_upsampling;
   unsigned int have_average_luma;
 
   /* other stuff */
@@ -102,8 +111,9 @@ struct _SchroEncoderFrame {
   SchroPictureNumber frame_number;
   SchroFrame *original_frame;
   SchroFrame *filtered_frame;
-  SchroFrame *downsampled_frames[5];
+  SchroFrame *downsampled_frames[8];
   SchroUpsampledFrame *reconstructed_frame;
+  SchroUpsampledFrame *upsampled_original_frame;
 
   SchroBuffer *sequence_header_buffer;
   SchroList *inserted_buffers;
@@ -142,8 +152,6 @@ struct _SchroEncoderFrame {
 
   int16_t *quant_data;
 
-  int16_t *tmpbuf;
-
   int quant_index[3][1+SCHRO_LIMIT_TRANSFORM_DEPTH*3];
   double est_entropy[3][1+SCHRO_LIMIT_TRANSFORM_DEPTH*3][60];
   double est_error[3][1+SCHRO_LIMIT_TRANSFORM_DEPTH*3][60];
@@ -155,6 +163,9 @@ struct _SchroEncoderFrame {
   SchroFrame *prediction_frame;
 
   SchroEncoderFrame *ref_frame[2];
+
+  struct _SchroMotionEst *me;
+  struct _SchroRoughME *rme[2];
 
   SchroMotion *motion;
   SchroList *motion_field_list;
@@ -288,6 +299,7 @@ struct _SchroEncoder {
   int quantiser_engine;
 
   double start_time;
+  int downsample_levels;
 
 #if 0
   int prefs[SCHRO_PREF_LAST];
@@ -424,11 +436,16 @@ void schro_encoder_encode_subband (SchroEncoderFrame *frame, int component, int 
 void schro_encoder_encode_subband_noarith (SchroEncoderFrame *frame, int component, int index);
 
 void schro_encoder_analyse_picture (SchroEncoderFrame *frame);
-void schro_encoder_predict_picture (SchroEncoderFrame *frame);
+void schro_encoder_predict_rough_picture (SchroEncoderFrame *frame);
+void schro_encoder_predict_pel_picture (SchroEncoderFrame *frame);
+void schro_encoder_predict_subpel_picture (SchroEncoderFrame *frame);
+
+void schro_encoder_fullpel_predict_picture (SchroEncoderFrame* frame);
+void schro_encoder_mode_decision (SchroEncoderFrame* frame);
+
 void schro_encoder_encode_picture (SchroEncoderFrame *frame);
 void schro_encoder_reconstruct_picture (SchroEncoderFrame *frame);
 void schro_encoder_postanalyse_picture (SchroEncoderFrame *frame);
-void schro_encoder_encode_picture_all (SchroEncoderFrame *frame);
 
 SchroFrame * schro_encoder_frame_queue_get (SchroEncoder *encoder,
     SchroPictureNumber frame_number);

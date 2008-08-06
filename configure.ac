@@ -110,6 +110,13 @@ AC_ARG_WITH([opengl],
     [],
     [with_opengl=no])
 
+AC_ARG_ENABLE(encoder, AC_HELP_STRING([--disable-encoder],
+              [disable encoder (default=enabled)]))
+AM_CONDITIONAL(ENABLE_ENCODER, test "x$enable_encoder" != "xno")
+if [ test "x$enable_encoder" != "xno" ] ; then
+  AC_DEFINE(ENABLE_ENCODER, 1, [Enable encoder])
+fi
+
 ##################################################
 # Check for gtk-doc.
 ##################################################
@@ -118,8 +125,6 @@ if test "x$cross_compiling" = "xyes" ; then
   enable_gtk_doc=no
 fi
 GTK_DOC_CHECK([1.0])
-
-AX_CREATE_STDINT_H([schroedinger/schro-stdint.h])
 
 AS_COMPILER_FLAG(-Wall, SCHRO_CFLAGS="$SCHRO_CFLAGS -Wall")
 if test "x$SCHRO_CVS" = "xyes"

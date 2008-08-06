@@ -31,13 +31,20 @@ static int schro_encoder_encode_padding (SchroEncoder *encoder, int n);
 static void schro_encoder_clean_up_transform_subband (SchroEncoderFrame *frame,
     int component, int index);
 static void schro_encoder_fixup_offsets (SchroEncoder *encoder,
-    SchroBuffer *buffer);
+    SchroBuffer *buffer, schro_bool is_eos);
 static void schro_encoder_frame_complete (SchroEncoderFrame *frame);
 static int schro_encoder_async_schedule (SchroEncoder *encoder, SchroExecDomain exec_domain);
 static void schro_encoder_init_perceptual_weighting (SchroEncoder *encoder);
 void schro_encoder_encode_sequence_header_header (SchroEncoder *encoder,
     SchroPack *pack);
 
+/**
+ * schro_encoder_new:
+ *
+ * Create a new encoder object.
+ *
+ * Returns: a new encoder object
+ */
 SchroEncoder *
 schro_encoder_new (void)
 {
@@ -46,7 +53,7 @@ schro_encoder_new (void)
   encoder = schro_malloc0 (sizeof(SchroEncoder));
 
   encoder->version_major = 2;
-  encoder->version_minor = 1;
+  encoder->version_minor = 2;
 
   encoder->au_frame = -1;
 
@@ -63,13 +70,13 @@ schro_encoder_new (void)
   encoder->noise_threshold = 25.0;
   encoder->gop_structure = 0;
   encoder->queue_depth = 20;
-  encoder->perceptual_weighting = 0;
+  encoder->perceptual_weighting = 1;
   encoder->perceptual_distance = 4.0;
   encoder->filtering = 0;
   encoder->filter_value = 5.0;
   encoder->profile = 0;
   encoder->level = 0;
-  encoder->au_distance = 30;
+  encoder->au_distance = 120;
   encoder->enable_psnr = TRUE;
   encoder->enable_ssim = FALSE;
   encoder->enable_md5 = FALSE;
@@ -93,9 +100,9 @@ schro_encoder_new (void)
   encoder->vert_slices = 6;
 
   encoder->magic_dc_metric_offset = 1.0;
-  encoder->magic_subband0_lambda_scale = 2.0;
-  encoder->magic_chroma_lambda_scale = 1.0;
-  encoder->magic_nonref_lambda_scale = 0.5;
+  encoder->magic_subband0_lambda_scale = 10.0;
+  encoder->magic_chroma_lambda_scale = 0.01;
+  encoder->magic_nonref_lambda_scale = 0.01;
   encoder->magic_allocation_scale = 1.1;
   encoder->magic_keyframe_weight = 7.5;
   encoder->magic_scene_change_threshold = 0.2;
@@ -103,12 +110,14 @@ schro_encoder_new (void)
   encoder->magic_inter_b_weight = 0.2;
   encoder->magic_mc_bailout_limit = 0.5;
   encoder->magic_bailout_weight = 4.0;
-  encoder->magic_error_power = 2.0;
-  encoder->magic_mc_lambda = 0.5;
+  encoder->magic_error_power = 4.0;
+  encoder->magic_mc_lambda = 0.1;
   encoder->magic_subgroup_length = 4;
   encoder->magic_lambda = 1.0;
   encoder->magic_badblock_multiplier_nonref = 4.0;
   encoder->magic_badblock_multiplier_ref = 8.0;
+
+  encoder->downsample_levels = 5;
 
   schro_video_format_set_std_video_format (&encoder->video_format,
       SCHRO_VIDEO_FORMAT_CUSTOM);
@@ -163,6 +172,14 @@ handle_gop_enum (SchroEncoder *encoder)
   }
 }
 
+/**
+ * schro_encoder_start:
+ * @encoder: an encoder object
+ *
+ * Locks in encoder configuration and causes the encoder to start
+ * encoding pictures.  At this point, the encoder will start worker
+ * threads to do the actual encoding.
+ */
 void
 schro_encoder_start (SchroEncoder *encoder)
 {
@@ -241,6 +258,12 @@ schro_encoder_start (SchroEncoder *encoder)
   encoder->start_time = schro_utils_get_time ();
 }
 
+/**
+ * schro_encoder_free:
+ * @encoder: an encoder object
+ *
+ * Frees an encoder object and all its resources.
+ */
 void
 schro_encoder_free (SchroEncoder *encoder)
 {
@@ -299,6 +322,18 @@ schro_encoder_init_perceptual_weighting (SchroEncoder *encoder)
   }
 }
 
+/**
+ * schro_encoder_get_video_format:
+ * @encoder: an encoder object
+ *
+ * Creates a new SchroVideoFormat structure and copies the
+ * video format information of @decoder into it.
+ *
+ * When no longer needed, the returned pointer should be
+ * freed using free().
+ *
+ * Returns: a pointer to a SchroVideoFormat structure
+ */
 SchroVideoFormat *
 schro_encoder_get_video_format (SchroEncoder *encoder)
 {
@@ -310,6 +345,15 @@ schro_encoder_get_video_format (SchroEncoder *encoder)
   return format;
 }
 
+/**
+ * schro_encoder_set_video_format:
+ * @encoder: an encoder object
+ * @format: the video format to use
+ *
+ * Sets the video format used by @encoder to the values specified
+ * in @format.  This function may only be called before schro_encoder_start()
+ * is called on the encoder.
+ */
 void
 schro_encoder_set_video_format (SchroEncoder *encoder,
     SchroVideoFormat *format)
@@ -339,6 +383,16 @@ schro_encoder_push_is_ready_locked (SchroEncoder *encoder)
   }
 }
 
+/**
+ * schro_encoder_push_ready:
+ * @encoder: an encoder object
+ *
+ * Returns true if the encoder has available space for additional
+ * video frames.
+ *
+ * Returns: TRUE if the encoder is ready for another video frame to
+ * be pushed.
+ */
 int
 schro_encoder_push_ready (SchroEncoder *encoder)
 {
@@ -351,18 +405,42 @@ schro_encoder_push_ready (SchroEncoder *encoder)
   return ret;
 }
 
+/**
+ * schro_encoder_force_sequence_header:
+ * @encoder: an encoder object
+ *
+ * Indicates to the encoder that the next frame pushed should be
+ * encoded with a sequence header.
+ */
 void
 schro_encoder_force_sequence_header (SchroEncoder *encoder)
 {
   encoder->force_sequence_header = TRUE;
 }
 
+/**
+ * schro_encoder_push_frame:
+ * @encoder: an encoder object
+ * @frame: a frame to encode
+ *
+ * Provides a frame to the encoder to encode.
+ */
 void
 schro_encoder_push_frame (SchroEncoder *encoder, SchroFrame *frame)
 {
   schro_encoder_push_frame_full (encoder, frame, NULL);
 }
 
+/**
+ * schro_encoder_push_frame_full:
+ * @encoder: an encoder object
+ * @frame: a frame to encode
+ * @priv: a private tag
+ *
+ * Provides a frame to the encoder to encode.  The value of @priv is
+ * returned when schro_encoder_pull_full() is called for the encoded
+ * frame.
+ */
 void
 schro_encoder_push_frame_full (SchroEncoder *encoder, SchroFrame *frame, void *priv)
 {
@@ -451,6 +529,11 @@ schro_encoder_pull_is_ready_locked (SchroEncoder *encoder)
     }
   }
 
+  if (schro_queue_is_empty(encoder->frame_queue) && encoder->end_of_stream
+      && !encoder->end_of_stream_pulled) {
+    return TRUE;
+  }
+
   return FALSE;
 }
 
@@ -469,12 +552,37 @@ schro_encoder_shift_frame_queue (SchroEncoder *encoder)
   }
 }
 
+/**
+ * schro_encoder_pull:
+ * @encoder: an encoder object
+ * @presentation_frame: (output) latest decodable frame
+ *
+ * Pulls a buffer of compressed video from the encoder.  If
+ * @presentation_frame is not NULL, the frame number of the
+ * latest decodable frame is returned.
+ *
+ * Returns: a buffer containing compressed video
+ */
 SchroBuffer *
 schro_encoder_pull (SchroEncoder *encoder, int *presentation_frame)
 {
   return schro_encoder_pull_full (encoder, presentation_frame, NULL);
 }
 
+/**
+ * schro_encoder_pull_full:
+ * @encoder: an encoder object
+ * @presentation_frame: (output) latest decodable frame
+ * @priv: (output)
+ *
+ * Pulls a buffer of compressed video from the encoder.  If
+ * @presentation_frame is not NULL, the frame number of the
+ * latest decodable frame is returned.  If @priv is not NULL,
+ * the private tag attached to the pushed uncompressed frame
+ * is returned.
+ *
+ * Returns: a buffer containing compressed video
+ */
 SchroBuffer *
 schro_encoder_pull_full (SchroEncoder *encoder, int *presentation_frame,
     void **priv)
@@ -587,7 +695,7 @@ schro_encoder_pull_full (SchroEncoder *encoder, int *presentation_frame,
         }
       }
 
-      schro_encoder_fixup_offsets (encoder, buffer);
+      schro_encoder_fixup_offsets (encoder, buffer, FALSE);
 
       SCHRO_DEBUG("got buffer length=%d", buffer->length);
       schro_async_unlock (encoder->async);
@@ -597,7 +705,7 @@ schro_encoder_pull_full (SchroEncoder *encoder, int *presentation_frame,
 
   if (schro_queue_is_empty(encoder->frame_queue) && encoder->end_of_stream) {
     buffer = schro_encoder_encode_end_of_stream (encoder);
-    schro_encoder_fixup_offsets (encoder, buffer);
+    schro_encoder_fixup_offsets (encoder, buffer, TRUE);
     encoder->end_of_stream_pulled = TRUE;
 
     schro_async_unlock (encoder->async);
@@ -609,6 +717,14 @@ schro_encoder_pull_full (SchroEncoder *encoder, int *presentation_frame,
   return NULL;
 }
 
+/**
+ * schro_encoder_end_of_stream:
+ * @encoder: an encoder object
+ *
+ * Tells the encoder that the end of the stream has been reached, and
+ * no more frames are available to encode.  The encoder will then
+ * finish encoding.
+ */
 void
 schro_encoder_end_of_stream (SchroEncoder *encoder)
 {
@@ -624,24 +740,32 @@ schro_encoder_end_of_stream (SchroEncoder *encoder)
 }
 
 static void
-schro_encoder_fixup_offsets (SchroEncoder *encoder, SchroBuffer *buffer)
+schro_encoder_fixup_offsets (SchroEncoder *encoder, SchroBuffer *buffer,
+    schro_bool is_eos)
 {
   uint8_t *data = buffer->data;
+  unsigned int next_offset;
 
   if (buffer->length < 13) {
     SCHRO_ERROR("packet too short (%d < 13)", buffer->length);
   }
 
-  data[5] = (buffer->length >> 24) & 0xff;
-  data[6] = (buffer->length >> 16) & 0xff;
-  data[7] = (buffer->length >> 8) & 0xff;
-  data[8] = (buffer->length >> 0) & 0xff;
+  if (is_eos) {
+    next_offset = 0;
+  } else {
+    next_offset = buffer->length;
+  }
+
+  data[5] = (next_offset >> 24) & 0xff;
+  data[6] = (next_offset >> 16) & 0xff;
+  data[7] = (next_offset >> 8) & 0xff;
+  data[8] = (next_offset >> 0) & 0xff;
   data[9] = (encoder->prev_offset >> 24) & 0xff;
   data[10] = (encoder->prev_offset >> 16) & 0xff;
   data[11] = (encoder->prev_offset >> 8) & 0xff;
   data[12] = (encoder->prev_offset >> 0) & 0xff;
 
-  encoder->prev_offset = buffer->length;
+  encoder->prev_offset = next_offset;
 }
 
 static int
@@ -693,7 +817,7 @@ schro_encoder_encode_bitrate_comment (SchroEncoder *encoder,
   s[3] = (bitrate>>0)&0xff;
   buffer = schro_encoder_encode_auxiliary_data (encoder,
       SCHRO_AUX_DATA_BITRATE, s, 4);
-  
+
   schro_encoder_insert_buffer (encoder, buffer);
 }
 
@@ -706,16 +830,31 @@ schro_encoder_encode_md5_checksum (SchroEncoderFrame *frame)
   schro_frame_md5 (frame->reconstructed_frame->frames[0], checksum);
   buffer = schro_encoder_encode_auxiliary_data (frame->encoder,
       SCHRO_AUX_DATA_MD5_CHECKSUM, checksum, 16);
-  
+
   schro_encoder_frame_insert_buffer (frame, buffer);
 }
 
+/**
+ * schro_encoder_insert_buffer:
+ * @encoder: an encoder object
+ * @buffer: a buffer
+ *
+ * Inserts an application-provided buffer into the encoded video stream
+ * with the next frame that is pushed.
+ */
 void
 schro_encoder_insert_buffer (SchroEncoder *encoder, SchroBuffer *buffer)
 {
   schro_list_append (encoder->inserted_buffers, buffer);
 }
 
+/**
+ * schro_encoder_frame_insert_buffer:
+ * @frame: an encoder frame
+ * @buffer: a buffer
+ *
+ * Inserts a buffer into an encoder frame.
+ */
 void
 schro_encoder_frame_insert_buffer (SchroEncoderFrame *frame,
     SchroBuffer *buffer)
@@ -723,6 +862,17 @@ schro_encoder_frame_insert_buffer (SchroEncoderFrame *frame,
   schro_list_append (frame->inserted_buffers, buffer);
 }
 
+/**
+ * schro_encoder_encode_auxiliary_data:
+ * @encoder:
+ * @id:
+ * @data:
+ * @size:
+ *
+ * Packs data into a Dirac auxiliary data packet.
+ *
+ * Returns: a buffer
+ */
 SchroBuffer *
 schro_encoder_encode_auxiliary_data (SchroEncoder *encoder,
     SchroAuxiliaryDataID id, void *data, int size)
@@ -744,6 +894,14 @@ schro_encoder_encode_auxiliary_data (SchroEncoder *encoder,
   return buffer;
 }
 
+/**
+ * schro_encoder_encode_sequence_header:
+ * @encoder: an encoder object
+ *
+ * Creates a buffer containing a sequence header.
+ *
+ * Returns: a buffer
+ */
 SchroBuffer *
 schro_encoder_encode_sequence_header (SchroEncoder *encoder)
 {
@@ -768,6 +926,14 @@ schro_encoder_encode_sequence_header (SchroEncoder *encoder)
   return subbuffer;
 }
 
+/**
+ * schro_encoder_encode_end_of_stream:
+ * @encoder:
+ *
+ * Creates an end-of-stream packet.
+ *
+ * Returns: a buffer
+ */
 SchroBuffer *
 schro_encoder_encode_end_of_stream (SchroEncoder *encoder)
 {
@@ -786,6 +952,17 @@ schro_encoder_encode_end_of_stream (SchroEncoder *encoder)
   return buffer;
 }
 
+/**
+ * schro_encoder_wait:
+ * @encoder: an encoder object
+ *
+ * Checks the state of the encoder.  If the encoder requires the
+ * application to do something, an appropriate state code is returned.
+ * Otherwise, this function waits until the encoder requires the
+ * application to do something.
+ *
+ * Returns: a state code
+ */
 SchroStateEnum
 schro_encoder_wait (SchroEncoder *encoder)
 {
@@ -803,7 +980,7 @@ schro_encoder_wait (SchroEncoder *encoder)
       ret = SCHRO_STATE_NEED_FRAME;
       break;
     }
-    if (schro_queue_is_empty(encoder->frame_queue) && encoder->end_of_stream) {
+    if (schro_queue_is_empty(encoder->frame_queue) && encoder->end_of_stream_pulled) {
       ret = SCHRO_STATE_END_OF_STREAM;
       break;
     }
@@ -893,8 +1070,17 @@ run_stage (SchroEncoderFrame *frame, SchroEncoderFrameStateEnum state)
     case SCHRO_ENCODER_FRAME_STATE_ANALYSE:
       func = schro_encoder_analyse_picture;
       break;
-    case SCHRO_ENCODER_FRAME_STATE_PREDICT:
-      func = schro_encoder_predict_picture;
+    case SCHRO_ENCODER_FRAME_STATE_PREDICT_ROUGH:
+      func = schro_encoder_predict_rough_picture;
+      break;
+    case SCHRO_ENCODER_FRAME_STATE_PREDICT_PEL:
+      func = schro_encoder_predict_pel_picture;
+      break;
+    case SCHRO_ENCODER_FRAME_STATE_PREDICT_SUBPEL:
+      func = schro_encoder_predict_subpel_picture;
+      break;
+    case SCHRO_ENCODER_FRAME_STATE_MODE_DECISION:
+      func = schro_encoder_mode_decision;
       break;
     case SCHRO_ENCODER_FRAME_STATE_ENCODING:
       func = schro_encoder_encode_picture;
@@ -987,12 +1173,33 @@ schro_encoder_async_schedule (SchroEncoder *encoder, SchroExecDomain exec_domain
           frame->state |= SCHRO_ENCODER_FRAME_STATE_HAVE_PARAMS;
         }
       }
-      if (todo & SCHRO_ENCODER_FRAME_STATE_PREDICT &&
-          frame->state & SCHRO_ENCODER_FRAME_STATE_HAVE_PARAMS) {
+
+      if (todo & SCHRO_ENCODER_FRAME_STATE_PREDICT_ROUGH
+          && frame->state & SCHRO_ENCODER_FRAME_STATE_HAVE_PARAMS) {
         if (!check_refs(frame)) continue;
-        run_stage (frame, SCHRO_ENCODER_FRAME_STATE_PREDICT);
+        run_stage (frame, SCHRO_ENCODER_FRAME_STATE_PREDICT_ROUGH);
         return TRUE;
       }
+
+      if (todo & SCHRO_ENCODER_FRAME_STATE_PREDICT_PEL
+          && frame->state & SCHRO_ENCODER_FRAME_STATE_PREDICT_ROUGH) {
+        run_stage (frame, SCHRO_ENCODER_FRAME_STATE_PREDICT_PEL);
+        return TRUE;
+      }
+
+      if (todo & SCHRO_ENCODER_FRAME_STATE_PREDICT_SUBPEL
+          && frame->state & SCHRO_ENCODER_FRAME_STATE_PREDICT_PEL) {
+        run_stage (frame, SCHRO_ENCODER_FRAME_STATE_PREDICT_SUBPEL);
+        return TRUE;
+      }
+
+      if (todo & SCHRO_ENCODER_FRAME_STATE_MODE_DECISION
+          && frame->state & SCHRO_ENCODER_FRAME_STATE_PREDICT_SUBPEL) {
+        if (!check_refs (frame)) continue;
+        run_stage (frame, SCHRO_ENCODER_FRAME_STATE_MODE_DECISION);
+        return TRUE;
+      }
+
     }
   }
 
@@ -1066,11 +1273,18 @@ schro_encoder_analyse_picture (SchroEncoderFrame *frame)
     schro_encoder_frame_downsample (frame);
     frame->have_downsampling = TRUE;
   }
+#if 0
+  if (frame->need_upsampling) {
+    schro_encoder_frame_upsample (frame);
+    frame->have_upsampling = TRUE;
+  }
+#endif
 
   if (frame->need_average_luma) {
     if (frame->have_downsampling) {
       frame->average_luma =
-        schro_frame_calculate_average_luma (frame->downsampled_frames[3]);
+        schro_frame_calculate_average_luma (
+            frame->downsampled_frames[frame->encoder->downsample_levels-1]);
     } else {
       frame->average_luma =
         schro_frame_calculate_average_luma (frame->filtered_frame);
@@ -1080,23 +1294,57 @@ schro_encoder_analyse_picture (SchroEncoderFrame *frame)
 }
 
 void
-schro_encoder_predict_picture (SchroEncoderFrame *frame)
+schro_encoder_predict_rough_picture (SchroEncoderFrame *frame)
 {
   SCHRO_INFO("predict picture %d", frame->frame_number);
 
-  frame->tmpbuf = schro_malloc(sizeof(int16_t) *
-      (frame->encoder->video_format.width + 16));
+  if (frame->params.num_refs > 0) {
+    schro_encoder_motion_predict_rough (frame);
+  }
+}
+
+/* should perform fullpel ME without "rendering",
+ * ie without mode decision and motion compensation and DWT */
+void
+schro_encoder_predict_pel_picture (SchroEncoderFrame* frame)
+{
+  SCHRO_ASSERT (frame && frame->state & SCHRO_ENCODER_FRAME_STATE_PREDICT_ROUGH);
+  SCHRO_INFO ("fullpel predict picture %d", frame->frame_number);
 
   if (frame->params.num_refs > 0) {
-    schro_encoder_motion_predict (frame);
+    schro_encoder_motion_predict_pel (frame);
   }
+}
+
+void
+schro_encoder_predict_subpel_picture (SchroEncoderFrame* frame)
+{
+
+}
+
+/* performs mode decision and superblock splitting
+ * finally it does DWT */
+void
+schro_encoder_mode_decision (SchroEncoderFrame* frame)
+{
+  SCHRO_ASSERT(frame && frame->state & SCHRO_ENCODER_FRAME_STATE_PREDICT_PEL);
+  SCHRO_INFO("mode decision and superblock splitting picture %d", frame->frame_number);
+
+#if 0
+  if (frame->params.num_refs > 0) {
+    schro_encoder_do_mode_decision (frame);
+ }
+#endif
 
   schro_encoder_render_picture (frame);
 }
 
+
 void
 schro_encoder_render_picture (SchroEncoderFrame *frame)
 {
+  int16_t *tmpbuf;
+
   SCHRO_INFO("render picture %d", frame->frame_number);
 
   if (frame->params.num_refs > 0) {
@@ -1133,19 +1381,12 @@ schro_encoder_render_picture (SchroEncoderFrame *frame)
     schro_frame_convert (frame->iwt_frame, frame->filtered_frame);
   }
 
-  schro_frame_iwt_transform (frame->iwt_frame, &frame->params,
-      frame->tmpbuf);
-  schro_encoder_clean_up_transform (frame);
-}
+  tmpbuf = schro_malloc(sizeof(int16_t) *
+      (frame->encoder->video_format.width + 16));
+  schro_frame_iwt_transform (frame->iwt_frame, &frame->params, tmpbuf);
+  schro_free (tmpbuf);
 
-void
-schro_encoder_encode_picture_all (SchroEncoderFrame *frame)
-{
-  schro_encoder_analyse_picture (frame);
-  schro_encoder_predict_picture (frame);
-  schro_encoder_encode_picture (frame);
-  schro_encoder_reconstruct_picture (frame);
-  schro_encoder_postanalyse_picture (frame);
+  schro_encoder_clean_up_transform (frame);
 }
 
 void
@@ -1234,9 +1475,14 @@ schro_encoder_reconstruct_picture (SchroEncoderFrame *encoder_frame)
 {
   SchroFrameFormat frame_format;
   SchroFrame *frame;
+  int16_t *tmpbuf;
 
+  tmpbuf = schro_malloc(sizeof(int16_t) *
+      (encoder_frame->encoder->video_format.width + 16));
   schro_frame_inverse_iwt_transform (encoder_frame->iwt_frame, &encoder_frame->params,
-      encoder_frame->tmpbuf);
+      tmpbuf);
+  schro_free (tmpbuf);
+
   if (encoder_frame->params.num_refs > 0) {
     schro_frame_add (encoder_frame->iwt_frame, encoder_frame->prediction_frame);
   }
@@ -2432,7 +2678,7 @@ schro_encoder_frame_new (SchroEncoder *encoder)
 
   encoder_frame = schro_malloc0 (sizeof(SchroEncoderFrame));
   encoder_frame->state = SCHRO_ENCODER_FRAME_STATE_NEW;
-  encoder_frame->needed_state = 0xfff;
+  encoder_frame->needed_state = 0xffff;
   encoder_frame->refcount = 1;
 
   frame_format = schro_params_get_frame_format (16,
@@ -2442,7 +2688,7 @@ schro_encoder_frame_new (SchroEncoder *encoder)
       &iwt_width, &iwt_height);
   encoder_frame->iwt_frame = schro_frame_new_and_alloc (NULL, frame_format,
       iwt_width, iwt_height);
-  
+
   schro_video_format_get_picture_luma_size (&encoder->video_format,
       &picture_width, &picture_height);
   encoder_frame->prediction_frame = schro_frame_new_and_alloc (NULL, frame_format,
@@ -2478,6 +2724,18 @@ schro_encoder_frame_unref (SchroEncoderFrame *frame)
     if (frame->reconstructed_frame) {
       schro_upsampled_frame_free (frame->reconstructed_frame);
     }
+
+    if (frame->upsampled_original_frame) {
+      schro_upsampled_frame_free (frame->upsampled_original_frame);
+    }
+#if 0
+    for (i=0;i<2;i++) {
+      if (frame->mf[i]) {
+        schro_motion_field_free (frame->mf[i]);
+      }
+    }
+#endif
+
     for(i=0;i<5;i++){
       if (frame->downsampled_frames[i]) {
         schro_frame_unref (frame->downsampled_frames[i]);
@@ -2493,8 +2751,13 @@ schro_encoder_frame_unref (SchroEncoderFrame *frame)
       schro_motion_free (frame->motion);
     }
 
-    if (frame->tmpbuf) schro_free (frame->tmpbuf);
     schro_list_free (frame->inserted_buffers);
+
+    if (frame->me) {
+      schro_motionest_free (frame->me);
+    }
+    if (frame->rme[0]) schro_rough_me_free (frame->rme[0]);
+    if (frame->rme[1]) schro_rough_me_free (frame->rme[1]);
 
     schro_free (frame);
   }
