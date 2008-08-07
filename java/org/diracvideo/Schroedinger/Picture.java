@@ -2,6 +2,9 @@ package org.diracvideo.Schroedinger;
 import java.awt.Dimension;
 import java.awt.Image;
 import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
+import javax.imageio.ImageIO;
 
 public class Picture {
     private Buffer buf;
@@ -13,7 +16,7 @@ public class Picture {
     private Picture refs[];
     private boolean zero_residual = false;
     private SubBand[][] coeffs;
-    private Block[] frame;
+    private Block iwt_frame[], mc_frame[];
     private Motion motion;
     private BufferedImage img;
     private Buffer[] motion_buffers;
@@ -230,13 +233,20 @@ public class Picture {
 	if(status != Decoder.Status.OK)
 	    return;
 	status = Decoder.Status.WAIT;
-	initializeFrames();
 	if(!zero_residual) {
+	    initializeIwtFrames();
 	    decodeWaveletTransform();
 	}
 	if(!par.is_intra) {
 	    decodeRefs();
+	    initializeMCFrames();
 	    decodeMotionCompensate();
+	    if(zero_residual) {
+		iwt_frame = mc_frame;
+	    } else {
+		for(int i = 0; i < 3; i++)
+		    mc_frame[i].addTo(iwt_frame[i]);
+	    }
 	}
 	createImage();
 	status = Decoder.Status.DONE;
@@ -245,7 +255,7 @@ public class Picture {
     
     private void decodeWaveletTransform() {
 	for(int c = 0; c < 3; c++) {
-	    short out[] = frame[c].d;
+	    short out[] = iwt_frame[c].d;
 	    coeffs[c][0].decodeCoeffs(out);
 	    coeffs[c][0].intraDCPredict(out);
 	    for(int i = 0; i < par.transformDepth; i++) {
@@ -253,7 +263,7 @@ public class Picture {
 		coeffs[c][3*i+2].decodeCoeffs(out);
 		coeffs[c][3*i+3].decodeCoeffs(out);
 	    } 
-	    wav.inverse(frame[c], par.transformDepth);  
+	    wav.inverse(iwt_frame[c], par.transformDepth);  
 	}
     }
 
@@ -286,14 +296,24 @@ public class Picture {
 	}
 	motion = new Motion(par, refs);
 	motion.decode(motion_buffers);
-	motion.render(frame, format);
+	motion.render(mc_frame, format);
     }
 
-    private void initializeFrames() {
-	frame = new Block[3];
-	frame[0] = new Block(par.iwtLumaSize);
-	frame[1] = new Block(par.iwtChromaSize);
-	frame[2] = new Block(par.iwtChromaSize);
+    private void initializeIwtFrames() {
+	iwt_frame = new Block[3];
+	iwt_frame[0] = new Block(par.iwtLumaSize);
+	iwt_frame[1] = new Block(par.iwtChromaSize);
+	iwt_frame[2] = new Block(par.iwtChromaSize);
+    }
+    
+    private void initializeMCFrames() {
+	Dimension luma = new Dimension(format.width, format.height);
+	Dimension chro = new Dimension(format.width >> format.chromaHShift(),
+				       format.height >> format.chromaVShift());
+	mc_frame = new Block[3];
+	mc_frame[0] = new Block(luma);
+	mc_frame[1] = new Block(chro);
+	mc_frame[2] = new Block(chro);
     }
 
     private void decodeYUV(int pixels[]) {
@@ -301,7 +321,8 @@ public class Picture {
 	Dimension chrom = par.iwtChromaSize;
 	ColourSpace col = format.colour;
 	short y,u,v;
-	short Y[] = frame[0].d, U[] = frame[1].d, V[] = frame[2].d;
+	short Y[] = iwt_frame[0].d, U[] = iwt_frame[1].d,
+	    V[] = iwt_frame[2].d;
 	int xFac = (lum.width > chrom.width ? 2 : 1);
 	int yFac = (lum.height > chrom.height ? 2 : 1);
         for(int i = 0; i < format.height; i++) {
@@ -339,18 +360,18 @@ public class Picture {
     }
 
     public Block getComponent(int k) {
-	return frame[k];
+	return iwt_frame[k];
     }
 
-    public void save() {
+    public void save(String streamname) {
 	if(img == null ||
 	   error != null) {
 	    return;
 	}
 	try {
-	    java.io.File f = new java.io.File(String.format("stream_%d.png", num));
-	    javax.imageio.ImageIO.write(img, "png", f);
-	} catch(java.io.IOException x) {
+	    File f = new File(String.format("%s_%d.png", num));
+	    ImageIO.write(img, "png", f);
+	} catch(IOException x) {
 	    System.err.format("Could not save pic %d for reason: %s\n",
 			      num, x.getMessage());
 	}

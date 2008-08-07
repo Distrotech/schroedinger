@@ -1,4 +1,7 @@
 CLASSPATH= ../../../
+WAVELETS=DeslauriesDebuc9_7 LeGall5_3 DeslauriesDebuc13_7 \
+	HaarSingleShift HaarNoShift Fidelity Daubechies9_7
+
 
 all: Decoder.class
 	@echo "Build!"
@@ -19,7 +22,7 @@ Arithmetic.java: Context.class
 
 Motion.java: Parameters.class Vector.class Block.class Global.class
 
-Parameters.java: Global.class
+Parameters.java: Global.class Wavelet.class
 
 Global.java: Vector.class
 

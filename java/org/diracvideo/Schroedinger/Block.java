@@ -113,6 +113,15 @@ public final class Block {
 	    System.arraycopy(d, offset + line, b.d, b.index(x,y), length);
 	}
     }
+
+    public void addTo(Block b) {
+	int height = Math.min(b.s.height, s.height);
+	int width = Math.min(b.s.width, s.width);
+	for(int y = 0; y < height; y++) {
+	    for(int x = 0; x < width; x++) 
+		b.set(x, y, (short) (pixel(x, y) + b.pixel(x, y)));
+	}
+    }
     
     /** upsample a block
      * block should be `real'
@@ -123,8 +132,7 @@ public final class Block {
 	short taps[] = {21, -7, 3, -1};
 	for(int y = 0; y < s.height - 1; y++) { /* vertical upsampling */
 	    for(int x = 0; x < s.width - 1; x++) {
-		short val = pixel(x,y);
-		r.set(x*2, y*2, val);
+		r.set(x*2, y*2, pixel(x,y)); /* the copying part */
 	    }
 	    for(int x = 0; x < s.width - 1; x++) {
 		short val = 16;
@@ -133,6 +141,24 @@ public final class Block {
 		    val += taps[i]*pixel(x, Math.min(s.height - 1, y + i));
 		}
 		r.set(x*2, y*2 + 1, (short)(val >> 5));
+	    }
+	}
+	for(int y = 0; y < s.height - 1; y++) {
+	    for(int x = 0; x < s.width - 1; x++) {
+		short val = 16;
+		for(int i = 0; i < 4; i++) {
+		    val += taps[i]*pixel(Math.max(0, x - i), y);
+		    val += taps[i]*pixel(Math.min(x + i, s.width - 1), y);
+		}
+		r.set(x*2 + 1, y*2, (short) (val >> 5));
+		val = 16;
+		for(int i = 0; i < 4; i++) {
+		    int xdown = Math.max(0, (x-i)*2);
+		    int xup = Math.min(2*s.width - 2, (x+i)*2);
+		    val += taps[i]*r.pixel(xdown, y*2+1);
+		    val += taps[i]*r.pixel(xup, y*2+1);
+		}
+		r.set(x*2 + 1, y*2 + 1, (short) (val >> 5));
 	    }
 	}
 	return r;
