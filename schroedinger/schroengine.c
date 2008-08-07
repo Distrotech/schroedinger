@@ -91,6 +91,8 @@ schro_engine_code_picture (SchroEncoderFrame *frame,
  * Sets up coding parameters for encoding as a completely independent
  * non-ref intra picture.
  */
+#if 0
+/* not used in this version */
 static void
 schro_engine_code_intra (SchroEncoderFrame *frame, double weight)
 {
@@ -99,6 +101,7 @@ schro_engine_code_intra (SchroEncoderFrame *frame, double weight)
   frame->picture_weight = weight;
   frame->gop_length = 1;
 }
+#endif
 
 void
 schro_engine_code_IBBBP (SchroEncoder *encoder, int i, int gop_length)
@@ -427,6 +430,11 @@ get_alloc (SchroEncoder *encoder, double requested_bits)
 
   SCHRO_DEBUG("%g/%d -> %g", requested_bits, encoder->buffer_level,
       encoder->buffer_level * y);
+  /*
+  SCHRO_DEBUG("requested %g, allocated %g, proportion %g"
+      , requested_bits, encoder->buffer_level*y
+      , encoder->buffer_level*y/requested_bits);
+  */
 
   return encoder->buffer_level * y;
 }
@@ -506,7 +514,7 @@ schro_encoder_init_frame (SchroEncoderFrame *frame)
 
 /***** tworef *****/
 /**
- * handle_gop_tworef2:
+ * handle_gop_tworef: Andrea's version
  * @encoder: structure containing all global parameters for encoding process
  * @i: index of the current 'anchor' frame in the frame queue in encoder
  *
@@ -514,7 +522,7 @@ schro_encoder_init_frame (SchroEncoderFrame *frame)
  * It uses an open GOP.
  * */
 void
-schro_encoder_handle_gop_tworef2 (SchroEncoder* encoder, int i)
+schro_encoder_handle_gop_tworef (SchroEncoder* encoder, int i)
 {
   SCHRO_ASSERT(encoder && encoder->frame_queue
       && i<encoder->frame_queue->n);
@@ -589,8 +597,6 @@ schro_encoder_handle_gop_tworef2 (SchroEncoder* encoder, int i)
     }
   }
 
-  SCHRO_DEBUG("tworef2: i=%d queue=%d gop_picture=%d"
-      , i, encoder->frame_queue->n, encoder->gop_picture);
   if (encoder->frame_queue->n - i -1 > encoder->magic_subgroup_length) {
     encoder->gop_picture += encoder->magic_subgroup_length;
   } else if (encoder->end_of_stream) {
@@ -603,12 +609,13 @@ schro_encoder_handle_gop_tworef2 (SchroEncoder* encoder, int i)
 
 
 /**
- * handle_gop_tworef:
+ * handle_gop_tworef: Dave's version
  * @encoder:
  * @i:
  *
  * Sets up a minor group of pictures for the tworef engine.
  */
+#if 0
 void
 schro_encoder_handle_gop_tworef (SchroEncoder *encoder, int i)
 {
@@ -690,6 +697,7 @@ schro_encoder_handle_gop_tworef (SchroEncoder *encoder, int i)
 
   encoder->gop_picture += gop_length;
 }
+#endif
 
 int
 schro_encoder_setup_frame_tworef (SchroEncoderFrame *frame)

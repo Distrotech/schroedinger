@@ -166,7 +166,7 @@ handle_gop_enum (SchroEncoder *encoder)
       SCHRO_DEBUG("Setting tworef engine\n");
       encoder->profile = 8;
       encoder->init_frame = schro_encoder_init_frame;
-      encoder->handle_gop = schro_encoder_handle_gop_tworef2;
+      encoder->handle_gop = schro_encoder_handle_gop_tworef;
       encoder->handle_quants = schro_encoder_handle_quants;
       encoder->setup_frame = schro_encoder_setup_frame_tworef;
       break;
@@ -1177,6 +1177,7 @@ schro_encoder_render_picture (SchroEncoderFrame *frame)
 
     SCHRO_ASSERT(schro_motion_verify (frame->motion));
 
+    /* switches predicted frames to intra if MVs are too heavy */
     if ((frame->encoder->bits_per_picture &&
         frame->estimated_mc_bits > frame->encoder->bits_per_picture * frame->encoder->magic_mc_bailout_limit) ||
         frame->badblock_ratio > 0.5) {
@@ -3137,6 +3138,7 @@ schro_encoder_async_schedule (SchroEncoder *encoder, SchroExecDomain exec_domain
     }
   }
 
+  /* analyse the residual in preparation for quantisation */
   for(i=0;i<encoder->frame_queue->n;i++) {
     frame = encoder->frame_queue->elements[i].data;
     if (frame->slot == encoder->quant_slot) {
