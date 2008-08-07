@@ -31,7 +31,7 @@ class Parameters {
     public int picture_prediction_mode, mv_precision;
     public int picture_weight_bits = 1, 
 	picture_weight_1 = 1,picture_weight_2 = 1;
-    public Global global[] = new Global[3];
+    public Global global[] = new Global[2];
 
     public Parameters(int c) {
 	no_ac = !((c & 0x48) == 0x8);

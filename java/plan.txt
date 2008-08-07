@@ -16,6 +16,10 @@ x#13   Fix arithmetic unpacking of Subbands (sign prediction almost done)
 x#14   Implement motion vector structures 
 x#15   Decode motion vectors
 #16    Implement motion decoding
+x#16.1 Implement upSample()
+#16.2  Implement mv_precision=0 MC
+#16.3  Implemenet mv_precision=1 MC
+#16.4  Implement mv_precision=2	MC	
 #17    Make initial cortado plugin
 #18    Add SchroDec into building cortado
 #19    Fix cortado plugin

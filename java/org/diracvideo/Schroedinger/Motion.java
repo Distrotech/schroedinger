@@ -146,6 +146,7 @@ class Motion {
 		xblen = par.xblen_luma >> chroma_h_shift;
 		yblen = par.yblen_luma >> chroma_v_shift;
 	    }
+	    block = new Block(new Dimension(xblen, yblen));
 	    width = out[k].s.width;
 	    height = out[k].s.height;
 	    xoffset = (xblen - xbsep)/2;
@@ -161,27 +162,75 @@ class Motion {
 		}
 	    }
 	    initOBMCWeight();
+	    for(int j = 0; j < par.y_num_blocks; j++)
+		for(int i = 0; i < par.x_num_blocks; i++)
+		    predictBlock(out[k], i, j, k);
 	}
     }
 
-    private void predictBlock(int x, int y, int k, int i, int j) {
+    private void predictBlock(Block out, int i, int j, int k) {
+	int xstart = i*xblen - xoffset;
+	int xstop = Math.min(width - 1, (i+1)*xblen + xoffset);
+	int ystart = j*yblen - yoffset;
+	int ystop = Math.min(height - 1, (j+1)*yblen + yoffset);
 	Vector mv = getVector(i,j);
-	switch(mv.pred_mode) {
-	case 0:
-	    getDCBlock(i, j, k);
-	    break;
-	case 1:
-	    getRef1Block(i, j, k, x, y);
-	    break;
-	case 2:
-	    getRef2Block(i, j, k, x, y);
-	    break;
-	case 3:
-	    getBiRefBlock(i, j, k, x, y);
-	    break;
-	default:
-	    break;
+	if(!mv.using_global && k != 0) {
+	    mv = mv.scale(chroma_h_shift, chroma_v_shift);
 	}
+	for(int y = Math.max(ystart, 0); y < ystop; y++) {
+	    int q = y - ystart;
+	    for(int x = Math.max(xstart, 0); x < xstop; x++) {
+		int p = x - xstart;
+		short val;
+		if(mv.pred_mode == 0) {
+		    val = (short)mv.dc[k];
+		} else {
+		    val = predictPixel(mv, x, y, k);
+		}
+		block.set(p, q,  out.pixel(x, y) + val);
+	    }
+	}
+	block.shiftOut(5);
+	accumalateBlock(xstart, ystart, out);
+    }
+
+    private short predictPixel(Vector mv, int x,  int y, int k) {
+	if(mv.using_global) {
+	    for(int i = 0; i < par.num_refs; i++) {
+		par.global[i].getVector(mv, x, y, i);
+		if(k != 0) /* this is only needed for global motion compensation,
+			    * otherwise it is done before we get here */
+		    mv = mv.scale(chroma_h_shift, chroma_v_shift);
+	    }
+	}
+	short weight = (short)(par.picture_weight_1 + par.picture_weight_2);
+	int px, py;
+	switch(mv.pred_mode) {
+	case 1:
+	    px = (x << par.mv_precision) + mv.dx[0];
+	    py = (y << par.mv_precision) + mv.dy[0];
+	    return (short)(weight*predictSubPixel(0, px, py));
+	case 2:
+	    px = (x << par.mv_precision) + mv.dx[1];
+	    py = (y << par.mv_precision) + mv.dy[1];
+	    return (short)(weight*predictSubPixel(1, px, py));
+	case 3:
+	    px = (x << par.mv_precision) + mv.dx[0];
+	    py = (y << par.mv_precision) + mv.dy[0];
+	    short val = (short)(par.picture_weight_1*predictSubPixel(0, px, py));
+	    px = (x << par.mv_precision) + mv.dx[1];
+	    py = (x << par.mv_precision) + mv.dy[1];
+	    return (short)(val + par.picture_weight_2*predictSubPixel(1, px, py));
+	default:
+	    return 0;
+	}
+    }
+
+    private short predictSubPixel(int ref, int px, int py) {
+	if(par.mv_precision < 2) { 
+	    return tmp_ref[ref].real(px, py); 
+	}
+	return 0;
     }
 
     private void accumalateBlock(int x, int y, Block frame) {
@@ -208,30 +257,6 @@ class Motion {
 		frame.d[i + outLine] = (short)(block.d[i + inLine] * w_x * w_y);
 	    }
 	}
-    }
-
-    private void getDCBlock(int x, int y, int k) {
-	int val = getVector(x,y).dc[k];
-	for(int j = 0; j < yblen; j++) {
-	    int offset = block.line(j);
-	    for(int i = 0; i < xblen; i++) {
-		block.d[i + offset] += (short)(val);
-	    }
-	}
-    }
-
-    private void getRef1Block(int i, int j, int k, int x, int y) {
-	Vector mv = getVector(i,j);
-	int weight = par.picture_weight_1 + par.picture_weight_2;
-
-    }
-
-    private void getRef2Block(int i, int j, int k, int x, int y) {
-	
-    }
-
-    private void getBiRefBlock(int i, int j, int k, int x, int y) {
-	
     }
 
     private void initOBMCWeight() {

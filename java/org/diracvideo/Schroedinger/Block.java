@@ -77,11 +77,19 @@ public final class Block {
     public short pixel(int x, int y) {
 	return d[(y + p.y)*o.width + (p.x + x)];
     }
-    
+
+    /** Pixel at a given point, checked */
+    public short real(int x, int y) {
+	return pixel(Util.clamp(x, 0, s.width - 1), Util.clamp(y, 0, s.height - 1));
+    }
+
     public void set(int x, int y, short v) {
 	d[(y+p.y)*o.width + (p.x + x)] = v;
     }
     
+    public void set(int x, int y, int v) {
+	set(x, y, (short)v);
+    }
     /** copies current block into another
      *
      * Since blocks can have offsets out of the 
@@ -162,6 +170,13 @@ public final class Block {
 	    }
 	}
 	return r;
+    }
+
+    public void shiftOut(int b) {
+	int add = (1 << (b - 1));
+	for(int y = 0; y < s.height; y++)
+	    for(int x = 0; x < s.width; x++)
+		set(x, y, (short)((pixel(x, y) + add) >> b));
     }
 
     /** A test method which fills the block with a checkers pattern 

@@ -290,10 +290,6 @@ public class Picture {
     }
 
     private void decodeMotionCompensate() {
-	if(true) {
-	    error = new Exception("foo");
-	    return;
-	}
 	motion = new Motion(par, refs);
 	motion.decode(motion_buffers);
 	motion.render(mc_frame, format);
