@@ -78,6 +78,7 @@ typedef int (*SchroEngineIterateFunc) (SchroEncoder *encoder);
 
 /* forward declaration */
 struct _SchroMotionEst;
+struct _SchroRoughME;
 
 struct _SchroEncoderFrame {
   /*< private >*/
@@ -114,7 +115,7 @@ struct _SchroEncoderFrame {
   SchroPictureNumber frame_number;
   SchroFrame *original_frame;
   SchroFrame *filtered_frame;
-  SchroFrame *downsampled_frames[5];
+  SchroFrame *downsampled_frames[8];
   SchroUpsampledFrame *reconstructed_frame;
   SchroUpsampledFrame *upsampled_original_frame;
 
@@ -173,7 +174,8 @@ struct _SchroEncoderFrame {
 
   SchroEncoderFrame *ref_frame[2];
 
-  struct _SchroMotionEst* me;
+  struct _SchroMotionEst *me;
+  struct _SchroRoughME *rme[2];
 
   SchroMotion *motion;
   SchroList *motion_field_list;
@@ -307,6 +309,7 @@ struct _SchroEncoder {
   int quantiser_engine;
 
   double start_time;
+  int downsample_levels;
 
 #if 0
   int prefs[SCHRO_PREF_LAST];

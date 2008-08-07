@@ -70,13 +70,13 @@ schro_encoder_new (void)
   encoder->noise_threshold = 25.0;
   encoder->gop_structure = 0;
   encoder->queue_depth = 20;
-  encoder->perceptual_weighting = 0;
+  encoder->perceptual_weighting = 1;
   encoder->perceptual_distance = 4.0;
   encoder->filtering = 0;
   encoder->filter_value = 5.0;
   encoder->profile = 0;
   encoder->level = 0;
-  encoder->au_distance = 30;
+  encoder->au_distance = 120;
   encoder->enable_psnr = TRUE;
   encoder->enable_ssim = FALSE;
   encoder->enable_md5 = FALSE;
@@ -100,9 +100,9 @@ schro_encoder_new (void)
   encoder->vert_slices = 6;
 
   encoder->magic_dc_metric_offset = 1.0;
-  encoder->magic_subband0_lambda_scale = 2.0;
-  encoder->magic_chroma_lambda_scale = 1.0;
-  encoder->magic_nonref_lambda_scale = 0.5;
+  encoder->magic_subband0_lambda_scale = 10.0;
+  encoder->magic_chroma_lambda_scale = 0.01;
+  encoder->magic_nonref_lambda_scale = 0.01;
   encoder->magic_allocation_scale = 1.1;
   encoder->magic_keyframe_weight = 7.5;
   encoder->magic_scene_change_threshold = 0.2;
@@ -110,12 +110,14 @@ schro_encoder_new (void)
   encoder->magic_inter_b_weight = 0.2;
   encoder->magic_mc_bailout_limit = 0.5;
   encoder->magic_bailout_weight = 4.0;
-  encoder->magic_error_power = 2.0;
-  encoder->magic_mc_lambda = 0.5;
+  encoder->magic_error_power = 4.0;
+  encoder->magic_mc_lambda = 0.1;
   encoder->magic_subgroup_length = 4;
   encoder->magic_lambda = 1.0;
   encoder->magic_badblock_multiplier_nonref = 4.0;
   encoder->magic_badblock_multiplier_ref = 8.0;
+
+  encoder->downsample_levels = 5;
 
   schro_video_format_set_std_video_format (&encoder->video_format,
       SCHRO_VIDEO_FORMAT_CUSTOM);
@@ -1086,7 +1088,8 @@ schro_encoder_analyse_picture (SchroEncoderFrame *frame)
   if (frame->need_average_luma) {
     if (frame->have_downsampling) {
       frame->average_luma =
-        schro_frame_calculate_average_luma (frame->downsampled_frames[3]);
+        schro_frame_calculate_average_luma (
+            frame->downsampled_frames[frame->encoder->downsample_levels-1]);
     } else {
       frame->average_luma =
         schro_frame_calculate_average_luma (frame->filtered_frame);
@@ -1120,7 +1123,7 @@ schro_encoder_predict_rough_picture (SchroEncoderFrame *frame)
   SCHRO_INFO("rough scan picture %d", frame->frame_number);
 
   if (frame->params.num_refs > 0) {
-    schro_motionest_rough_scan (frame);
+    schro_encoder_motion_predict_rough (frame);
   }
 }
 
@@ -1129,11 +1132,11 @@ schro_encoder_predict_rough_picture (SchroEncoderFrame *frame)
 static void
 schro_encoder_predict_pel_picture (SchroEncoderFrame* frame)
 {
-  SCHRO_ASSERT (frame && frame->state & SCHRO_ENCODER_FRAME_STATE_HAVE_GOP);
+  SCHRO_ASSERT (frame && frame->state & SCHRO_ENCODER_FRAME_STATE_PREDICT_ROUGH);
   SCHRO_INFO ("fullpel predict picture %d", frame->frame_number);
 
   if (frame->params.num_refs > 0) {
-    schro_motionest_predict_pel (frame);
+    schro_encoder_motion_predict_pel (frame);
   }
 }
 
@@ -1146,13 +1149,13 @@ schro_encoder_predict_subpel_picture (SchroEncoderFrame* frame)
 /* performs mode decision and superblock splitting
  * finally it does DWT */
 static void
-schro_encoder_mode_decision (SchroEncoderFrame* frame)
+schro_encoder_select_mode_picture (SchroEncoderFrame* frame)
 {
   SCHRO_ASSERT(frame && frame->state & SCHRO_ENCODER_FRAME_STATE_PREDICT_PEL);
   SCHRO_INFO("mode decision and superblock splitting picture %d", frame->frame_number);
 
   if (frame->params.num_refs > 0) {
-    schro_motionest_mode_decision (frame);
+    schro_encoder_mode_decision (frame);
  }
 
   schro_encoder_render_picture (frame);
@@ -2578,6 +2581,8 @@ schro_encoder_frame_unref (SchroEncoderFrame *frame)
     if (frame->me) {
       schro_motionest_free (frame->me);
     }
+    if (frame->rme[0]) schro_rough_me_free (frame->rme[0]);
+    if (frame->rme[1]) schro_rough_me_free (frame->rme[1]);
 
     schro_free (frame);
   }
@@ -2909,7 +2914,7 @@ run_stage (SchroEncoderFrame *frame, SchroEncoderFrameStateEnum state)
       func = schro_encoder_predict_subpel_picture;
       break;
     case SCHRO_ENCODER_FRAME_STATE_MODE_DECISION:
-      func = schro_encoder_mode_decision;
+      func = schro_encoder_select_mode_picture;
       break;
     case SCHRO_ENCODER_FRAME_STATE_ENCODING:
       func = schro_encoder_encode_picture;

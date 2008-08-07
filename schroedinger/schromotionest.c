@@ -21,16 +21,13 @@ void schro_encoder_bigblock_estimation (SchroMotionEst *me);
 void schro_motion_field_set (SchroMotionField *field, int split, int pred_mode);
 void schro_motion_global_metric (SchroMotionField *mf, SchroFrame *frame,
     SchroFrame *ref);
-void schro_motionest_rough_scan_nohint (SchroMotionEst *me,
-    int shift, int ref, int distance);
-/* Added by Andrea - same as above but we add the search of the mvs of the
- * blocks above, to the left and top-left, borrowed from the next function,
- * rough_scan_hint. The idea is to try to increase the search area without
- * incurring in huge performance penalty */
 void schro_motionest_rough_scan_nohint2 (SchroMotionEst *me,
     int shift, int ref, int distance);
-void schro_motionest_rough_scan_hint (SchroMotionEst *me,
-    int shift, int ref, int distance);
+void schro_rough_me_heirarchical_scan_nohint (SchroRoughME *rme, int shift,
+    int distance);
+void schro_rough_me_heirarchical_scan_hint (SchroRoughME *rme, int shift,
+    int distance);
+static SchroFrame * get_downsampled(SchroEncoderFrame *frame, int i);
 
 #ifdef unused
 void schro_motion_predict_subpixel (SchroMotion *motion, SchroFrame *frame,
@@ -80,6 +77,7 @@ schro_motionest_new (SchroEncoderFrame *frame)
 void
 schro_motionest_free (SchroMotionEst *me)
 {
+#if 0
   int ref;
   int i;
 
@@ -90,51 +88,446 @@ schro_motionest_free (SchroMotionEst *me)
       }
     }
   }
+#endif
 
   schro_free (me->sblocks);
 
   schro_free (me);
 }
 
+SchroRoughME *
+schro_rough_me_new (SchroEncoderFrame *frame, SchroEncoderFrame *ref)
+{
+  SchroRoughME *rme;
+
+  rme = schro_malloc0 (sizeof(SchroRoughME));
+
+  rme->encoder_frame = frame;
+  rme->ref_frame = ref;
+
+  return rme;
+}
+
 void
-schro_encoder_motion_predict (SchroEncoderFrame *frame)
+schro_rough_me_free (SchroRoughME *rme)
+{
+  int i;
+  for(i=0;i<SCHRO_MAX_HIER_LEVELS;i++){
+    if (rme->motion_fields[i]) schro_motion_field_free (rme->motion_fields[i]);
+  }
+  schro_free (rme);
+}
+
+void
+schro_rough_me_heirarchical_scan (SchroRoughME *rme)
+{
+  SchroParams *params = &rme->encoder_frame->params;
+  int i;
+  int n_levels = rme->encoder_frame->encoder->downsample_levels;
+
+  SCHRO_ASSERT(params->x_num_blocks != 0);
+  SCHRO_ASSERT(params->y_num_blocks != 0);
+  SCHRO_ASSERT(params->num_refs > 0);
+
+  schro_rough_me_heirarchical_scan_nohint (rme, n_levels, 12);
+  for (i=n_levels-1; i >= 1; i--) {
+    schro_rough_me_heirarchical_scan_hint (rme, i, 4);
+  }
+}
+
+/* Note: this is not Dave's original function.
+ * Added candidate from same level (perhaps I should
+ * change the name, as I'm using some hint */
+void
+schro_rough_me_heirarchical_scan_nohint (SchroRoughME *rme, int shift,
+    int distance)
+{
+  SCHRO_ASSERT(rme && rme->encoder_frame && rme->ref_frame);
+
+  SchroMetricScan scan;
+  SchroMotionVector *mv, zero_mv;
+  SchroMotionField *mf;
+  SchroParams *params = &rme->encoder_frame->params;
+  int i;
+  int j;
+  int skip, ref;
+
+  /* I need to determine which reference I'm working on
+   * to process the candidates MVs - note I've already checked
+   * that ref_frame != NULL */
+  ref = rme->ref_frame == rme->encoder_frame->ref_frame[0] ? 0 
+    : (rme->encoder_frame->ref_frame[1] ? 1 : -1);
+  SCHRO_ASSERT(ref != -1);
+
+  scan.frame = get_downsampled (rme->encoder_frame, shift);
+  scan.ref_frame = get_downsampled (rme->ref_frame, shift);
+
+  mf = schro_motion_field_new (params->x_num_blocks, params->y_num_blocks);
+
+  schro_motion_field_set (mf, 0, 1);
+
+  scan.block_width = params->xbsep_luma;
+  scan.block_height = params->ybsep_luma;
+  scan.gravity_scale = 0;
+  scan.gravity_x = 0;
+  scan.gravity_y = 0;
+
+  memset (&zero_mv, 0, sizeof(zero_mv));
+
+  skip = 1<<shift;
+  for(j=0;j<params->y_num_blocks;j+=skip){
+    for(i=0;i<params->x_num_blocks;i+=skip){
+      SchroFrameData orig, ref_data;
+      SchroMotionVector* hint_mv[4]; /* use zero vector as well as available neighbours */
+      int dx, dy;
+      int min_m, min_metric, n=0, m;
+      /* get source data */
+      schro_frame_get_subdata (scan.frame, &orig,
+          0, i*params->xbsep_luma >> shift,
+          j*params->ybsep_luma >> shift);
+
+      /* always test the zero vector */
+      hint_mv[n++] = &zero_mv;
+
+      /* inherit from neighbours (only towards SE) */
+      if (0<i) {
+        hint_mv[n++] = motion_field_get (mf, i-skip, j);
+      }
+      if (0<j) {
+        hint_mv[n++] = motion_field_get (mf, i, j-skip);
+      }
+      if (0<i && 0<j) {
+        hint_mv[n++] = motion_field_get (mf, i-skip, j-skip);
+      }
+      min_m = 0;
+      min_metric = SCHRO_METRIC_INVALID;
+      for (m=0; m<n;++m) {
+        int metric, width, height;
+
+        dx = hint_mv[m]->dx[ref];
+        dx += i * params->xbsep_luma;
+        dx >>=shift;
+        dy = hint_mv[m]->dy[ref];
+        dy += j * params->ybsep_luma;
+        dy >>= shift;
+
+        if (0>dx || 0>dy || dx>scan.ref_frame->width || dy>scan.ref_frame->height) {
+          continue;
+        }
+
+        schro_frame_get_subdata (scan.ref_frame,
+            &ref_data, 0,
+            (i*params->xbsep_luma + dx) >> shift,
+            (j*params->ybsep_luma + dy) >> shift);
+
+        width = MIN(params->xbsep_luma, orig.width);
+        height = MIN(params->ybsep_luma, orig.height);
+        if (0==width || 0==height) continue;
+        if (width > ref_data.width || height > ref_data.height) continue;
+
+        /* block matching for a single position */
+        metric = schro_metric_get (&orig, &ref_data, width, height);
+
+        if (min_metric > metric) {
+          min_metric = metric;
+          min_m = m;
+        }
+      }
+
+      /* now we have selected the best candidate for the refinement, which is
+       * going to be performed with full block matching over an area
+       * distance*distance */
+      dx = hint_mv[min_m]->dx[ref] >> shift;
+      dy = hint_mv[min_m]->dy[ref] >> shift;
+
+      scan.x = (i>>shift) * params->xbsep_luma;
+      scan.y = (j>>shift) * params->ybsep_luma;
+      scan.block_width = MIN(scan.frame->width - scan.x, params->xbsep_luma);
+      scan.block_height = MIN(scan.frame->height - scan.y, params->ybsep_luma);
+      schro_metric_scan_setup (&scan, 0, 0, distance);
+
+      mv = motion_field_get (mf, i, j);
+      if (scan.scan_width <= 0 || scan.scan_height <= 0) {
+        mv->dx[0] = 0 << shift;
+        mv->dy[0] = 0 << shift;
+        mv->metric = SCHRO_METRIC_INVALID;
+        continue;
+      }
+#if 0
+      /* this code skips blocks that are off the edge.  Instead, we
+       * scan smaller block sizes */
+      if (scan.x + scan.block_width >= scan.ref_frame->width ||
+          scan.y + scan.block_height >= scan.ref_frame->height) {
+        mv->dx[0] = 0 << shift;
+        mv->dy[0] = 0 << shift;
+        mv->metric = SCHRO_METRIC_INVALID;
+        continue;
+      }
+#endif
+
+      schro_metric_scan_do_scan (&scan);
+      mv->metric = schro_metric_scan_get_min (&scan, &dx, &dy);
+      dx <<= shift;
+      dy <<= shift;
+
+      mv->dx[0] = dx;
+      mv->dy[0] = dy;
+    }
+  }
+
+  rme->motion_fields[shift] = mf;
+}
+
+void
+schro_rough_me_heirarchical_scan_hint (SchroRoughME *rme, int shift,
+    int distance)
+{
+  SchroMetricScan scan;
+  SchroMotionVector *mv;
+  SchroMotionField *mf;
+  SchroMotionField *hint_mf;
+  SchroParams *params = &rme->encoder_frame->params;
+  SchroMotionVector zero_mv;
+  int i;
+  int j;
+  int skip;
+  unsigned int hint_mask;
+
+  scan.frame = get_downsampled (rme->encoder_frame, shift);
+  scan.ref_frame = get_downsampled (rme->ref_frame, shift);
+
+  mf = schro_motion_field_new (params->x_num_blocks, params->y_num_blocks);
+  hint_mf = rme->motion_fields[shift+1];
+
+  schro_motion_field_set (mf, 0, 1);
+
+  scan.block_width = params->xbsep_luma;
+  scan.block_height = params->ybsep_luma;
+  scan.gravity_scale = 0;
+  scan.gravity_x = 0;
+  scan.gravity_y = 0;
+
+  memset (&zero_mv, 0, sizeof(zero_mv));
+
+  hint_mask = ~((1<<(shift + 1))-1);
+  skip = 1<<shift;
+  for(j=0;j<params->y_num_blocks;j+=skip){
+    for(i=0;i<params->x_num_blocks;i+=skip){
+      SchroFrameData orig;
+      SchroFrameData ref_data;
+#define LIST_LENGTH 10
+      SchroMotionVector *hint_mv[LIST_LENGTH];
+      int m;
+      int n = 0;
+      int dx, dy;
+      int min_m;
+      int min_metric;
+
+      schro_frame_get_subdata (scan.frame, &orig,
+          0, i*params->xbsep_luma >> shift,
+          j*params->ybsep_luma >> shift);
+
+      /* always test the zero vector */
+      hint_mv[n] = &zero_mv;
+      n++;
+
+      /* inherit from nearby parents */
+      /* This overly clever bit of code checks the parents of the diagonal
+       * neighbors, which corresponds to the nearest parents. */
+      for(m=0;m<4;m++) {
+        int l = (i + skip*(-1 + 2*(m&1)))&hint_mask;
+        int k = (j + skip*(-1 + (m&2)))&hint_mask;
+        if (l >= 0 && l < params->x_num_blocks &&
+            k >= 0 && k < params->y_num_blocks) {
+          hint_mv[n] = motion_field_get (hint_mf, l, k);
+          n++;
+        }
+      }
+
+      /* inherit from neighbors (only towards SE) */
+      if (i > 0) {
+        hint_mv[n] = motion_field_get (mf, i-skip, j);
+        n++;
+      }
+      if (j > 0) {
+        hint_mv[n] = motion_field_get (mf, i, j - skip);
+        n++;
+      }
+      if (i > 0 && j > 0) {
+        hint_mv[n] = motion_field_get (mf, i - skip, j - skip);
+        n++;
+      }
+
+      SCHRO_ASSERT(n <= LIST_LENGTH);
+
+      min_m = 0;
+      min_metric = SCHRO_METRIC_INVALID;
+      for(m = 0; m < n; m++) {
+        int metric;
+        int width, height;
+        int x,y;
+
+        dx = hint_mv[m]->dx[0];
+        dy = hint_mv[m]->dy[0];
+
+
+        x = (i*params->xbsep_luma + dx) >> shift;
+        y = (j*params->ybsep_luma + dy) >> shift;
+        if (x < 0 || y < 0) {
+          //SCHRO_ERROR("ij %d %d dx dy %d %d", i, j, dx, dy);
+          continue;
+        }
+
+        schro_frame_get_subdata (scan.ref_frame,
+            &ref_data, 0,
+            (i*params->xbsep_luma + dx) >> shift,
+            (j*params->ybsep_luma + dy) >> shift);
+
+        width = MIN(params->xbsep_luma, orig.width);
+        height = MIN(params->ybsep_luma, orig.height);
+        if (width == 0 || height == 0) continue;
+        if (ref_data.width < width || ref_data.height < height) continue;
+
+        metric = schro_metric_get (&orig, &ref_data, width, height);
+
+        if (metric < min_metric) {
+          min_metric = metric;
+          min_m = m;
+        }
+      }
+
+      dx = hint_mv[min_m]->dx[0] >> shift;
+      dy = hint_mv[min_m]->dy[0] >> shift;
+
+      scan.x = (i>>shift) * params->xbsep_luma;
+      scan.y = (j>>shift) * params->ybsep_luma;
+      scan.block_width = MIN(scan.frame->width - scan.x, params->xbsep_luma);
+      scan.block_height = MIN(scan.frame->height - scan.y, params->ybsep_luma);
+      schro_metric_scan_setup (&scan, dx, dy, distance);
+
+      mv = motion_field_get (mf, i, j);
+      if (scan.scan_width <= 0 || scan.scan_height <= 0) {
+        mv->dx[0] = 0;
+        mv->dy[0] = 0;
+        mv->metric = SCHRO_METRIC_INVALID;
+        continue;
+      }
+
+      schro_metric_scan_do_scan (&scan);
+      mv->metric = schro_metric_scan_get_min (&scan, &dx, &dy);
+      dx <<= shift;
+      dy <<= shift;
+
+      mv->dx[0] = dx;
+      mv->dy[0] = dy;
+    }
+  }
+
+  rme->motion_fields[shift] = mf;
+}
+
+/* rough motion estimate using hierarchical block matching */
+void
+schro_encoder_motion_predict_rough (SchroEncoderFrame* frame)
+{
+  SCHRO_ASSERT(frame && frame->state & SCHRO_ENCODER_FRAME_STATE_HAVE_GOP);
+
+  SchroParams* params = &frame->params;
+  int ref=0;
+
+  SCHRO_ASSERT(params->x_num_blocks != 0);
+  SCHRO_ASSERT(params->y_num_blocks != 0);
+  SCHRO_ASSERT(params->num_refs > 0);
+
+  for(ref=0;ref<params->num_refs;ref++){
+    frame->rme[ref] = schro_rough_me_new (frame, frame->ref_frame[0]);
+    schro_rough_me_heirarchical_scan (frame->rme[ref]);
+  }
+
+  frame->me = schro_motionest_new (frame);
+
+  frame->motion = schro_motion_new (params, NULL, NULL);
+  frame->me->motion = frame->motion;
+
+  frame->motion_field_list = schro_list_new_full ((SchroListFreeFunc)schro_motion_field_free, NULL);
+
+}
+
+#if 0
+/* Dave's version */
+void
+schro_encoder_motion_predict_rough (SchroEncoderFrame *frame)
 {
   SchroParams *params = &frame->params;
-  SchroMotionEst *me;
-  /* int n; - not needed */
+  int n;
   int ref;
 
   SCHRO_ASSERT(params->x_num_blocks != 0);
   SCHRO_ASSERT(params->y_num_blocks != 0);
   SCHRO_ASSERT(params->num_refs > 0);
 
-  me = schro_motionest_new (frame);
-
-  frame->motion = schro_motion_new (params, NULL, NULL);
-  me->motion = frame->motion;
-
-  /*
-  frame->motion_field_list = schro_list_new_full ((SchroListFreeFunc)schro_motion_field_free, NULL);
-  n = 0;
-  */
-  /* it looks to me as if ME is done on downsampled frames only, starting with
-   * 1/8, then 1/4 and finally 1/2 - are we not generating only 1/4 of the MVs?
-   * yes, we are - the motion field is completely populated in bigblock_estimation
-   * */
   for(ref=0;ref<params->num_refs;ref++){
-    schro_motionest_rough_scan_nohint (me, 3, ref, 12);
-    schro_motionest_rough_scan_hint (me, 2, ref, 2);
-    schro_motionest_rough_scan_hint (me, 1, ref, 2);
+    frame->rme[ref] = schro_rough_me_new (frame, frame->ref_frame[0]);
+    schro_rough_me_heirarchical_scan (frame->rme[ref]);
   }
 
-  schro_encoder_bigblock_estimation (me);
+  frame->me = schro_motionest_new (frame);
+
+  frame->motion = schro_motion_new (params, NULL, NULL);
+  frame->me->motion = frame->motion;
+
+  frame->motion_field_list = schro_list_new_full ((SchroListFreeFunc)schro_motion_field_free, NULL);
+  n = 0;
+
+#if 0
+  for(ref=0;ref<params->num_refs;ref++){
+    schro_motionest_rough_scan_nohint (frame->me, 3, ref, 12);
+    schro_motionest_rough_scan_hint (frame->me, 2, ref, 2);
+    schro_motionest_rough_scan_hint (frame->me, 1, ref, 2);
+  }
+#endif
+
+}
+
+#endif
+
+void
+schro_encoder_motion_predict_pel (SchroEncoderFrame* frame)
+{
+  SCHRO_ASSERT(frame && frame->state & SCHRO_ENCODER_FRAME_STATE_PREDICT_ROUGH);
+
+  SchroParams* params = &frame->params;
+  int ref;
+
+  SCHRO_ASSERT(params->x_num_blocks != 0);
+  SCHRO_ASSERT(params->y_num_blocks != 0);
+  SCHRO_ASSERT(params->num_refs > 0);
+
+  for(ref=0;ref<params->num_refs;ref++){
+    schro_rough_me_heirarchical_scan_hint (frame->rme[ref], 0, 4);
+  }
+
+}
+
+#if 0
+/* Dave's version */
+void
+schro_encoder_motion_predict_pel (SchroEncoderFrame *frame)
+{
+  SchroParams *params = &frame->params;
+
+  SCHRO_ASSERT(params->x_num_blocks != 0);
+  SCHRO_ASSERT(params->y_num_blocks != 0);
+  SCHRO_ASSERT(params->num_refs > 0);
+
+  schro_encoder_bigblock_estimation (frame->me);
 
 #if 0
     if (frame->encoder->enable_phasecorr_estimation) {
-      schro_encoder_phasecorr_estimation (me);
+      schro_encoder_phasecorr_estimation (frame->me);
     }
     if (params->have_global_motion) {
-      schro_encoder_global_estimation (me);
+      schro_encoder_global_estimation (frame->me);
 #endif
 
   schro_motion_calculate_stats (frame->motion, frame);
@@ -142,10 +535,9 @@ schro_encoder_motion_predict (SchroEncoderFrame *frame)
 
   /* schro_list_free (frame->motion_field_list); */
 
-  frame->badblock_ratio = (double)me->badblocks/(params->x_num_blocks*params->y_num_blocks/16);
-
-  schro_motionest_free (me);
+  frame->badblock_ratio = (double)frame->me->badblocks/(params->x_num_blocks*params->y_num_blocks/16);
 }
+#endif
 
 void
 schro_motion_field_lshift (SchroMotionField *mf, int n)
@@ -266,7 +658,8 @@ schro_encoder_global_estimation (SchroMotionEst *me)
   SCHRO_ERROR("Global prediction is broken.  Please try again later");
 
   for(i=0;i<params->num_refs;i++) {
-    mf_orig = me->downsampled_mf[i][0];
+    //mf_orig = me->downsampled_mf[i][0];
+    mf_orig = me->encoder_frame->rme[i]->motion_fields[0];
     mf = schro_motion_field_new (mf_orig->x_num_blocks, mf_orig->y_num_blocks);
 
     memcpy (mf->motion_vectors, mf_orig->motion_vectors,
@@ -757,6 +1150,7 @@ schro_frame_get_metric (SchroFrame *frame1, int x1, int y1,
   return metric;
 }
 
+#if 0
 /* Added by Andrea, same as rough_scan_nohint but it considers more candidates
  * from the same level in the hierarchy (copied from rough_scan_hint) */
 void
@@ -883,234 +1277,10 @@ schro_motionest_rough_scan_nohint2 (SchroMotionEst *me, int shift, int ref,
 
   me->downsampled_mf[ref][shift] = mf;
 }
-
-
-void
-schro_motionest_rough_scan_nohint (SchroMotionEst *me, int shift, int ref,
-    int distance)
-{
-  SchroMetricScan scan;
-  SchroMotionVector *mv;
-  SchroMotionField *mf;
-  SchroParams *params = me->params;
-  int i;
-  int j;
-  int skip;
-
-  scan.frame = get_downsampled (me->encoder_frame, shift);
-  scan.ref_frame = get_downsampled (me->encoder_frame->ref_frame[ref], shift);
-
-  mf = schro_motion_field_new (params->x_num_blocks, params->y_num_blocks);
-
-  schro_motion_field_set (mf, 0, 1<<ref);
-
-  scan.block_width = params->xbsep_luma;
-  scan.block_height = params->ybsep_luma;
-  scan.gravity_scale = 0;
-  scan.gravity_x = 0;
-  scan.gravity_y = 0;
-
-  skip = 1<<shift;
-  for(j=0;j<params->y_num_blocks;j+=skip){
-    for(i=0;i<params->x_num_blocks;i+=skip){
-      int dx, dy;
-
-      scan.x = (i>>shift) * params->xbsep_luma;
-      scan.y = (j>>shift) * params->ybsep_luma;
-      scan.block_width = MIN(scan.frame->width - scan.x, params->xbsep_luma);
-      scan.block_height = MIN(scan.frame->height - scan.y, params->ybsep_luma);
-      /* set up area to be scanned with full block matching - note it starts
-       * with 0 mv all the time */
-      schro_metric_scan_setup (&scan, 0, 0, distance);
-
-      mv = motion_field_get (mf, i, j);
-      if (scan.scan_width <= 0 || scan.scan_height <= 0) {
-        mv->dx[ref] = 0 << shift;
-        mv->dy[ref] = 0 << shift;
-        mv->metric = SCHRO_METRIC_INVALID;
-        continue;
-      }
-#if 0
-      /* this code skips blocks that are off the edge.  Instead, we
-       * scan smaller block sizes */
-      if (scan.x + scan.block_width >= scan.ref_frame->width ||
-          scan.y + scan.block_height >= scan.ref_frame->height) {
-        mv->dx[ref] = 0 << shift;
-        mv->dy[ref] = 0 << shift;
-        mv->metric = SCHRO_METRIC_INVALID;
-        continue;
-      }
 #endif
 
-      /* performs block matching starting with a 0 mv (see scan_setup above) */
-      schro_metric_scan_do_scan (&scan);
-      mv->metric = schro_metric_scan_get_min (&scan, &dx, &dy);
-      dx <<= shift;
-      dy <<= shift;
 
-      mv->dx[ref] = dx;
-      mv->dy[ref] = dy;
 
-      me->hier_score += (mv->metric>10*12*12);
-    }
-  }
-
-  me->downsampled_mf[ref][shift] = mf;
-}
-
-void
-schro_motionest_rough_scan_hint (SchroMotionEst *me, int shift, int ref,
-    int distance)
-{
-  SchroMetricScan scan={0};
-  SchroMotionVector *mv;
-  SchroMotionField *mf;
-  SchroMotionField *hint_mf;
-  SchroParams *params = me->params;
-  SchroMotionVector zero_mv;
-  int i;
-  int j;
-  int skip;
-  unsigned int hint_mask;
-  int split = 0==shift? 2 : (1==shift? 1 : 0);
-
-  scan.frame = get_downsampled (me->encoder_frame, shift);
-  scan.ref_frame = get_downsampled (me->encoder_frame->ref_frame[ref], shift);
-
-  mf = schro_motion_field_new (params->x_num_blocks, params->y_num_blocks);
-  hint_mf = me->downsampled_mf[ref][shift+1];
-
-  schro_motion_field_set (mf, split, 1<<ref);
-
-  scan.block_width = params->xbsep_luma;
-  scan.block_height = params->ybsep_luma;
-  scan.gravity_scale = 0;
-  scan.gravity_x = 0;
-  scan.gravity_y = 0;
-
-  memset (&zero_mv, 0, sizeof(zero_mv));
-
-  hint_mask = ~((1<<(shift + 1))-1);
-  skip = 1<<shift;
-  for(j=0;j<params->y_num_blocks;j+=skip){
-    for(i=0;i<params->x_num_blocks;i+=skip){
-      SchroFrameData orig;
-      SchroFrameData ref_data;
-#define LIST_LENGTH 10
-      SchroMotionVector *hint_mv[LIST_LENGTH];
-      int m;
-      int n = 0;
-      int dx, dy;
-      int min_m;
-      int min_metric;
-      /* get source data */
-      schro_frame_get_subdata (scan.frame, &orig,
-          0, i*me->params->xbsep_luma >> shift,
-          j*me->params->ybsep_luma >> shift);
-
-      /* always test the zero vector */
-      hint_mv[n] = &zero_mv;
-      n++;
-
-      /* inherit from nearby parents */
-      /* This overly clever bit of code checks the parents of the diagonal
-       * neighbors, which corresponds to the nearest parents. */
-      for(m=0;m<4;m++) {
-        int l = (i-1 + 2*(m&1))&hint_mask;
-        int k = (j-1 + (m&2))&hint_mask;
-        if (l >= 0 && l < params->x_num_blocks &&
-            k >= 0 && k < params->y_num_blocks) {
-          hint_mv[n] = motion_field_get (hint_mf, l, k);
-          n++;
-        }
-      }
-
-      /* inherit from neighbors (only towards SE)
-       * I don't understand this one: shouldn't Dave check the mvs in
-       * i - skip and j - skip? Is there any mv in i-1, j-1? */
-      if (i > 0) {
-        hint_mv[n] = motion_field_get (mf, i - skip, j);
-        n++;
-      }
-      if (j > 0) {
-        hint_mv[n] = motion_field_get (mf, i, j - skip);
-        n++;
-      }
-      if (i > 0 && j > 0) {
-        hint_mv[n] = motion_field_get (mf, i - skip, j - skip);
-        n++;
-      }
-
-      SCHRO_ASSERT(n <= LIST_LENGTH);
-
-      min_m = 0;
-      min_metric = SCHRO_METRIC_INVALID;
-      for(m = 0; m < n; m++) {
-        int metric;
-        int width, height;
-
-        dx = hint_mv[m]->dx[ref];
-        dx += i*params->xbsep_luma;
-        dx >>= shift;
-        dy = hint_mv[m]->dy[ref];
-        dy += j*params->ybsep_luma;
-        dy >>= shift;
-
-        if (0>dx || scan.ref_frame->width<dx
-            || 0>dy || scan.ref_frame->height<dy) {
-          continue;
-        }
-        schro_frame_get_subdata (scan.ref_frame, &ref_data, 0, dx, dy);
-
-        width = MIN(me->params->xbsep_luma, orig.width);
-        height = MIN(me->params->ybsep_luma, orig.height);
-        if (width == 0 || height == 0) continue;
-        if (ref_data.width < width || ref_data.height < height) continue;
-
-        /* block matching for a single position, I think */
-        metric = schro_metric_get (&orig, &ref_data, width, height);
-
-        if (metric < min_metric) {
-          min_metric = metric;
-          min_m = m;
-        }
-      }
-
-      /* now we have selected the best candidate for the refinement, done by
-       * full block matching over an area distance*distance */
-      dx = hint_mv[min_m]->dx[ref] >> shift;
-      dy = hint_mv[min_m]->dy[ref] >> shift;
-
-      scan.x = (i>>shift) * params->xbsep_luma;
-      scan.y = (j>>shift) * params->ybsep_luma;
-      scan.block_width = MIN(scan.frame->width - scan.x, params->xbsep_luma);
-      scan.block_height = MIN(scan.frame->height - scan.y, params->ybsep_luma);
-      schro_metric_scan_setup (&scan, dx, dy, distance);
-
-      mv = motion_field_get (mf, i, j);
-      if (scan.scan_width <= 0 || scan.scan_height <= 0) {
-        mv->dx[ref] = 0;
-        mv->dy[ref] = 0;
-        mv->metric = SCHRO_METRIC_INVALID;
-        continue;
-      }
-
-      schro_metric_scan_do_scan (&scan);
-      mv->metric = schro_metric_scan_get_min (&scan, &dx, &dy);
-      dx <<= shift;
-      dy <<= shift;
-
-      mv->dx[ref] = dx;
-      mv->dy[ref] = dy;
-    }
-  }
-
-  me->downsampled_mf[ref][shift] = mf;
-}
-
-/* It refines the MV for a superblock with a distance x distance search area
- * the MV comes from block-matching on level 2 of the hierarchy
- * it also calculates the entropy of MVs (as well as cost) */
 static void
 schro_motionest_superblock_scan_one (SchroMotionEst *me, int ref, int distance,
     SchroBlock *block, int i, int j)
@@ -1125,11 +1295,8 @@ schro_motionest_superblock_scan_one (SchroMotionEst *me, int ref, int distance,
   scan.frame = get_downsampled (me->encoder_frame, 0);
   scan.ref_frame = get_downsampled (me->encoder_frame->ref_frame[ref], 0);
 
-  /* takes motion field from the previous scan done at level 2 of the hierarchy
-   * - ie not the last available level in the hierarchy
-   *   this also means that the motion field will be populated just 1 in 4,
-   *   which is the same granularity as i and j */
-  hint_mf = me->downsampled_mf[ref][2];
+  //hint_mf = me->downsampled_mf[ref][2];
+  hint_mf = me->encoder_frame->rme[ref]->motion_fields[2];
 
   scan.x = i * params->xbsep_luma;
   scan.y = j * params->ybsep_luma;
@@ -1352,9 +1519,8 @@ schro_motionest_block_scan_one (SchroMotionEst *me, int ref, int distance,
   scan.frame = get_downsampled (me->encoder_frame, 0);
   scan.ref_frame = get_downsampled (me->encoder_frame->ref_frame[ref], 0);
 
-  /* mf from level 1 of hierarchical block-matching where we have only
-   * one 1 MV in 4 */
-  hint_mf = me->downsampled_mf[ref][1];
+  //hint_mf = me->downsampled_mf[ref][1];
+  hint_mf = me->encoder_frame->rme[ref]->motion_fields[1];
 
   scan.block_width = params->xbsep_luma;
   scan.block_height = params->ybsep_luma;
@@ -1397,7 +1563,7 @@ schro_motionest_block_scan_one (SchroMotionEst *me, int ref, int distance,
     }
   }
 
-  schro_block_fixup (block); /* do we need it here ? Certainly not, here is split 2 only */
+  schro_block_fixup (block);
   block->entropy = schro_motion_superblock_try_estimate_entropy (me->motion,
       i, j, block);
 }
@@ -1405,12 +1571,6 @@ schro_motionest_block_scan_one (SchroMotionEst *me, int ref, int distance,
 
 #define MAGIC_SUPERBLOCK_METRIC 5
 #define MAGIC_BLOCK_METRIC 50
-/* I think motion in me is still empty at the start of this function */
-/* it checks superblock with zero mv, all permutations, dc pred with split 0
- * and finally split 0 with 4x4 refinement but no biref.
- * It doesn't do split 1. It does split 2 with 4x4 refinement but it doesnt do
- * biref on it!! Even more interesting is that at split 2 it's either all ref1
- * or all ref2!!! Also why not split 1 ? */
 void
 schro_encoder_bigblock_estimation (SchroMotionEst *me)
 {
@@ -1442,8 +1602,6 @@ schro_encoder_bigblock_estimation (SchroMotionEst *me)
 
       /* split 0 */
       /* base 119 s */
-      /* I think it calculates the cost of using a zero MV for the entire SB
-       * it does biref with zero mv later on */
       schro_motionest_superblock_predicted (me, 0, &block, i, j);
       min_score = block.entropy + me->lambda * block.error;
       if (params->num_refs > 1) {
@@ -1452,9 +1610,6 @@ schro_encoder_bigblock_estimation (SchroMotionEst *me)
       }
 
       /* 16 s */
-      /* tries a MV for the entire superblock, but first it refines it
-       * with a search area of 4x4. The MV comes from the hierarchical BM,
-       * level 2 */
       schro_motionest_superblock_scan_one (me, 0, 4, &tryblock, i, j);
       TRYBLOCK
       if (params->num_refs > 1) {
@@ -1475,15 +1630,6 @@ schro_encoder_bigblock_estimation (SchroMotionEst *me)
         schro_motionest_superblock_biref_zero (me, &tryblock, i, j);
         TRYBLOCK
       }
-
-      /* split 1 - completely missing: FIXME */
-
-      /* so far we've done split 0: zero mv in all permutations and then
-       * a seeded mv with 4x4 refinement only ref1 or ref2 (no biref) */
-      /* how about this '1000' ? Where does it come from? ANother magic in
-       * disguise?
-       * I think we want to use a top down approach and start with this step
-       * before considering split 1 and 0 */
 
       /* split 2 */
       if (min_score > 1000) {
@@ -1775,68 +1921,22 @@ schro_motion_copy_to (SchroMotion *motion, int i, int j, SchroBlock *block)
   }
 }
 
-/* rough motion estimate using hierarchical block matching */
-void
-schro_motionest_rough_scan (SchroEncoderFrame* frame)
-{
-  SCHRO_ASSERT(frame && frame->state & SCHRO_ENCODER_FRAME_STATE_HAVE_GOP);
 
-  SchroParams* params = &frame->params;
-  SchroMotionEst* me = 0;
-  int ref=0;
 
-  SCHRO_ASSERT(params->x_num_blocks != 0);
-  SCHRO_ASSERT(params->y_num_blocks != 0);
-  SCHRO_ASSERT(params->num_refs > 0);
 
-  /* Note: we don't create SchroMotion in MotionEst, I don't think I need it at
-   * this stage for full-pel ME only */
-  frame->me = schro_motionest_new (frame);
-  me = frame->me;
-
-  /* let's try to use four level of hierarchical BM to extend
-   * the reach of our MVs - max MV should be 16*12 but in fact could be bigger,
-   * thanks to using candidates from same level in scan_nohint2 */
-  for(ref=0;ref<params->num_refs;ref++){
-    schro_motionest_rough_scan_nohint2 (me, 4, ref, 12);
-    schro_motionest_rough_scan_hint (me, 3, ref, 4);
-    schro_motionest_rough_scan_hint (me, 2, ref, 4);
-    schro_motionest_rough_scan_hint (me, 1, ref, 4);
-  }
-}
-
-/* performs full-pel ME */
-void
-schro_motionest_predict_pel (SchroEncoderFrame* frame)
-{
-  SCHRO_ASSERT(frame && frame->state & SCHRO_ENCODER_FRAME_STATE_PREDICT_ROUGH);
-
-  SchroParams* params = &frame->params;
-  SchroMotionEst* me = frame->me;
-  int ref=0;
-
-  SCHRO_ASSERT(params->x_num_blocks != 0);
-  SCHRO_ASSERT(params->y_num_blocks != 0);
-  SCHRO_ASSERT(params->num_refs > 0);
-
-  for(ref=0;ref<params->num_refs;ref++){
-    schro_motionest_rough_scan_hint (me, 0, ref, 4);
-  }
-
-}
 
 /* performs mode decision for a superblock, split level 2
  * Must returns a valid superblock, which probably means going through DC
  * first and then the other prediction modes */
 static void
-do_split2 (SchroMotionEst* me, int i, int j, SchroBlock* block)
+do_split2 (SchroEncoderFrame* frame, int i, int j, SchroBlock* block)
 {
+  SCHRO_ASSERT(frame && block && frame->me);
   int total_entropy = 0, total_error = 0;
-  int ii, jj;
-  SchroParams* params;
-
-  SCHRO_ASSERT(me && block);
-  params = me->params;
+  int ii, jj;;
+  SchroMotionEst* me = frame->me;
+  SchroRoughME* rme;
+  SchroParams* params = me->params;
 
   params = me->params;
   for (jj=0; 4>jj; ++jj) {
@@ -1879,7 +1979,9 @@ do_split2 (SchroMotionEst* me, int i, int j, SchroBlock* block)
       /* now we have a valid block */
       /* ref1 */
       ref = 0;
-      *mv = me->downsampled_mf[ref][0]->motion_vectors[(j+jj)*params->x_num_blocks + i + ii];
+      rme = frame->rme[ref];
+      SCHRO_ASSERT(rme);
+      *mv = rme->motion_fields[0]->motion_vectors[(j+jj)*params->x_num_blocks + i + ii];
       if (mv->metric != SCHRO_METRIC_INVALID) {
         mv->split = 2;
         mv->pred_mode = 1<<ref;
@@ -1895,7 +1997,9 @@ do_split2 (SchroMotionEst* me, int i, int j, SchroBlock* block)
       if (params->num_refs > 1) {
         /* ref2 */
         ref = 1;
-        *mv = me->downsampled_mf[ref][0]->motion_vectors[(j+jj)*params->x_num_blocks + i + ii];
+        rme = frame->rme[ref];
+        SCHRO_ASSERT(rme);
+        *mv = rme->motion_fields[0]->motion_vectors[(j+jj)*params->x_num_blocks + i + ii];
         if (mv->metric != SCHRO_METRIC_INVALID) {
           mv->split = 2;
           mv->pred_mode = 1<<ref;
@@ -1908,17 +2012,17 @@ do_split2 (SchroMotionEst* me, int i, int j, SchroBlock* block)
             min_score = score;
           }
           /* biref */
-          mvref1 = &me->downsampled_mf[0][0]->motion_vectors[(j+jj)*params->x_num_blocks + i + ii];
+          mvref1 = &frame->rme[0]->motion_fields[0]->motion_vectors[(j+jj)*params->x_num_blocks + i + ii];
           if (mvref1->metric != SCHRO_METRIC_INVALID) {
             mv->pred_mode = 3;
             mv->dx[0] = mvref1->dx[0];
             mv->dy[0] = mvref1->dy[0];
-            schro_frame_get_subdata (get_downsampled (me->encoder_frame, 0), &orig
+            schro_frame_get_subdata (get_downsampled (frame, 0), &orig
                 , 0, (i+ii)*params->xbsep_luma, (j+jj)*params->ybsep_luma);
-            schro_frame_get_subdata (get_downsampled (me->encoder_frame->ref_frame[0], 0)
+            schro_frame_get_subdata (get_downsampled (frame->ref_frame[0], 0)
                 , &ref0_data, 0, (i+ii)*params->xbsep_luma + mv->dx[0],
                 (j+jj)*params->ybsep_luma + mv->dy[0]);
-            schro_frame_get_subdata (get_downsampled (me->encoder_frame->ref_frame[1], 0)
+            schro_frame_get_subdata (get_downsampled (frame->ref_frame[1], 0)
                 , &ref1_data, 0, (i+ii)*params->xbsep_luma + mv->dx[1],
                 (j+jj)*params->ybsep_luma + mv->dy[1]);
             mv->metric = schro_metric_get_biref (&orig, &ref0_data, 1, &ref1_data, 1
@@ -1948,9 +2052,9 @@ do_split2 (SchroMotionEst* me, int i, int j, SchroBlock* block)
  * Must return a valid superblock, which probably means setting DC first
  * and then trying out all other cases */
 static void
-do_split1 (SchroMotionEst* me, int i, int j, SchroBlock* block)
+do_split1 (SchroEncoderFrame* frame, int i, int j, SchroBlock* block)
 {
-  SCHRO_ASSERT(me && block);
+  SCHRO_ASSERT(frame && block);
   block->valid = FALSE;
 }
 
@@ -1958,13 +2062,15 @@ do_split1 (SchroMotionEst* me, int i, int j, SchroBlock* block)
  * Must return a valid superblock, which probably means setting DC first
  * amd then trying out all other cases */
 static void
-do_split0 (SchroMotionEst* me, int i, int j, SchroBlock* block)
+do_split0 (SchroEncoderFrame* frame, int i, int j, SchroBlock* block)
 {
-  SCHRO_ASSERT(me && block);
+  SCHRO_ASSERT(frame && block && frame->me);
 
   double score, min_score;
   SchroBlock tryblock = {0};
+  SchroMotionEst* me = frame->me;
   SchroParams* params = me->params;
+  SCHRO_ASSERT(params);
   /* starts with zero mv */
   schro_motionest_superblock_predicted (me, 0, block, i, j);
   min_score = block->entropy + me->lambda * block->error;
@@ -2012,7 +2118,7 @@ do_split0 (SchroMotionEst* me, int i, int j, SchroBlock* block)
 
 /* performs mdoe decision and block/superblock splitting */
 void
-schro_motionest_mode_decision (SchroEncoderFrame* frame)
+schro_encoder_mode_decision (SchroEncoderFrame* frame)
 {
   SchroMotionEst* me;
   SchroParams* params;
@@ -2036,10 +2142,10 @@ schro_motionest_mode_decision (SchroEncoderFrame* frame)
     for (i=0; params->x_num_blocks > i; i+=4) {
       SchroBlock block = {0}, tryblock = {0};
 
-      do_split2 (me, i, j, &block); /* this should generate a valid block */
+      do_split2 (frame, i, j, &block); /* this should generate a valid block */
       min_score = block.entropy + me->lambda * block.error;
 
-      do_split1 (me, i, j, &tryblock); /* same here */
+      do_split1 (frame, i, j, &tryblock); /* same here */
       if (tryblock.valid) {
         score = tryblock.entropy + me->lambda * tryblock.error;
         if (score < min_score) {
@@ -2048,7 +2154,7 @@ schro_motionest_mode_decision (SchroEncoderFrame* frame)
         }
       }
 
-      do_split0 (me, i, j, &tryblock); /* should generate a valid block */
+      do_split0 (frame, i, j, &tryblock); /* should generate a valid block */
       if (tryblock.valid) {
         score = tryblock.entropy + me->lambda * tryblock.error;
         if (score < min_score) {

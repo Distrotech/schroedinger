@@ -254,10 +254,6 @@ schro_picture_new (SchroDecoder *decoder)
     picture->frame = schro_frame_new_and_alloc (decoder->cpu_domain,
         frame_format, iwt_width, iwt_height);
     picture->transform_frame = schro_frame_ref (picture->frame);
-
-    picture->planar_output_frame = schro_frame_new_and_alloc (decoder->cpu_domain,
-        schro_params_get_frame_format (8, video_format->chroma_format),
-        video_format->width, video_format->height);
   }
 
   SCHRO_DEBUG("planar output frame %dx%d",
@@ -1133,7 +1129,7 @@ schro_decoder_x_render_motion (SchroPicture *picture)
   SchroDecoder *decoder = picture->decoder;
 
   if (params->num_refs > 0) {
-    SCHRO_WARNING("motion render with %p and %p", picture->ref0, picture->ref1);
+    SCHRO_DEBUG("motion render with %p and %p", picture->ref0, picture->ref1);
     if (decoder->use_cuda) {
 #ifdef HAVE_CUDA
       int frame_width;
@@ -1175,7 +1171,16 @@ schro_decoder_x_render_motion (SchroPicture *picture)
     } else {
       schro_motion_render (picture->motion, picture->mc_tmp_frame);
     }
-    SCHRO_WARNING("render done with %p and %p", picture->ref0, picture->ref1);
+    /* Eagerly unreference the ref picures.  Otherwise they are kept
+     * until the picture dependency chain terminates (worst case, Ponly
+     * coding = infinite dependency chain = -ENOMEM) */
+    if (picture->ref0) {
+      schro_picture_unref(picture->ref0);
+    }
+    if (picture->ref1) {
+      schro_picture_unref(picture->ref1);
+    }
+    picture->ref0 = picture->ref1 = NULL;
   }
 }
 
@@ -1229,6 +1234,7 @@ schro_decoder_x_combine (SchroPicture *picture)
 {
   SchroParams *params = &picture->params;
   SchroDecoder *decoder = picture->decoder;
+  SchroFrame *planar_output_frame;
   SchroFrame *combined_frame;
   SchroFrame *output_frame;
 
@@ -1266,13 +1272,16 @@ schro_decoder_x_combine (SchroPicture *picture)
   }
 
   if (SCHRO_FRAME_IS_PACKED(picture->output_picture->format)) {
+    planar_output_frame = schro_frame_new_and_alloc (decoder->cpu_domain,
+        schro_params_get_frame_format (8, decoder->video_format.chroma_format),
+        decoder->video_format.width, decoder->video_format.height);
     if (picture->decoder->use_cuda) {
 #ifdef HAVE_CUDA
       SchroFrame *cuda_output_frame;
       cuda_output_frame = schro_frame_clone (decoder->cuda_domain,
           picture->output_picture);
-      schro_gpuframe_convert (picture->planar_output_frame, output_frame);
-      schro_gpuframe_convert (cuda_output_frame, picture->planar_output_frame);
+      schro_gpuframe_convert (planar_output_frame, output_frame);
+      schro_gpuframe_convert (cuda_output_frame, planar_output_frame);
       schro_gpuframe_to_cpu (picture->output_picture, cuda_output_frame);
       schro_frame_unref (cuda_output_frame);
 #else
@@ -1295,10 +1304,11 @@ schro_decoder_x_combine (SchroPicture *picture)
       SCHRO_ASSERT(0);
 #endif
     } else {
-      schro_frame_convert (picture->planar_output_frame, output_frame);
-      schro_frame_convert (picture->output_picture, picture->planar_output_frame);
+      schro_frame_convert (planar_output_frame, output_frame);
+      schro_frame_convert (picture->output_picture, planar_output_frame);
     }
   } else {
+    planar_output_frame = schro_frame_ref(picture->output_picture);
     if (picture->decoder->use_cuda) {
 #ifdef HAVE_CUDA
       SchroFrame *cuda_output_frame;
@@ -1366,13 +1376,7 @@ schro_decoder_x_combine (SchroPicture *picture)
   if (picture->has_md5) {
     uint32_t state[4];
 
-    /* FIXME planar_output_frame should be fixed to always be the
-     * planar representation */
-    if (SCHRO_FRAME_IS_PACKED(picture->output_picture->format)) {
-      schro_frame_md5 (picture->planar_output_frame, state);
-    } else {
-      schro_frame_md5 (picture->output_picture, state);
-    }
+    schro_frame_md5 (planar_output_frame, state);
     if (memcmp (state, picture->md5_checksum, 16) != 0) {
       char a[33];
       char b[33];
@@ -1387,6 +1391,15 @@ schro_decoder_x_combine (SchroPicture *picture)
       SCHRO_ERROR("MD5 checksum mismatch (%s should be %s)", a, b);
     }
   }
+  schro_frame_unref(planar_output_frame);
+
+  /* eagerly unreference any storage that is nolonger required */
+  schro_frame_unref(picture->mc_tmp_frame);
+  picture->mc_tmp_frame = NULL;
+  schro_frame_unref(picture->transform_frame);
+  picture->transform_frame = NULL;
+  schro_frame_unref(picture->frame);
+  picture->frame = NULL;
 }
 
 void
@@ -1841,11 +1854,11 @@ schro_decoder_decode_block_data (SchroPicture *picture)
       if (arith[i] == NULL) continue;
 
       if (arith[i]->offset < arith[i]->buffer->length) {
-        SCHRO_WARNING("arith decoding %d didn't consume buffer (%d < %d)", i,
+        SCHRO_DEBUG("arith decoding %d didn't consume buffer (%d < %d)", i,
             arith[i]->offset, arith[i]->buffer->length);
       }
       if (arith[i]->offset > arith[i]->buffer->length + 6) {
-        SCHRO_ERROR("arith decoding %d overran buffer (%d > %d)", i,
+        SCHRO_WARNING("arith decoding %d overran buffer (%d > %d)", i,
             arith[i]->offset, arith[i]->buffer->length);
       }
       schro_arith_free (arith[i]);
