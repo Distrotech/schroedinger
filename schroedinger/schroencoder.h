@@ -279,6 +279,7 @@ struct _SchroEncoder {
   double magic_lambda;
   double magic_badblock_multiplier_nonref;
   double magic_badblock_multiplier_ref;
+  double magic_block_search_threshold;
 
   /* hooks */
 
