@@ -250,8 +250,12 @@ schro_picture_new (SchroDecoder *decoder)
         frame_format, video_format->width, video_format->height);
 #endif
   } else if (decoder->use_opengl) {
+#ifdef HAVE_OPENGL
     picture->transform_frame = schro_frame_new_and_alloc (decoder->cpu_domain,
         frame_format, iwt_width, iwt_height);
+#else
+    SCHRO_ASSERT (0);
+#endif
   } else {
     picture->mc_tmp_frame = schro_frame_new_and_alloc (decoder->cpu_domain,
         frame_format, picture_width, picture_height);

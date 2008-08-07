@@ -91,9 +91,15 @@ struct _SchroOpenGLUniforms {
   GLint block_offset;
   GLint block_origin;
   GLint dc;
+  GLint decrease1;
+  GLint decrease2;
+  GLint decrease3;
   GLint edge1;
   GLint edge2;
-  GLint four_increase;
+  GLint increase1;
+  GLint increase2;
+  GLint increase3;
+  GLint increase4;
   GLint input;
   GLint input1;
   GLint input2;
@@ -115,8 +121,6 @@ struct _SchroOpenGLUniforms {
   GLint offset4_ref2;
   GLint offset_ref1;
   GLint offset_ref2;
-  GLint one_decrease;
-  GLint one_increase;
   GLint previous;
   GLint ref_addend;
   GLint ref_divisor;
@@ -124,10 +128,6 @@ struct _SchroOpenGLUniforms {
   GLint ref_weight1;
   GLint ref_weight2;
   GLint spatial_weight;
-  GLint three_decrease;
-  GLint three_increase;
-  GLint two_decrease;
-  GLint two_increase;
   GLint u2;
   GLint u4;
   GLint upsampled;
@@ -186,9 +186,15 @@ void schro_opengl_shader_bind_block_length (SchroOpenGLShader* shader, int16_t v
 void schro_opengl_shader_bind_block_offset (SchroOpenGLShader* shader, int16_t v0, int16_t v1);
 void schro_opengl_shader_bind_block_origin (SchroOpenGLShader* shader, float v0, float v1);
 void schro_opengl_shader_bind_dc (SchroOpenGLShader* shader, int16_t v0);
+void schro_opengl_shader_bind_decrease1 (SchroOpenGLShader* shader, float v0, float v1);
+void schro_opengl_shader_bind_decrease2 (SchroOpenGLShader* shader, float v0, float v1);
+void schro_opengl_shader_bind_decrease3 (SchroOpenGLShader* shader, float v0, float v1);
 void schro_opengl_shader_bind_edge1 (SchroOpenGLShader* shader, float v0, float v1);
 void schro_opengl_shader_bind_edge2 (SchroOpenGLShader* shader, float v0, float v1);
-void schro_opengl_shader_bind_four_increase (SchroOpenGLShader* shader, float v0, float v1);
+void schro_opengl_shader_bind_increase1 (SchroOpenGLShader* shader, float v0, float v1);
+void schro_opengl_shader_bind_increase2 (SchroOpenGLShader* shader, float v0, float v1);
+void schro_opengl_shader_bind_increase3 (SchroOpenGLShader* shader, float v0, float v1);
+void schro_opengl_shader_bind_increase4 (SchroOpenGLShader* shader, float v0, float v1);
 void schro_opengl_shader_bind_linear_weight (SchroOpenGLShader* shader, int16_t v0, int16_t v1, int16_t v2, int16_t v3);
 void schro_opengl_shader_bind_linear_weight_ref1 (SchroOpenGLShader* shader, int16_t v0, int16_t v1, int16_t v2, int16_t v3);
 void schro_opengl_shader_bind_linear_weight_ref2 (SchroOpenGLShader* shader, int16_t v0, int16_t v1, int16_t v2, int16_t v3);
@@ -207,17 +213,11 @@ void schro_opengl_shader_bind_offset4_ref1 (SchroOpenGLShader* shader, float v0,
 void schro_opengl_shader_bind_offset4_ref2 (SchroOpenGLShader* shader, float v0, float v1);
 void schro_opengl_shader_bind_offset_ref1 (SchroOpenGLShader* shader, float v0, float v1);
 void schro_opengl_shader_bind_offset_ref2 (SchroOpenGLShader* shader, float v0, float v1);
-void schro_opengl_shader_bind_one_decrease (SchroOpenGLShader* shader, float v0, float v1);
-void schro_opengl_shader_bind_one_increase (SchroOpenGLShader* shader, float v0, float v1);
 void schro_opengl_shader_bind_ref_addend (SchroOpenGLShader* shader, int16_t v0);
 void schro_opengl_shader_bind_ref_divisor (SchroOpenGLShader* shader, int16_t v0);
 void schro_opengl_shader_bind_ref_weight (SchroOpenGLShader* shader, int16_t v0);
 void schro_opengl_shader_bind_ref_weight1 (SchroOpenGLShader* shader, int16_t v0);
 void schro_opengl_shader_bind_ref_weight2 (SchroOpenGLShader* shader, int16_t v0);
-void schro_opengl_shader_bind_three_decrease (SchroOpenGLShader* shader, float v0, float v1);
-void schro_opengl_shader_bind_three_increase (SchroOpenGLShader* shader, float v0, float v1);
-void schro_opengl_shader_bind_two_decrease (SchroOpenGLShader* shader, float v0, float v1);
-void schro_opengl_shader_bind_two_increase (SchroOpenGLShader* shader, float v0, float v1);
 
 SCHRO_END_DECLS
 

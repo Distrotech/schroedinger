@@ -257,48 +257,46 @@ static void
 schro_opengl_upsampled_frame_render_quad (SchroOpenGLShader *shader, int x,
     int y, int quad_width, int quad_height, int total_width, int total_height)
 {
-  int x_inverse, y_inverse;
-  int four_x = 0, four_y = 0, three_x = 0, three_y = 0, two_x = 0, two_y = 0,
-      one_x = 0, one_y = 0;
+  int inverse[] = { 0, 0 };
+  int four[] = { 0, 0 }, three[] = { 0, 0 }, two[] = { 0, 0 }, one[] = { 0, 0 };
 
-  x_inverse = total_width - x - quad_width;
-  y_inverse = total_height - y - quad_height;
+  inverse[0] = total_width - x - quad_width;
+  inverse[1] = total_height - y - quad_height;
 
   if (quad_width == total_width && quad_height < total_height) {
-    four_y = 4;
-    three_y = 3;
-    two_y = 2;
-    one_y = 1;
+    four[1] = 4;
+    three[1] = 3;
+    two[1] = 2;
+    one[1] = 1;
   } else if (quad_width < total_width && quad_height == total_height) {
-    four_x = 4;
-    three_x = 3;
-    two_x = 2;
-    one_x = 1;
+    four[0] = 4;
+    three[0] = 3;
+    two[0] = 2;
+    one[0] = 1;
   } else {
     SCHRO_ERROR ("invalid quad to total relation");
     SCHRO_ASSERT (0);
   }
 
-  SCHRO_ASSERT (x_inverse >= 0);
-  SCHRO_ASSERT (y_inverse >= 0);
+  SCHRO_ASSERT (inverse[0] >= 0);
+  SCHRO_ASSERT (inverse[1] >= 0);
 
-  #define UNIFORM(_number, _operation, __x, __y) \
+  #define UNIFORM(_operation, _number, _x, _y) \
       do { \
-        if (shader->uniforms->_number##_##_operation != -1) { \
-          schro_opengl_shader_bind_##_number##_##_operation (shader, \
-              __x < _number##_x ? __x : _number##_x, \
-              __y < _number##_y ? __y : _number##_y); \
+        if (shader->uniforms->_operation != -1) { \
+          schro_opengl_shader_bind_##_operation (shader, \
+              _x < _number[0] ? _x : _number[0], \
+              _y < _number[1] ? _y : _number[1]); \
         } \
       } while (0)
 
-  //UNIFORM (four,  decrease, x, y);
-  UNIFORM (three, decrease, x, y);
-  UNIFORM (two,   decrease, x, y);
-  UNIFORM (one,   decrease, x, y);
-  UNIFORM (one,   increase, x_inverse, y_inverse);
-  UNIFORM (two,   increase, x_inverse, y_inverse);
-  UNIFORM (three, increase, x_inverse, y_inverse);
-  UNIFORM (four,  increase, x_inverse, y_inverse);
+  UNIFORM (decrease3, three, x, y);
+  UNIFORM (decrease2, two,   x, y);
+  UNIFORM (decrease1, one,   x, y);
+  UNIFORM (increase1, one,   inverse[0], inverse[1]);
+  UNIFORM (increase2, two,   inverse[0], inverse[1]);
+  UNIFORM (increase3, three, inverse[0], inverse[1]);
+  UNIFORM (increase4, four,  inverse[0], inverse[1]);
 
   #undef UNIFORM
 

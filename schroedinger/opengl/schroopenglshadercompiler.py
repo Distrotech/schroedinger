@@ -11,30 +11,16 @@ def error (message):
 
 
 
-def intersection (a, b):
-  c = []
-
-  for item in a:
-    if item in b:
-      c += [item]
-
-  return c
-
-
-
-def contains_reserverd_block_header (list):
-  header_re = re.compile ("^(?:versions|uniforms|defines|else|"
-      "(?:shader|func|if|elif)[ ]+[^:]+):$")
-
-  for item in list:
-    if header_re.search (item) is not None:
-      return True
+def contains_reserverd_block_header (string):
+  if re.search ("^(?:versions|uniforms|defines|else|" \
+      "(?:shader|func|if|elif)[ ]+[^:]+):$", string) is not None:
+    return True
 
   return False
 
 
 
-def uniform_compare (a, b):
+def compare_uniform_bind_signatures (a, b):
   if a.endswith ("texture)") is b.endswith ("texture)"):
     return cmp (a, b)
 
@@ -45,18 +31,22 @@ def uniform_compare (a, b):
 
 
 
+def compare_uniforms_float (a, b):
+  return cmp (a.print_glsl ("float"), b.print_glsl ("float"))
+
+
+
+def compare_uniforms_integer (a, b):
+  return cmp (a.print_glsl ("integer"), b.print_glsl ("integer"))
+
+
+
 class Item:
   def __init__ (self):
-    self.versions = ["default"]
+    self.version = ".*"
 
-  def add_versions (self, versions):
-    if "default" in self.versions:
-      self.versions.remove ("default")
-
-    self.versions += versions
-
-  def has_version (self, versions):
-    return len (intersection (versions, self.versions)) > 0
+  def matches_version (self, version):
+    return re.search ("^" + self.version + "$", version) is not None
 
 
 
@@ -92,7 +82,7 @@ class Line (Item):
       level = level - 1
 
     string += "(Line: " + repr (self.number) + ", " + repr (self.level) + ", " \
-        + repr (self.content) + ", " + repr (self.versions) + ")"
+        + repr (self.content) + ", " + repr (self.version) + ")"
 
     return string
 
@@ -116,7 +106,7 @@ class Block (Item):
       string += "  "
       level = level - 1
 
-    string += "(Block: " + repr (self.versions) + " " \
+    string += "(Block: " + repr (self.version) + " " \
         + repr (self.header).lstrip () + "\n"
 
     for child in self.children:
@@ -322,7 +312,8 @@ class Shader:
         "convert_raw_u8"      : "SHADER_CONVERT_RAW_U8",
         "convert_raw_s16"     : "SHADER_CONVERT_RAW_S16",
         "divide_s16"          : "SHADER_DIVIDE_S16",
-        "crossfoot_s16"       : "SHADER_CROSSFOOT_S16",
+        "crossfoot2_s16"       : "SHADER_CROSSFOOT2_S16",
+        "crossfoot4_s16"       : "SHADER_CROSSFOOT4_S16",
         "ref_weighting_s16"   : "SHADER_REF_WEIGHTING_S16",
         "biref_weighting_s16" : "SHADER_BIREF_WEIGHTING_S16"}
     self.builtin_dependencies = {
@@ -416,7 +407,7 @@ class Shader:
               -1, True))
 
   def parse_define (self, line):
-    if line.has_version (["default", self.version]):
+    if line.matches_version (self.version):
       match = re.search ("^[A-Z0-9]+[ ]+.+$", line.content)
 
       if match is None:
@@ -426,7 +417,7 @@ class Shader:
       self.defines += [line]
 
   def parse_uniform (self, line):
-    if line.has_version (["default", self.version]):
+    if line.matches_version (self.version):
       match = re.search ("^([a-z1-9_]+)[ ]+([a-z0-9_]+)$", line.content)
 
       if match is None:
@@ -439,14 +430,14 @@ class Shader:
   def parse_builtins (self, block):
     for child in block.children:
       if isinstance (child, Line):
-        if child.has_version (["default", self.version]):
+        if child.matches_version (self.version):
           for builtin in self.available_builtins.keys ():
             if re.search ("([^a-zA-Z0-9_]|^)" + builtin + "([^a-zA-Z0-9_]|$)", \
                 child.content) is not None and \
                 builtin not in self.used_builtins:
               self.used_builtins += [builtin]
       elif isinstance (child, Block):
-        if child.has_version (["default", self.version]):
+        if child.matches_version (self.version):
           self.parse_builtins (child)
       else:
         error ("internal type error")
@@ -454,7 +445,7 @@ class Shader:
   def parse_read_calls (self, block):
     for child in block.children:
       if isinstance (child, Line):
-        if child.has_version (["default", self.version]):
+        if child.matches_version (self.version):
           string = child.content
           read_call_re = re.compile ("(?:[^a-zA-Z0-9_]|^)"
               "read_([a-z0-9_]+?)(_vec4|)_(u8|s16)(_raw|)(?:[^a-zA-Z0-9_]|$)")
@@ -507,7 +498,7 @@ class Shader:
             string = string[match.span ()[1]:]
             match = copy_call_re.search (string)
       elif isinstance (child, Block):
-        if child.has_version (["default", self.version]):
+        if child.matches_version (self.version):
           self.parse_read_calls (child)
       else:
         error ("internal type error")
@@ -540,9 +531,11 @@ class Shader:
 
   def print_glsl_mode (self, mode):
     postfix = ""
+    compare_uniforms = compare_uniforms_float
 
     if mode == "integer":
       postfix = "_INTEGER"
+      compare_uniforms = compare_uniforms_integer
 
     string = "      SHADER_HEADER" + postfix + "\n"
 
@@ -555,7 +548,11 @@ class Shader:
       string += "      \"#define " + define.content + "\\n\"\n"
 
     # uniforms
-    for uniform in self.uniforms.values ():
+    uniforms = self.uniforms.values ()[:]
+
+    uniforms.sort(compare_uniforms)
+
+    for uniform in uniforms:
       string += uniform.print_glsl (mode)
 
     # functions
@@ -576,10 +573,10 @@ class Shader:
 
     for child in function.children:
       if isinstance (child, Line):
-        if child.has_version (["default", self.version]):
+        if child.matches_version (self.version):
           string += self.print_function_line (child, type, "  ")
       elif isinstance (child, Block):
-        if child.has_version (["default", self.version]):
+        if child.matches_version (self.version):
           result = self.print_function_block (child, type, "  ")
 
           if result.startswith ("else "):
@@ -619,10 +616,10 @@ class Shader:
 
     for child in block.children:
       if isinstance (child, Line):
-        if child.has_version (["default", self.version]):
+        if child.matches_version (self.version):
           string += self.print_function_line (child, type, indent + "  ")
       elif isinstance (child, Block):
-        if child.has_version (["default", self.version]):
+        if child.matches_version (self.version):
           result = self.print_function_block (child, type, indent + "  ")
 
           if result.startswith ("else "):
@@ -686,11 +683,11 @@ class ShaderBunch:
     version = match.group (1)
     index = match.group (2)
 
-    if contains_reserverd_block_header ([version]):
-      error ("version '" + version + "' is a reserved block header")
+    if contains_reserverd_block_header (version):
+      error ("version " + repr (version) + " is a reserved block header")
 
     if version in self.versions:
-      error ("version '" + version + "' already defined")
+      error ("version " + repr (version) + " already defined")
 
     self.versions += [version]
     self.indices[version] = index
@@ -702,34 +699,34 @@ class ShaderBunch:
       if isinstance (child, Line):
         transformed += [child]
       elif isinstance (child, Block):
-        if contains_reserverd_block_header ([child.header.content]):
+        if contains_reserverd_block_header (child.header.content):
           child.children = self.transform_versions (child.children)
           transformed += [child]
         else:
-          versions = []
+          header = child.header.content[:-1].strip ()
 
-          for version in child.header.content[:-1].split(','):
-            versions += [version.strip()]
-
-          if contains_reserverd_block_header (versions):
-            if len (versions) > 1:
-              error ("versions " + repr (versions) + " contain a reserved " \
-                  "block header")
-            else:
+          if contains_reserverd_block_header (header):
               child.children = self.transform_versions (child.children)
               transformed += [child]
-          elif intersection (versions, self.versions) != versions:
-            error ("at least one version of " + repr (versions) + " in line " \
-                + repr (child.header.number) + " is undefined in " \
-                + repr (self.versions))
           else:
+            version_re = re.compile ("^" + header + "$")
+
+            for version in self.versions:
+              if version_re.search (version) is not None:
+                break
+            else:
+              error ("version " + repr (header) + " in line " \
+                  + repr (child.header.number)
+                  + " doesn't match any defined version in "
+                  + repr (self.versions))
+
             for subchild in child.children:
-              if subchild.versions != ["default"]:
+              if subchild.version != ".*":
                 error ("nesting versions is not allowed at line " \
                     + repr (child.number))
 
               subchild.decrease_level ()
-              subchild.add_versions (versions)
+              subchild.version = header
 
             transformed += self.transform_versions (child.children)
       else:
@@ -850,8 +847,8 @@ if __name__ == "__main__":
         else:
           uniforms[uniform_bind_signature] += [uniform]
 
-  uniform_names.sort (uniform_compare)
-  uniform_bind_signatures.sort (uniform_compare)
+  uniform_names.sort ()
+  uniform_bind_signatures.sort (compare_uniform_bind_signatures)
 
   output_h_uniform_variables = ""
 

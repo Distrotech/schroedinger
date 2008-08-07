@@ -312,14 +312,24 @@
 
 #endif
 
-#define SHADER_CROSSFOOT_S16 \
-    "float crossfoot_s16 (vec4 value) {\n" \
-    "  return value.r + value.g + value.b + value.a;\n" \
+#define SHADER_CROSSFOOT2_S16 \
+    "float crossfoot2_s16 (vec2 value) {\n" \
+    "  return value.x + value.y;\n" \
     "}\n"
 
-#define SHADER_CROSSFOOT_S16_INTEGER \
-    "int crossfoot_s16 (ivec4 value) {\n" \
-    "  return value.r + value.g + value.b + value.a;\n" \
+#define SHADER_CROSSFOOT2_S16_INTEGER \
+    "int crossfoot2_s16 (ivec2 value) {\n" \
+    "  return value.x + value.y;\n" \
+    "}\n"
+
+#define SHADER_CROSSFOOT4_S16 \
+    "float crossfoot4_s16 (vec4 value) {\n" \
+    "  return value.x + value.y + value.z + value.w;\n" \
+    "}\n"
+
+#define SHADER_CROSSFOOT4_S16_INTEGER \
+    "int crossfoot4_s16 (ivec4 value) {\n" \
+    "  return value.x + value.y + value.z + value.w;\n" \
     "}\n"
 
 #define SHADER_REF_WEIGHTING_S16 \

@@ -56,7 +56,7 @@ shader convert_u8_yuyv: ########################################################
       else:
         write_u8_raw (yuyv.b)
 
-    u2, v2:
+    (u2|v2):
       var4_u8 yuyv = read_yuyv_vec4_u8_raw (gl_TexCoord[0].xy)
 
     u2:
@@ -88,7 +88,7 @@ shader convert_u8_uyvy: ########################################################
       else:
         write_u8_raw (uyvy.a)
 
-    u2, v2:
+    (u2|v2):
       var4_u8 uyvy = read_uyvy_vec4_u8_raw (gl_TexCoord[0].xy)
 
     u2:
@@ -287,15 +287,15 @@ shader iiwt_s16_filter_deslauriers_dubuc_9_7_lp: ###############################
   uniforms:
     # distance between two corresponding texels from subbands L and H in texels
     vec2 offset # = vec2 (width / 2.0, 0.0) or vec2 (0.0, height / 2.0)
-    vec2 one_decrease
+    vec2 decrease1
 
   func var_s16 filter (var_s16 h1m, var_s16 h0):
     return divide_s16 (h1m + h0 + 2, 4)
 
   func void main (void):
-    var_s16 l0  = read_input_s16 (XY)                         # A[2 ∗ n]
-    var_s16 h1m = read_input_s16 (XY + offset - one_decrease) # A[2 ∗ n - 1]
-    var_s16 h0  = read_input_s16 (XY + offset)                # A[2 ∗ n + 1]
+    var_s16 l0  = read_input_s16 (XY)                      # A[2 ∗ n]
+    var_s16 h1m = read_input_s16 (XY + offset - decrease1) # A[2 ∗ n - 1]
+    var_s16 h0  = read_input_s16 (XY + offset)             # A[2 ∗ n + 1]
 
     write_s16 (l0 - filter (h1m, h0))
 
@@ -311,19 +311,19 @@ shader iiwt_s16_filter_deslauriers_dubuc_9_7_hp: ###############################
   uniforms:
     # distance between two corresponding texels from subbands L' and H in texels
     vec2 offset # = vec2 (width / 2.0, 0.0) or vec2 (0.0, height / 2.0)
-    vec2 one_decrease
-    vec2 one_increase
-    vec2 two_increase
+    vec2 decrease1
+    vec2 increase1
+    vec2 increase2
 
   func var_s16 filter (var_s16 l1m, var_s16 l0, var_s16 l1p, var_s16 l2p):
     return divide_s16 (-l1m + 9 * (l0 + l1p) - l2p + 8, 16)
 
   func void main (void):
-    var_s16 l1m = read_input_s16 (XY - offset - one_decrease) # A[2 ∗ n - 2]
-    var_s16 l0  = read_input_s16 (XY - offset)                # A[2 ∗ n]
-    var_s16 l1p = read_input_s16 (XY - offset + one_increase) # A[2 ∗ n + 2]
-    var_s16 l2p = read_input_s16 (XY - offset + two_increase) # A[2 ∗ n + 4]
-    var_s16 h0  = read_input_s16 (XY)                         # A[2 ∗ n + 1]
+    var_s16 l1m = read_input_s16 (XY - offset - decrease1) # A[2 ∗ n - 2]
+    var_s16 l0  = read_input_s16 (XY - offset)             # A[2 ∗ n]
+    var_s16 l1p = read_input_s16 (XY - offset + increase1) # A[2 ∗ n + 2]
+    var_s16 l2p = read_input_s16 (XY - offset + increase2) # A[2 ∗ n + 4]
+    var_s16 h0  = read_input_s16 (XY)                      # A[2 ∗ n + 1]
 
     write_s16 (h0 + filter (l1m, l0, l1p, l2p))
 
@@ -339,15 +339,15 @@ shader iiwt_s16_filter_le_gall_5_3_lp: #########################################
   uniforms:
     # distance between two corresponding texels from subbands L and H in texels
     vec2 offset # = vec2 (width / 2.0, 0.0) or vec2 (0.0, height / 2.0)
-    vec2 one_decrease
+    vec2 decrease1
 
   func var_s16 filter (var_s16 h1m, var_s16 h0):
     return divide_s16 (h1m + h0 + 2, 4)
 
   func void main (void):
-    var_s16 l0  = read_input_s16 (XY)                         # A[2 ∗ n]
-    var_s16 h1m = read_input_s16 (XY + offset - one_decrease) # A[2 ∗ n - 1]
-    var_s16 h0  = read_input_s16 (XY + offset)                # A[2 ∗ n + 1]
+    var_s16 l0  = read_input_s16 (XY)                      # A[2 ∗ n]
+    var_s16 h1m = read_input_s16 (XY + offset - decrease1) # A[2 ∗ n - 1]
+    var_s16 h0  = read_input_s16 (XY + offset)             # A[2 ∗ n + 1]
 
     write_s16 (l0 - filter (h1m, h0))
 
@@ -363,15 +363,15 @@ shader iiwt_s16_filter_le_gall_5_3_hp: #########################################
   uniforms:
     # distance between two corresponding texels from subbands L and H in texels
     vec2 offset # = vec2 (width / 2.0, 0.0) or vec2 (0.0, height / 2.0)
-    vec2 one_increase
+    vec2 increase1
 
   func var_s16 filter (var_s16 l0, var_s16 l1p):
     return divide_s16 (l0 + l1p + 1, 2)
 
   func void main (void):
-    var_s16 l0  = read_input_s16 (XY - offset)                # A[2 ∗ n]
-    var_s16 l1p = read_input_s16 (XY - offset + one_increase) # A[2 ∗ n + 2]
-    var_s16 h0  = read_input_s16 (XY)                         # A[2 ∗ n + 1]
+    var_s16 l0  = read_input_s16 (XY - offset)             # A[2 ∗ n]
+    var_s16 l1p = read_input_s16 (XY - offset + increase1) # A[2 ∗ n + 2]
+    var_s16 h0  = read_input_s16 (XY)                      # A[2 ∗ n + 1]
 
     write_s16 (h0 + filter (l0, l1p))
 
@@ -388,19 +388,19 @@ shader iiwt_s16_filter_deslauriers_dubuc_13_7_lp: ##############################
   uniforms:
     # distance between two corresponding texels from subbands L and H in texels
     vec2 offset # = vec2 (width / 2.0, 0.0) or vec2 (0.0, height / 2.0)
-    vec2 two_decrease
-    vec2 one_decrease
-    vec2 one_increase
+    vec2 decrease2
+    vec2 decrease1
+    vec2 increase1
 
   func var_s16 filter (var_s16 h2m, var_s16 h1m, var_s16 h0, var_s16 h1p):
     return divide_s16 (-h2m + 9 * (h1m + h0) - h1p + 16, 32)
 
   func void main (void):
-    var_s16 l0  = read_input_s16 (XY)                         # A[2 ∗ n]
-    var_s16 h2m = read_input_s16 (XY + offset - two_decrease) # A[2 ∗ n - 3]
-    var_s16 h1m = read_input_s16 (XY + offset - one_decrease) # A[2 ∗ n - 1]
-    var_s16 h0  = read_input_s16 (XY + offset)                # A[2 ∗ n + 1]
-    var_s16 h1p = read_input_s16 (XY + offset + one_increase) # A[2 ∗ n + 3]
+    var_s16 l0  = read_input_s16 (XY)                      # A[2 ∗ n]
+    var_s16 h2m = read_input_s16 (XY + offset - decrease2) # A[2 ∗ n - 3]
+    var_s16 h1m = read_input_s16 (XY + offset - decrease1) # A[2 ∗ n - 1]
+    var_s16 h0  = read_input_s16 (XY + offset)             # A[2 ∗ n + 1]
+    var_s16 h1p = read_input_s16 (XY + offset + increase1) # A[2 ∗ n + 3]
 
     write_s16 (l0 - filter (h2m, h1m, h0, h1p))
 
@@ -417,19 +417,19 @@ shader iiwt_s16_filter_deslauriers_dubuc_13_7_hp: ##############################
   uniforms:
     # distance between two corresponding texels from subbands L and H in texels
     vec2 offset # = vec2 (width / 2.0, 0.0) or vec2 (0.0, height / 2.0)
-    vec2 one_decrease
-    vec2 one_increase
-    vec2 two_increase
+    vec2 decrease1
+    vec2 increase1
+    vec2 increase2
 
   func var_s16 filter (var_s16 l1m, var_s16 l0, var_s16 l1p, var_s16 l2p):
     return divide_s16 (-l1m + 9 * (l0 + l1p) - l2p + 8, 16)
 
   func void main (void):
-    var_s16 l1m = read_input_s16 (XY - offset - one_decrease) # A[2 ∗ n - 2]
-    var_s16 l0  = read_input_s16 (XY - offset)                # A[2 ∗ n]
-    var_s16 l1p = read_input_s16 (XY - offset + one_increase) # A[2 ∗ n + 2]
-    var_s16 l2p = read_input_s16 (XY - offset + two_increase) # A[2 ∗ n + 4]
-    var_s16 h0  = read_input_s16 (XY)                         # A[2 ∗ n + 1]
+    var_s16 l1m = read_input_s16 (XY - offset - decrease1) # A[2 ∗ n - 2]
+    var_s16 l0  = read_input_s16 (XY - offset)             # A[2 ∗ n]
+    var_s16 l1p = read_input_s16 (XY - offset + increase1) # A[2 ∗ n + 2]
+    var_s16 l2p = read_input_s16 (XY - offset + increase2) # A[2 ∗ n + 4]
+    var_s16 h0  = read_input_s16 (XY)                      # A[2 ∗ n + 1]
 
     write_s16 (h0 + filter (l1m, l0, l1p, l2p))
 
@@ -561,23 +561,23 @@ shader upsample_u8: ############################################################
     XY gl_TexCoord[0].xy
 
   uniforms:
-    vec2 three_decrease
-    vec2 two_decrease
-    vec2 one_decrease
-    vec2 one_increase
-    vec2 two_increase
-    vec2 three_increase
-    vec2 four_increase
+    vec2 decrease3
+    vec2 decrease2
+    vec2 decrease1
+    vec2 increase1
+    vec2 increase2
+    vec2 increase3
+    vec2 increase4
 
   func void main (void):
-    var_s16 s3m = cast_s16_u8 (read_input_u8 (XY - three_decrease)) # S[n - 3]
-    var_s16 s2m = cast_s16_u8 (read_input_u8 (XY - two_decrease))   # S[n - 2]
-    var_s16 s1m = cast_s16_u8 (read_input_u8 (XY - one_decrease))   # S[n - 1]
-    var_s16 s0  = cast_s16_u8 (read_input_u8 (XY))                  # S[n]
-    var_s16 s1p = cast_s16_u8 (read_input_u8 (XY + one_increase))   # S[n + 1]
-    var_s16 s2p = cast_s16_u8 (read_input_u8 (XY + two_increase))   # S[n + 2]
-    var_s16 s3p = cast_s16_u8 (read_input_u8 (XY + three_increase)) # S[n + 3]
-    var_s16 s4p = cast_s16_u8 (read_input_u8 (XY + four_increase))  # S[n + 4]
+    var_s16 s3m = cast_s16_u8 (read_input_u8 (XY - decrease3)) # S[n - 3]
+    var_s16 s2m = cast_s16_u8 (read_input_u8 (XY - decrease2)) # S[n - 2]
+    var_s16 s1m = cast_s16_u8 (read_input_u8 (XY - decrease1)) # S[n - 1]
+    var_s16 s0  = cast_s16_u8 (read_input_u8 (XY))             # S[n]
+    var_s16 s1p = cast_s16_u8 (read_input_u8 (XY + increase1)) # S[n + 1]
+    var_s16 s2p = cast_s16_u8 (read_input_u8 (XY + increase2)) # S[n + 2]
+    var_s16 s3p = cast_s16_u8 (read_input_u8 (XY + increase3)) # S[n + 3]
+    var_s16 s4p = cast_s16_u8 (read_input_u8 (XY + increase4)) # S[n + 4]
     var_s16 sum = divide_s16 (-s3m + 3 * s2m - 7 * s1m + 21 * s0 \
         + 21 * s1p - 7 * s2p + 3 * s3p - s4p + 16, 32)
 
@@ -671,485 +671,178 @@ shader obmc_render_dc: #########################################################
 
 
 
-# FIXME: combine to obmc_render_ref
-shader obmc_render_ref_prec_0: #################################################
+shader obmc_render_ref_prec: ###################################################
   versions:
-    normal SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_0
-    weight SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_0_WEIGHT
+    0_normal  SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_0
+    0_weight  SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_0_WEIGHT
+    3a_normal SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_3a
+    3a_weight SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_3a_WEIGHT
+    3b_normal SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_3b
+    3b_weight SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_3b_WEIGHT
 
   defines:
     XY gl_TexCoord[0].xy
 
   uniforms:
-    vec2 offset
     vec2 block_origin
+
+    0_.*:
+      vec2 offset
+
+    3a_.*:
+      vec2 offset1
+      vec2 offset2
+
+    3b_.*:
+      vec2 offset1
+      vec2 offset2
+      vec2 offset3
+      vec2 offset4
+      var4_s16 linear_weight
 
   func void main (void):
     var_s16 previous = read_previous_s16 (XY)
     var_s16 spatial_weight = read_spatial_weight_s16 (XY - block_origin)
-    var_s16 upsampled = cast_s16_u8 (read_upsampled_u8 (XY + offset))
-
-    normal:
-      write_s16 (previous + upsampled * spatial_weight)
-
-    weight:
-      write_s16 (previous + ref_weighting_s16 (upsampled) * spatial_weight)
-
-
-
-# FIXME: combine to obmc_render_ref
-shader obmc_render_ref_prec_3a: ################################################
-  versions:
-    normal SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_3a
-    weight SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_3a_WEIGHT
-
-  defines:
-    XY gl_TexCoord[0].xy
-
-  uniforms:
-    vec2 offset1
-    vec2 offset2
-    vec2 block_origin
-
-  func void main (void):
-    var_s16 previous = read_previous_s16 (XY)
-    var_s16 spatial_weight = read_spatial_weight_s16 (XY - block_origin)
-    var_s16 upsampled1 = cast_s16_u8 (read_upsampled1_u8 (XY + offset1))
-    var_s16 upsampled2 = cast_s16_u8 (read_upsampled2_u8 (XY + offset2))
-    var_s16 average = divide_s16 (upsampled1 + upsampled2 + 1, 2)
-
-    normal:
-      write_s16 (previous + average * spatial_weight)
-
-    weight:
-      write_s16 (previous + ref_weighting_s16 (average) * spatial_weight)
-
-
-
-# FIXME: combine to obmc_render_ref
-shader obmc_render_ref_prec_3b: ################################################
-  versions:
-    normal SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_3b
-    weight SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_3b_WEIGHT
-
-  defines:
-    XY gl_TexCoord[0].xy
-
-  uniforms:
-    vec2 offset1
-    vec2 offset2
-    vec2 offset3
-    vec2 offset4
-    vec2 block_origin
-    var4_s16 linear_weight
-
-  func void main (void):
-    var_s16 previous = read_previous_s16 (XY)
-    var_s16 spatial_weight = read_spatial_weight_s16 (XY - block_origin)
-    var4_s16 upsampled
-    var_s16 average
-
-    upsampled.r = cast_s16_u8 (read_upsampled1_u8 (XY + offset1))
-    upsampled.g = cast_s16_u8 (read_upsampled2_u8 (XY + offset2))
-    upsampled.b = cast_s16_u8 (read_upsampled3_u8 (XY + offset3))
-    upsampled.a = cast_s16_u8 (read_upsampled4_u8 (XY + offset4))
-
-    average = divide_s16 (crossfoot_s16 (upsampled * linear_weight) + 8, 16)
-
-    normal:
-      write_s16 (previous + average * spatial_weight)
-
-    weight:
-      write_s16 (previous + ref_weighting_s16 (average) * spatial_weight)
-
-
-
-# FIXME: combine to obmc_render_biref
-shader obmc_render_biref_prec_0_0: #############################################
-  versions:
-    normal SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_0_0
-    weight SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_0_0_WEIGHT
-
-  defines:
-    XY gl_TexCoord[0].xy
-
-  uniforms:
-    vec2 offset_ref1
-    vec2 offset_ref2
-    vec2 block_origin
-
-  func void main (void):
-    var_s16 previous = read_previous_s16 (XY)
-    var_s16 spatial_weight = read_spatial_weight_s16 (XY - block_origin)
-    var_s16 upsampled_ref1, upsampled_ref2, intermediate
-
-    upsampled_ref1 = cast_s16_u8 (read_upsampled_ref1_u8 (XY + offset_ref1))
-    upsampled_ref2 = cast_s16_u8 (read_upsampled_ref2_u8 (XY + offset_ref2))
-
-    normal:
-      intermediate = divide_s16 (upsampled_ref1 + upsampled_ref2 + 1, 2)
-
-    weight:
-      intermediate = biref_weighting_s16 (upsampled_ref1, upsampled_ref2)
-
-    write_s16 (previous + intermediate * spatial_weight)
-
-
-
-# FIXME: combine to obmc_render_biref
-shader obmc_render_biref_prec_0_3a: ############################################
-  versions:
-    normal SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_0_3a
-    weight SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_0_3a_WEIGHT
-
-  defines:
-    XY gl_TexCoord[0].xy
-
-  uniforms:
-    vec2 offset_ref1
-    vec2 offset1_ref2
-    vec2 offset2_ref2
-    vec2 block_origin
-
-  func void main (void):
-    var_s16 previous = read_previous_s16 (XY)
-    var_s16 spatial_weight = read_spatial_weight_s16 (XY - block_origin)
-    var_s16 upsampled_ref1, upsampled1_ref2, upsampled2_ref2, average_ref2
     var_s16 intermediate
 
-    upsampled_ref1 = cast_s16_u8 (read_upsampled_ref1_u8 (XY + offset_ref1))
+    0_.*:
+      intermediate = cast_s16_u8 (read_upsampled_u8 (XY + offset))
 
-    upsampled1_ref2 = cast_s16_u8 (read_upsampled1_ref2_u8 (XY + offset1_ref2))
-    upsampled2_ref2 = cast_s16_u8 (read_upsampled2_ref2_u8 (XY + offset2_ref2))
+    3a_.*:
+      var2_s16 upsampled
 
-    average_ref2 = divide_s16 (upsampled1_ref2 + upsampled2_ref2 + 1, 2)
+      upsampled.x = cast_s16_u8 (read_upsampled1_u8 (XY + offset1))
+      upsampled.y = cast_s16_u8 (read_upsampled2_u8 (XY + offset2))
 
-    normal:
-      intermediate = divide_s16 (upsampled_ref1 + average_ref2 + 1, 2)
+      intermediate = divide_s16 (crossfoot2_s16 (upsampled) + 1, 2)
 
-    weight:
-      intermediate = biref_weighting_s16 (upsampled_ref1, average_ref2)
+    3b_.*:
+      var4_s16 upsampled
 
-    write_s16 (previous + intermediate * spatial_weight)
+      upsampled.x = cast_s16_u8 (read_upsampled1_u8 (XY + offset1))
+      upsampled.y = cast_s16_u8 (read_upsampled2_u8 (XY + offset2))
+      upsampled.z = cast_s16_u8 (read_upsampled3_u8 (XY + offset3))
+      upsampled.w = cast_s16_u8 (read_upsampled4_u8 (XY + offset4))
+
+      intermediate \
+          = divide_s16 (crossfoot4_s16 (upsampled * linear_weight) + 8, 16)
+
+    .*_normal:
+      write_s16 (previous + intermediate * spatial_weight)
+
+    .*_weight:
+      write_s16 (previous + ref_weighting_s16 (intermediate) * spatial_weight)
 
 
 
-# FIXME: combine to obmc_render_biref
-shader obmc_render_biref_prec_0_3b: ############################################
+shader obmc_render_biref_prec: #################################################
   versions:
-    normal SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_0_3b
-    weight SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_0_3b_WEIGHT
+    0_0_normal   SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_0_0
+    0_0_weight   SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_0_0_WEIGHT
+    0_3a_normal  SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_0_3a
+    0_3a_weight  SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_0_3a_WEIGHT
+    0_3b_normal  SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_0_3b
+    0_3b_weight  SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_0_3b_WEIGHT
+    3a_0_normal  SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_0
+    3a_0_weight  SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_0_WEIGHT
+    3a_3a_normal SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_3a
+    3a_3a_weight SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_3a_WEIGHT
+    3a_3b_normal SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_3b
+    3a_3b_weight SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_3b_WEIGHT
+    3b_0_normal  SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_0
+    3b_0_weight  SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_0_WEIGHT
+    3b_3a_normal SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_3a
+    3b_3a_weight SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_3a_WEIGHT
+    3b_3b_normal SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_3b
+    3b_3b_weight SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_3b_WEIGHT
 
   defines:
     XY gl_TexCoord[0].xy
 
   uniforms:
-    vec2 offset_ref1
-    vec2 offset1_ref2
-    vec2 offset2_ref2
-    vec2 offset3_ref2
-    vec2 offset4_ref2
     vec2 block_origin
-    var4_s16 linear_weight_ref2
+
+    0_.*:
+      vec2 offset_ref1
+
+    3a_.*:
+      vec2 offset1_ref1
+      vec2 offset2_ref1
+
+    3b_.*:
+      vec2 offset1_ref1
+      vec2 offset2_ref1
+      vec2 offset3_ref1
+      vec2 offset4_ref1
+      var4_s16 linear_weight_ref1
+
+    .*_0_.*:
+      vec2 offset_ref2
+
+    .*_3a_.*:
+      vec2 offset1_ref2
+      vec2 offset2_ref2
+
+    .*_3b_.*:
+      vec2 offset1_ref2
+      vec2 offset2_ref2
+      vec2 offset3_ref2
+      vec2 offset4_ref2
+      var4_s16 linear_weight_ref2
 
   func void main (void):
     var_s16 previous = read_previous_s16 (XY)
     var_s16 spatial_weight = read_spatial_weight_s16 (XY - block_origin)
-    var_s16 upsampled_ref1, average_ref2, intermediate
-    var4_s16 upsampled_ref2
+    var_s16 intermediate_ref1, intermediate_ref2, intermediate
 
-    upsampled_ref1 = cast_s16_u8 (read_upsampled_ref1_u8 (XY + offset_ref1))
+    0_.*:
+      intermediate_ref1 = cast_s16_u8 (read_upsampled_ref1_u8 (XY + offset_ref1))
 
-    upsampled_ref2.r = cast_s16_u8 (read_upsampled1_ref2_u8 (XY + offset1_ref2))
-    upsampled_ref2.g = cast_s16_u8 (read_upsampled2_ref2_u8 (XY + offset2_ref2))
-    upsampled_ref2.b = cast_s16_u8 (read_upsampled3_ref2_u8 (XY + offset3_ref2))
-    upsampled_ref2.a = cast_s16_u8 (read_upsampled4_ref2_u8 (XY + offset4_ref2))
+    3a_.*:
+      var2_s16 upsampled_ref1
 
-    average_ref2 = divide_s16 (crossfoot_s16 (upsampled_ref2 \
-        * linear_weight_ref2) + 8, 16)
+      upsampled_ref1.x = cast_s16_u8 (read_upsampled1_ref1_u8 (XY + offset1_ref1))
+      upsampled_ref1.y = cast_s16_u8 (read_upsampled2_ref1_u8 (XY + offset2_ref1))
 
-    normal:
-      intermediate = divide_s16 (upsampled_ref1 + average_ref2 + 1, 2)
+      intermediate_ref1 = divide_s16 (crossfoot2_s16 (upsampled_ref1) + 1, 2)
 
-    weight:
-      intermediate = biref_weighting_s16 (upsampled_ref1, average_ref2)
+    3b_.*:
+      var4_s16 upsampled_ref1
 
-    write_s16 (previous + intermediate * spatial_weight)
+      upsampled_ref1.x = cast_s16_u8 (read_upsampled1_ref1_u8 (XY + offset1_ref1))
+      upsampled_ref1.y = cast_s16_u8 (read_upsampled2_ref1_u8 (XY + offset2_ref1))
+      upsampled_ref1.z = cast_s16_u8 (read_upsampled3_ref1_u8 (XY + offset3_ref1))
+      upsampled_ref1.w = cast_s16_u8 (read_upsampled4_ref1_u8 (XY + offset4_ref1))
 
+      intermediate_ref1 = divide_s16 (crossfoot4_s16 (upsampled_ref1 \
+          * linear_weight_ref1) + 8, 16)
 
+    .*_0_.*:
+      intermediate_ref2 = cast_s16_u8 (read_upsampled_ref2_u8 (XY + offset_ref2))
 
-# FIXME: combine to obmc_render_biref
-shader obmc_render_biref_prec_3a_0: ############################################
-  versions:
-    normal SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_0
-    weight SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_0_WEIGHT
+    .*_3a_.*:
+      var2_s16 upsampled_ref2
 
-  defines:
-    XY gl_TexCoord[0].xy
+      upsampled_ref2.x = cast_s16_u8 (read_upsampled1_ref2_u8 (XY + offset1_ref2))
+      upsampled_ref2.y = cast_s16_u8 (read_upsampled2_ref2_u8 (XY + offset2_ref2))
 
-  uniforms:
-    vec2 offset1_ref1
-    vec2 offset2_ref1
-    vec2 offset_ref2
-    vec2 block_origin
+      intermediate_ref2 = divide_s16 (crossfoot2_s16 (upsampled_ref2) + 1, 2)
 
-  func void main (void):
-    var_s16 previous = read_previous_s16 (XY)
-    var_s16 spatial_weight = read_spatial_weight_s16 (XY - block_origin)
-    var_s16 upsampled1_ref1, upsampled2_ref1, average_ref1, upsampled_ref2
-    var_s16 intermediate
+    .*_3b_.*:
+      var4_s16 upsampled_ref2
 
-    upsampled1_ref1 = cast_s16_u8 (read_upsampled1_ref1_u8 (XY + offset1_ref1))
-    upsampled2_ref1 = cast_s16_u8 (read_upsampled2_ref1_u8 (XY + offset2_ref1))
+      upsampled_ref2.x = cast_s16_u8 (read_upsampled1_ref2_u8 (XY + offset1_ref2))
+      upsampled_ref2.y = cast_s16_u8 (read_upsampled2_ref2_u8 (XY + offset2_ref2))
+      upsampled_ref2.z = cast_s16_u8 (read_upsampled3_ref2_u8 (XY + offset3_ref2))
+      upsampled_ref2.w = cast_s16_u8 (read_upsampled4_ref2_u8 (XY + offset4_ref2))
 
-    average_ref1 = divide_s16 (upsampled1_ref1 + upsampled2_ref1 + 1, 2)
+      intermediate_ref2 = divide_s16 (crossfoot4_s16 (upsampled_ref2 \
+          * linear_weight_ref2) + 8, 16)
 
-    upsampled_ref2 = cast_s16_u8 (read_upsampled_ref2_u8 (XY + offset_ref2))
+    .*_normal:
+      intermediate = divide_s16 (intermediate_ref1 + intermediate_ref2 + 1, 2)
 
-    normal:
-      intermediate = divide_s16 (average_ref1 + upsampled_ref2 + 1, 2)
-
-    weight:
-      intermediate = biref_weighting_s16 (average_ref1, upsampled_ref2)
+    .*_weight:
+      intermediate = biref_weighting_s16 (intermediate_ref1, intermediate_ref2)
 
     write_s16 (previous + intermediate * spatial_weight)
-
-
-
-# FIXME: combine to obmc_render_biref
-shader obmc_render_biref_prec_3a_3a: ###########################################
-  versions:
-    normal SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_3a
-    weight SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_3a_WEIGHT
-
-  defines:
-    XY gl_TexCoord[0].xy
-
-  uniforms:
-    vec2 offset1_ref1
-    vec2 offset2_ref1
-    vec2 offset1_ref2
-    vec2 offset2_ref2
-    vec2 block_origin
-
-  func void main (void):
-    var_s16 previous = read_previous_s16 (XY)
-    var_s16 spatial_weight = read_spatial_weight_s16 (XY - block_origin)
-    var_s16 upsampled1_ref1, upsampled2_ref1, average_ref1
-    var_s16 upsampled1_ref2, upsampled2_ref2, average_ref2
-    var_s16 intermediate
-
-    upsampled1_ref1 = cast_s16_u8 (read_upsampled1_ref1_u8 (XY + offset1_ref1))
-    upsampled2_ref1 = cast_s16_u8 (read_upsampled2_ref1_u8 (XY + offset2_ref1))
-
-    average_ref1 = divide_s16 (upsampled1_ref1 + upsampled2_ref1 + 1, 2)
-
-    upsampled1_ref2 = cast_s16_u8 (read_upsampled1_ref2_u8 (XY + offset1_ref2))
-    upsampled2_ref2 = cast_s16_u8 (read_upsampled2_ref2_u8 (XY + offset2_ref2))
-
-    average_ref2 = divide_s16 (upsampled1_ref2 + upsampled2_ref2 + 1, 2)
-
-    normal:
-      intermediate = divide_s16 (average_ref1 + average_ref2 + 1, 2)
-
-    weight:
-      intermediate = biref_weighting_s16 (average_ref1, average_ref2)
-
-    write_s16 (previous + intermediate * spatial_weight)
-
-
-
-# FIXME: combine to obmc_render_biref
-shader obmc_render_biref_prec_3a_3b: ###########################################
-  versions:
-    normal SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_3b
-    weight SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_3b_WEIGHT
-
-  defines:
-    XY gl_TexCoord[0].xy
-
-  uniforms:
-    vec2 offset1_ref1
-    vec2 offset2_ref1
-    vec2 offset1_ref2
-    vec2 offset2_ref2
-    vec2 offset3_ref2
-    vec2 offset4_ref2
-    vec2 block_origin
-    var4_s16 linear_weight_ref2
-
-  func void main (void):
-    var_s16 previous = read_previous_s16 (XY)
-    var_s16 spatial_weight = read_spatial_weight_s16 (XY - block_origin)
-    var_s16 upsampled1_ref1, upsampled2_ref1, average_ref1, average_ref2
-    var4_s16 upsampled_ref2
-    var_s16 intermediate
-
-    upsampled1_ref1 = cast_s16_u8 (read_upsampled1_ref1_u8 (XY + offset1_ref1))
-    upsampled2_ref1 = cast_s16_u8 (read_upsampled2_ref1_u8 (XY + offset2_ref1))
-
-    average_ref1 = divide_s16 (upsampled1_ref1 + upsampled2_ref1 + 1, 2)
-
-    upsampled_ref2.r = cast_s16_u8 (read_upsampled1_ref2_u8 (XY + offset1_ref2))
-    upsampled_ref2.g = cast_s16_u8 (read_upsampled2_ref2_u8 (XY + offset2_ref2))
-    upsampled_ref2.b = cast_s16_u8 (read_upsampled3_ref2_u8 (XY + offset3_ref2))
-    upsampled_ref2.a = cast_s16_u8 (read_upsampled4_ref2_u8 (XY + offset4_ref2))
-
-    average_ref2 = divide_s16 (crossfoot_s16 (upsampled_ref2 \
-        * linear_weight_ref2) + 8, 16)
-
-    normal:
-      intermediate = divide_s16 (average_ref1 + average_ref2 + 1, 2)
-
-    weight:
-      intermediate = biref_weighting_s16 (average_ref1, average_ref2)
-
-    write_s16 (previous + intermediate * spatial_weight)
-
-
-
-# FIXME: combine to obmc_render_biref
-shader obmc_render_biref_prec_3b_0: ############################################
-  versions:
-    normal SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_0
-    weight SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_0_WEIGHT
-
-  defines:
-    XY gl_TexCoord[0].xy
-
-  uniforms:
-    vec2 offset1_ref1
-    vec2 offset2_ref1
-    vec2 offset3_ref1
-    vec2 offset4_ref1
-    vec2 offset_ref2
-    vec2 block_origin
-    var4_s16 linear_weight_ref1
-
-  func void main (void):
-    var_s16 previous = read_previous_s16 (XY)
-    var_s16 spatial_weight = read_spatial_weight_s16 (XY - block_origin)
-    var4_s16 upsampled_ref1
-    var_s16 average_ref1, upsampled_ref2, intermediate
-
-    upsampled_ref1.r = cast_s16_u8 (read_upsampled1_ref1_u8 (XY + offset1_ref1))
-    upsampled_ref1.g = cast_s16_u8 (read_upsampled2_ref1_u8 (XY + offset2_ref1))
-    upsampled_ref1.b = cast_s16_u8 (read_upsampled3_ref1_u8 (XY + offset3_ref1))
-    upsampled_ref1.a = cast_s16_u8 (read_upsampled4_ref1_u8 (XY + offset4_ref1))
-
-    average_ref1 = divide_s16 (crossfoot_s16 (upsampled_ref1 \
-        * linear_weight_ref1) + 8, 16)
-
-    upsampled_ref2 = cast_s16_u8 (read_upsampled_ref2_u8 (XY + offset_ref2))
-
-    normal:
-      intermediate = divide_s16 (average_ref1 + upsampled_ref2 + 1, 2)
-
-    weight:
-      intermediate = biref_weighting_s16 (average_ref1, upsampled_ref2)
-
-    write_s16 (previous + intermediate * spatial_weight)
-
-
-
-# FIXME: combine to obmc_render_biref
-shader obmc_render_biref_prec_3b_3a: ###########################################
-  versions:
-    normal SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_3a
-    weight SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_3a_WEIGHT
-
-  defines:
-    XY gl_TexCoord[0].xy
-
-  uniforms:
-    vec2 offset1_ref1
-    vec2 offset2_ref1
-    vec2 offset3_ref1
-    vec2 offset4_ref1
-    vec2 offset1_ref2
-    vec2 offset2_ref2
-    vec2 block_origin
-    var4_s16 linear_weight_ref1
-
-  func void main (void):
-    var_s16 previous = read_previous_s16 (XY)
-    var_s16 spatial_weight = read_spatial_weight_s16 (XY - block_origin)
-    var4_s16 upsampled_ref1
-    var_s16 upsampled1_ref2, upsampled2_ref2, average_ref1, average_ref2
-    var_s16 intermediate
-
-    upsampled_ref1.r = cast_s16_u8 (read_upsampled1_ref1_u8 (XY + offset1_ref1))
-    upsampled_ref1.g = cast_s16_u8 (read_upsampled2_ref1_u8 (XY + offset2_ref1))
-    upsampled_ref1.b = cast_s16_u8 (read_upsampled3_ref1_u8 (XY + offset3_ref1))
-    upsampled_ref1.a = cast_s16_u8 (read_upsampled4_ref1_u8 (XY + offset4_ref1))
-
-    average_ref1 = divide_s16 (crossfoot_s16 (upsampled_ref1 \
-        * linear_weight_ref1) + 8, 16)
-
-    upsampled1_ref2 = cast_s16_u8 (read_upsampled1_ref2_u8 (XY + offset1_ref2))
-    upsampled2_ref2 = cast_s16_u8 (read_upsampled2_ref2_u8 (XY + offset2_ref2))
-
-    average_ref2 = divide_s16 (upsampled1_ref2 + upsampled2_ref2 + 1, 2)
-
-    normal:
-      intermediate = divide_s16 (average_ref1 + average_ref2 + 1, 2)
-
-    weight:
-      intermediate = biref_weighting_s16 (average_ref1, average_ref2)
-
-    write_s16 (previous + intermediate * spatial_weight)
-
-
-
-# FIXME: combine to obmc_render_biref
-shader obmc_render_biref_prec_3b_3b: ###########################################
-  versions:
-    normal SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_3b
-    weight SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_3b_WEIGHT
-
-  defines:
-    XY gl_TexCoord[0].xy
-
-  uniforms:
-    vec2 offset1_ref1
-    vec2 offset2_ref1
-    vec2 offset3_ref1
-    vec2 offset4_ref1
-    vec2 offset1_ref2
-    vec2 offset2_ref2
-    vec2 offset3_ref2
-    vec2 offset4_ref2
-    vec2 block_origin
-    var4_s16 linear_weight_ref1
-    var4_s16 linear_weight_ref2
-
-  func void main (void):
-    var_s16 previous = read_previous_s16 (XY)
-    var_s16 spatial_weight = read_spatial_weight_s16 (XY - block_origin)
-    var4_s16 upsampled_ref1, upsampled_ref2
-    var_s16 average_ref1, average_ref2, intermediate
-
-    upsampled_ref1.r = cast_s16_u8 (read_upsampled1_ref1_u8 (XY + offset1_ref1))
-    upsampled_ref1.g = cast_s16_u8 (read_upsampled2_ref1_u8 (XY + offset2_ref1))
-    upsampled_ref1.b = cast_s16_u8 (read_upsampled3_ref1_u8 (XY + offset3_ref1))
-    upsampled_ref1.a = cast_s16_u8 (read_upsampled4_ref1_u8 (XY + offset4_ref1))
-
-    average_ref1 = divide_s16 (crossfoot_s16 (upsampled_ref1 \
-        * linear_weight_ref1) + 8, 16)
-
-    upsampled_ref2.r = cast_s16_u8 (read_upsampled1_ref2_u8 (XY + offset1_ref2))
-    upsampled_ref2.g = cast_s16_u8 (read_upsampled2_ref2_u8 (XY + offset2_ref2))
-    upsampled_ref2.b = cast_s16_u8 (read_upsampled3_ref2_u8 (XY + offset3_ref2))
-    upsampled_ref2.a = cast_s16_u8 (read_upsampled4_ref2_u8 (XY + offset4_ref2))
-
-    average_ref2 = divide_s16 (crossfoot_s16 (upsampled_ref2 \
-        * linear_weight_ref2) + 8, 16)
-
-    normal:
-      intermediate = divide_s16 (average_ref1 + average_ref2 + 1, 2)
-
-    weight:
-      intermediate = biref_weighting_s16 (average_ref1, average_ref2)
-
-    write_s16 (previous + intermediate * spatial_weight)
-

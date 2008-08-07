@@ -760,7 +760,7 @@ main (int argc, char *argv[])
     opengl_test_combine_run ();
 
     /* inverse wavelet */
-    opengl_test_wavelet_inverse (SCHRO_FRAME_FORMAT_S16_444, 16, 64, 3,
+    opengl_test_wavelet_inverse (SCHRO_FRAME_FORMAT_S16_444, 32, 64, 3,
         OPENGL_CUSTOM_PATTERN_RANDOM_U8, SCHRO_WAVELET_DESLAURIES_DUBUC_9_7, 4);
     opengl_test_wavelet_inverse (SCHRO_FRAME_FORMAT_S16_444, 64, 64, 3,
         OPENGL_CUSTOM_PATTERN_RANDOM_U8, SCHRO_WAVELET_LE_GALL_5_3, 6);
