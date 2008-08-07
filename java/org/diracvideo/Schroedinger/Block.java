@@ -10,7 +10,7 @@ import java.awt.Dimension;
  * Frame but that conflicts with java.awt.Frame. */
 
 public final class Block {
-    public final short[] d;
+    public  short[] d;
     public final Point p;
     public final Dimension s, o;
     /** Default Block constructor 
@@ -80,7 +80,8 @@ public final class Block {
 
     /** Pixel at a given point, checked */
     public short real(int x, int y) {
-	return pixel(Util.clamp(x, 0, s.width - 1), Util.clamp(y, 0, s.height - 1));
+	return pixel(Util.clamp(x, 0, s.width - 1), 
+		     Util.clamp(y, 0, s.height - 1));
     }
 
     public void set(int x, int y, short v) {
@@ -90,6 +91,7 @@ public final class Block {
     public void set(int x, int y, int v) {
 	set(x, y, (short)v);
     }
+
     /** copies current block into another
      *
      * Since blocks can have offsets out of the 

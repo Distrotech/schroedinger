@@ -13,6 +13,10 @@ final class Util {
 	return (x + y - 1)/y;
     }
 
+    public final static int roundShift(int x, int y) {
+	return (((x) + (1<<((y)-1)))>>(y));
+    }
+
     public final static int clamp(int i, int l, int h) {
 	return (i < l ? l : i > h ? h : i);
     }

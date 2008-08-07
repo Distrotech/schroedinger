@@ -67,5 +67,5 @@ This could trigger a bug in which reference pictures are not added
 to the reference queue before pictures are loaded. That's why I'm going to 
 rewrite the queue.    
 
-On the account of me not entirely getting SchroMotion I'm going to do
-part of it my way in another branch.
+Reasons for the weird motion ref image and their fixes:
+x	Incorrect reference frames

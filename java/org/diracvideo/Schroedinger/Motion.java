@@ -1,5 +1,6 @@
 package org.diracvideo.Schroedinger;
 import java.awt.Dimension;
+import java.awt.Point;
 
 /** Motion
  *
@@ -132,9 +133,16 @@ class Motion {
     }
 
     public void render(Block out[], VideoFormat f) {
+
 	chroma_h_shift = f.chromaHShift();
 	chroma_v_shift = f.chromaVShift();
 	for(int k = 0; k < out.length; k++) {
+	    if(par.num_refs == 1)
+		out[k].d = refs[0].getComponent(k).d;
+	    else
+		out[k].d = refs[1].getComponent(k).d;
+	    if(true)
+		continue;
 	    if(k == 0) {
 		xbsep = par.xbsep_luma;
 		ybsep = par.ybsep_luma;
@@ -174,23 +182,21 @@ class Motion {
 	int ystart = j*yblen - yoffset;
 	int ystop = Math.min(height - 1, (j+1)*yblen + yoffset);
 	Vector mv = getVector(i,j);
-	if(!mv.using_global && k != 0) {
+	if(!mv.using_global && k != 0) 
 	    mv = mv.scale(chroma_h_shift, chroma_v_shift);
-	}
 	for(int y = Math.max(ystart, 0); y < ystop; y++) {
 	    int q = y - ystart;
 	    for(int x = Math.max(xstart, 0); x < xstop; x++) {
 		int p = x - xstart;
 		short val;
 		if(mv.pred_mode == 0) {
-		    val = (short)mv.dc[k];
+		    val = (short)(mv.dc[k]);
 		} else {
 		    val = predictPixel(mv, x, y, k);
 		}
-		block.set(p, q,  out.pixel(x, y) + val);
+		block.set(p, q,  val);
 	    }
 	}
-	block.shiftOut(5);
 	accumalateBlock(xstart, ystart, out);
     }
 
@@ -198,29 +204,33 @@ class Motion {
 	if(mv.using_global) {
 	    for(int i = 0; i < par.num_refs; i++) {
 		par.global[i].getVector(mv, x, y, i);
-		if(k != 0) /* this is only needed for global motion compensation,
-			    * otherwise it is done before we get here */
+		if(k != 0) 
 		    mv = mv.scale(chroma_h_shift, chroma_v_shift);
 	    }
 	}
 	short weight = (short)(par.picture_weight_1 + par.picture_weight_2);
+	int val, add = (1 << (par.mv_precision - 1)), 
+	    shift = par.mv_precision;
 	int px, py;
 	switch(mv.pred_mode) {
 	case 1:
 	    px = (x << par.mv_precision) + mv.dx[0];
 	    py = (y << par.mv_precision) + mv.dy[0];
-	    return (short)(weight*predictSubPixel(0, px, py));
+	    val = predictSubPixel(0, px, py)*weight;
+	    return (short)((val + add) >> shift);
 	case 2:
 	    px = (x << par.mv_precision) + mv.dx[1];
 	    py = (y << par.mv_precision) + mv.dy[1];
-	    return (short)(weight*predictSubPixel(1, px, py));
+	    val = predictSubPixel(1, px, py);
+	    return (short)Util.roundShift(val*weight, par.mv_precision);
 	case 3:
 	    px = (x << par.mv_precision) + mv.dx[0];
 	    py = (y << par.mv_precision) + mv.dy[0];
-	    short val = (short)(par.picture_weight_1*predictSubPixel(0, px, py));
+	    val = (short)(par.picture_weight_1*predictSubPixel(0, px, py));
 	    px = (x << par.mv_precision) + mv.dx[1];
 	    py = (x << par.mv_precision) + mv.dy[1];
-	    return (short)(val + par.picture_weight_2*predictSubPixel(1, px, py));
+	    val += par.picture_weight_2*predictSubPixel(1, px, py);
+	    return (short)Util.roundShift(val, par.mv_precision);
 	default:
 	    return 0;
 	}
@@ -234,29 +244,10 @@ class Motion {
     }
 
     private void accumalateBlock(int x, int y, Block frame) {
-	for(int j = 0; j < yblen; j++) {
-	    int inLine = block.line(j);
-	    int outLine = frame.index(x, y + j);
-	    int w_y = weight_y[j];
-	    if(y + j < yoffset) {
-		w_y += weight_y[2*yoffset - j - 1];
-	    }
-	    if(y + j >= par.y_num_blocks * ybsep - yoffset) {
-		w_y += weight_y[2*(yblen - yoffset) - j - 1];
-	    }
-	    if(y + j < 0 || y + j >= frame.s.height) continue;
-	    for(int i = 0; i < xblen; i++) {
-		if(x + i < 0 || x + i >= frame.s.width) continue;
-		int w_x = weight_x[i];
-		if(x + i < xoffset) {
-		    w_x += weight_x[2*xoffset - i - 1];
-		}
-		if(x + i >= par.x_num_blocks * xbsep - xoffset) {
-		    w_x += weight_x[2*(xblen - xoffset) - i - 1];
-		}
-		frame.d[i + outLine] = (short)(block.d[i + inLine] * w_x * w_y);
-	    }
-	}
+	try {
+	    block.copyTo(frame.sub(new Point(x, y), block.s));
+	} catch(IndexOutOfBoundsException e) {}
+	
     }
 
     private void initOBMCWeight() {

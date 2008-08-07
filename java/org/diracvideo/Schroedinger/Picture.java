@@ -245,7 +245,7 @@ public class Picture {
 		iwt_frame = mc_frame;
 	    } else {
 		for(int i = 0; i < 3; i++)
-		    mc_frame[i].addTo(iwt_frame[i]);
+		    mc_frame[i].addTo(iwt_frame[i]); 
 	    }
 	}
 	createImage();
