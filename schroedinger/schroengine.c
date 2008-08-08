@@ -723,7 +723,7 @@ schro_encoder_handle_quants (SchroEncoder *encoder, int i)
 
   frame = encoder->frame_queue->elements[i].data;
 
-  if (frame->busy || !(frame->state & SCHRO_ENCODER_FRAME_STATE_MODE_DECISION)) return FALSE;
+  if (frame->busy || !(frame->state & SCHRO_ENCODER_FRAME_STATE_SELECT_MODE)) return FALSE;
 
 
   encoder->quant_slot++;

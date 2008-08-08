@@ -2924,7 +2924,7 @@ run_stage (SchroEncoderFrame *frame, SchroEncoderFrameStateEnum state)
     case SCHRO_ENCODER_FRAME_STATE_PREDICT_SUBPEL:
       func = schro_encoder_predict_subpel_picture;
       break;
-    case SCHRO_ENCODER_FRAME_STATE_MODE_DECISION:
+    case SCHRO_ENCODER_FRAME_STATE_SELECT_MODE:
       func = schro_encoder_select_mode_picture;
       break;
     case SCHRO_ENCODER_FRAME_STATE_ENCODING:
@@ -3128,10 +3128,10 @@ schro_encoder_async_schedule (SchroEncoder *encoder, SchroExecDomain exec_domain
         return TRUE;
       }
 
-      if (todo & SCHRO_ENCODER_FRAME_STATE_MODE_DECISION
+      if (todo & SCHRO_ENCODER_FRAME_STATE_SELECT_MODE
           && frame->state & SCHRO_ENCODER_FRAME_STATE_PREDICT_SUBPEL) {
         if (!check_refs (frame)) continue;
-        run_stage (frame, SCHRO_ENCODER_FRAME_STATE_MODE_DECISION);
+        run_stage (frame, SCHRO_ENCODER_FRAME_STATE_SELECT_MODE);
         return TRUE;
       }
 
