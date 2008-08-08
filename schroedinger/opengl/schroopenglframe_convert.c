@@ -137,7 +137,7 @@ schro_opengl_frame_convert_with_shader (SchroFrame *dest, SchroFrame *src,
 
     glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, dest_canvas->framebuffer);
 
-    schro_opengl_shader_bind_input (shader, src_canvas->texture);
+    schro_opengl_shader_bind_source (shader, src_canvas->texture);
 
     SCHRO_OPENGL_CHECK_ERROR
 
@@ -145,7 +145,7 @@ schro_opengl_frame_convert_with_shader (SchroFrame *dest, SchroFrame *src,
 
     glUseProgramObjectARB (0);
 
-    glFlush ();
+    SCHRO_OPENGL_FLUSH
 
 #if SCHRO_OPENGL_UNBIND_TEXTURES
     glBindTexture (GL_TEXTURE_RECTANGLE_ARB, 0);
@@ -206,7 +206,7 @@ schro_opengl_frame_unpack_with_shader (SchroFrame *dest, SchroFrame *src,
 
     glUseProgramObjectARB (0);
 
-    glFlush ();
+    SCHRO_OPENGL_FLUSH
 
 #if SCHRO_OPENGL_UNBIND_TEXTURES
     glBindTexture (GL_TEXTURE_RECTANGLE_ARB, 0);
@@ -272,7 +272,7 @@ schro_opengl_frame_pack_with_shader (SchroFrame *dest, SchroFrame *src,
 
   schro_opengl_render_quad (0, 0, width, height);
 
-  glFlush ();
+  SCHRO_OPENGL_FLUSH
 
   glUseProgramObjectARB (0);
 #if SCHRO_OPENGL_UNBIND_TEXTURES

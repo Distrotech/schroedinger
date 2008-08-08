@@ -295,21 +295,17 @@
     "}\n"
 
 #if 0
-
 #define SHADER_DIVIDE_S16_INTEGER \
     "int divide_s16 (int value, int divisor) {\n" \
     "  return value < 0\n" \
     "      ? (value - (divisor - ((-value) % divisor))) / divisor\n" \
     "      : value / divisor;\n" \
     "}\n"
-
 #else
-
 #define SHADER_DIVIDE_S16_INTEGER \
     "int divide_s16 (int value, int divisor) {\n" \
     "  return int (floor (float (value) / float (divisor)));\n" \
     "}\n"
-
 #endif
 
 #define SHADER_CROSSFOOT2_S16 \

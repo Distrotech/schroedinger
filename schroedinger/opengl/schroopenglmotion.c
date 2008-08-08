@@ -822,8 +822,7 @@ schro_opengl_motion_render (SchroMotion *motion, SchroFrame *dest)
     schro_opengl_render_quad (0, 0, motion->width, motion->height);
 
     SCHRO_OPENGL_CHECK_ERROR
-
-    glFlush();
+    SCHRO_OPENGL_FLUSH
 
     /* render blocks */
     int passes[4][2] = { { 0, 0 }, { 0, 1 }, { 1, 0 }, { 1, 1 } };
@@ -839,21 +838,19 @@ schro_opengl_motion_render (SchroMotion *motion, SchroFrame *dest)
             motion->width, motion->height, GL_COLOR_BUFFER_BIT, GL_NEAREST);
 
         SCHRO_OPENGL_CHECK_ERROR
-
-        glFlush();
+        SCHRO_OPENGL_FLUSH
       } else*/ {
         glUseProgramObjectARB (shader_copy->program);
 
         glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, dest_canvas->framebuffer);
 
-        schro_opengl_shader_bind_input (shader_copy,
+        schro_opengl_shader_bind_source (shader_copy,
             dest_canvas->secondary->texture);
 
         schro_opengl_render_quad (0, 0, motion->width, motion->height);
 
         SCHRO_OPENGL_CHECK_ERROR
-
-        glFlush();
+        SCHRO_OPENGL_FLUSH
       }
 
       /* render */
@@ -1040,8 +1037,7 @@ schro_opengl_motion_render (SchroMotion *motion, SchroFrame *dest)
       }
 
       SCHRO_OPENGL_CHECK_ERROR
-
-      glFlush();
+      SCHRO_OPENGL_FLUSH
     }
 
     /* shift */
@@ -1049,14 +1045,13 @@ schro_opengl_motion_render (SchroMotion *motion, SchroFrame *dest)
 
     glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, dest_canvas->framebuffer);
 
-    schro_opengl_shader_bind_input (shader_shift,
+    schro_opengl_shader_bind_source (shader_shift,
         dest_canvas->secondary->texture);
 
     schro_opengl_render_quad (0, 0, motion->width, motion->height);
 
     SCHRO_OPENGL_CHECK_ERROR
-
-    glFlush();
+    SCHRO_OPENGL_FLUSH
 
     schro_opengl_spatial_weight_grid_unref (spatial_weight_grid);
   }
@@ -1166,8 +1161,7 @@ schro_opengl_spatial_weight_block_new (SchroOpenGL *opengl, int* edges, int xbse
   glUseProgramObjectARB (0);
 
   SCHRO_OPENGL_CHECK_ERROR
-
-  glFlush();
+  SCHRO_OPENGL_FLUSH
 
   schro_opengl_unlock_context (opengl);
 

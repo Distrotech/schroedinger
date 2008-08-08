@@ -375,7 +375,7 @@ schro_opengl_upsampled_frame_upsample (SchroUpsampledFrame *upsampled_frame)
     /* horizontal filter 0 -> 1 */
     glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, canvases[1]->framebuffer);
 
-    schro_opengl_shader_bind_input (shader, canvases[0]->texture);
+    schro_opengl_shader_bind_source (shader, canvases[0]->texture);
 
     SCHRO_OPENGL_CHECK_ERROR
 
@@ -414,7 +414,7 @@ schro_opengl_upsampled_frame_upsample (SchroUpsampledFrame *upsampled_frame)
     /* vertical filter 0 -> 2 */
     glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, canvases[2]->framebuffer);
 
-    schro_opengl_shader_bind_input (shader, canvases[0]->texture);
+    schro_opengl_shader_bind_source (shader, canvases[0]->texture);
 
     SCHRO_OPENGL_CHECK_ERROR
 
@@ -453,7 +453,7 @@ schro_opengl_upsampled_frame_upsample (SchroUpsampledFrame *upsampled_frame)
     /* horizontal filter 2 -> 3 */
     glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, canvases[3]->framebuffer);
 
-    schro_opengl_shader_bind_input (shader, canvases[2]->texture);
+    schro_opengl_shader_bind_source (shader, canvases[2]->texture);
 
     SCHRO_OPENGL_CHECK_ERROR
 

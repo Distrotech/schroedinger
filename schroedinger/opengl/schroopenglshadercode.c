@@ -296,21 +296,17 @@
     "}\n"
 
 #if 0
-
 #define SHADER_DIVIDE_S16_INTEGER \
     "int divide_s16 (int value, int divisor) {\n" \
     "  return value < 0\n" \
     "      ? (value - (divisor - ((-value) % divisor))) / divisor\n" \
     "      : value / divisor;\n" \
     "}\n"
-
 #else
-
 #define SHADER_DIVIDE_S16_INTEGER \
     "int divide_s16 (int value, int divisor) {\n" \
     "  return int (floor (float (value) / float (divisor)));\n" \
     "}\n"
-
 #endif
 
 #define SHADER_CROSSFOOT2_S16 \
@@ -373,82 +369,82 @@ SchroOpenGLShaderCode _schro_opengl_shader_code_list[] = {
   { SCHRO_OPENGL_SHADER_COPY_U8,
       "copy/u8",
       SHADER_HEADER
-      SHADER_COPY_U8 ("input")
+      SHADER_COPY_U8 ("source")
       "void main (void) {\n"
-      "  copy_input_u8 (gl_TexCoord[0].xy);\n"
+      "  copy_source_u8 (gl_TexCoord[0].xy);\n"
       "}\n",
       SHADER_HEADER_INTEGER
-      SHADER_COPY_U8_INTEGER ("input")
+      SHADER_COPY_U8_INTEGER ("source")
       "void main (void) {\n"
-      "  copy_input_u8 (gl_TexCoord[0].xy);\n"
+      "  copy_source_u8 (gl_TexCoord[0].xy);\n"
       "}\n" },
   { SCHRO_OPENGL_SHADER_COPY_S16,
       "copy/s16",
       SHADER_HEADER
-      SHADER_COPY_S16 ("input")
+      SHADER_COPY_S16 ("source")
       "void main (void) {\n"
-      "  copy_input_s16 (gl_TexCoord[0].xy);\n"
+      "  copy_source_s16 (gl_TexCoord[0].xy);\n"
       "}\n",
       SHADER_HEADER_INTEGER
-      SHADER_COPY_S16_INTEGER ("input")
+      SHADER_COPY_S16_INTEGER ("source")
       "void main (void) {\n"
-      "  copy_input_s16 (gl_TexCoord[0].xy);\n"
+      "  copy_source_s16 (gl_TexCoord[0].xy);\n"
       "}\n" },
   { SCHRO_OPENGL_SHADER_CONVERT_U8_S16,
       "convert/u8_s16",
       SHADER_HEADER
       SHADER_CAST_U8_S16
       SHADER_WRITE_U8
-      SHADER_READ_S16 ("input")
+      SHADER_READ_S16 ("source")
       "void main (void) {\n"
-      "  write_u8 (cast_u8_s16 (read_input_s16 (gl_TexCoord[0].xy) + 128.0));\n"
+      "  write_u8 (cast_u8_s16 (read_source_s16 (gl_TexCoord[0].xy) + 128.0));\n"
       "}\n",
       SHADER_HEADER_INTEGER
       SHADER_CAST_U8_S16_INTEGER
       SHADER_WRITE_U8_INTEGER
-      SHADER_READ_S16_INTEGER ("input")
+      SHADER_READ_S16_INTEGER ("source")
       "void main (void) {\n"
-      "  write_u8 (cast_u8_s16 (read_input_s16 (gl_TexCoord[0].xy) + 128));\n"
+      "  write_u8 (cast_u8_s16 (read_source_s16 (gl_TexCoord[0].xy) + 128));\n"
       "}\n" },
   { SCHRO_OPENGL_SHADER_CONVERT_S16_U8,
       "convert/s16_u8",
       SHADER_HEADER
       SHADER_CAST_S16_U8
       SHADER_WRITE_S16
-      SHADER_READ_U8 ("input")
+      SHADER_READ_U8 ("source")
       "void main (void) {\n"
-      "  write_s16 (cast_s16_u8 (read_input_u8 (gl_TexCoord[0].xy)) - 128.0);\n"
+      "  write_s16 (cast_s16_u8 (read_source_u8 (gl_TexCoord[0].xy)) - 128.0);\n"
       "}\n",
       SHADER_HEADER_INTEGER
       SHADER_CAST_S16_U8_INTEGER
       SHADER_WRITE_S16_INTEGER
-      SHADER_READ_U8_INTEGER ("input")
+      SHADER_READ_U8_INTEGER ("source")
       "void main (void) {\n"
-      "  write_s16 (cast_s16_u8 (read_input_u8 (gl_TexCoord[0].xy)) - 128);\n"
+      "  write_s16 (cast_s16_u8 (read_source_u8 (gl_TexCoord[0].xy)) - 128);\n"
       "}\n" },
   { SCHRO_OPENGL_SHADER_CONVERT_U8_U8,
       "convert/u8_u8",
       SHADER_HEADER
-      SHADER_COPY_U8 ("input")
+      SHADER_COPY_U8 ("source")
       "void main (void) {\n"
-      "  copy_input_u8 (gl_TexCoord[0].xy);\n"
+      "  copy_source_u8 (gl_TexCoord[0].xy);\n"
       "}\n",
       SHADER_HEADER_INTEGER
-      SHADER_COPY_U8_INTEGER ("input")
+      SHADER_COPY_U8_INTEGER ("source")
       "void main (void) {\n"
-      "  copy_input_u8 (gl_TexCoord[0].xy);\n"
+      "  copy_source_u8 (gl_TexCoord[0].xy);\n"
       "}\n" },
   { SCHRO_OPENGL_SHADER_CONVERT_S16_S16,
       "convert/s16_s16",
       SHADER_HEADER
-      SHADER_COPY_S16 ("input")
+      SHADER_COPY_S16 ("source")
       "void main (void) {\n"
-      "  copy_input_s16 (gl_TexCoord[0].xy);\n"
+      "  copy_source_s16 (gl_TexCoord[0].xy);\n"
       "}\n",
       SHADER_HEADER_INTEGER
-      SHADER_COPY_S16_INTEGER ("input")
+      SHADER_COPY_S16_INTEGER ("source")
       "void main (void) {\n"
-      "  copy_input_s16 (gl_TexCoord[0].xy);\n"
+      "  copy_source_s16 (gl_TexCoord[0].xy);\n"
       "}\n" },
   { SCHRO_OPENGL_SHADER_CONVERT_U8_Y4_YUYV,
       "convert_u8_yuyv/y4",
@@ -730,37 +726,37 @@ SchroOpenGLShaderCode _schro_opengl_shader_code_list[] = {
       SHADER_CAST_S16_U8
       SHADER_WRITE_S16
       "#define XY gl_TexCoord[0].xy\n"
-      SHADER_READ_S16 ("input1")
-      SHADER_READ_U8 ("input2")
+      SHADER_READ_S16 ("source1")
+      SHADER_READ_U8 ("source2")
       "void main (void) {\n"
-      "  write_s16 (read_input1_s16 (XY) + cast_s16_u8 (read_input2_u8 (XY)));\n"
+      "  write_s16 (read_source1_s16 (XY) + cast_s16_u8 (read_source2_u8 (XY)));\n"
       "}\n",
       SHADER_HEADER_INTEGER
       SHADER_CAST_S16_U8_INTEGER
       SHADER_WRITE_S16_INTEGER
       "#define XY gl_TexCoord[0].xy\n"
-      SHADER_READ_S16_INTEGER ("input1")
-      SHADER_READ_U8_INTEGER ("input2")
+      SHADER_READ_S16_INTEGER ("source1")
+      SHADER_READ_U8_INTEGER ("source2")
       "void main (void) {\n"
-      "  write_s16 (read_input1_s16 (XY) + cast_s16_u8 (read_input2_u8 (XY)));\n"
+      "  write_s16 (read_source1_s16 (XY) + cast_s16_u8 (read_source2_u8 (XY)));\n"
       "}\n" },
   { SCHRO_OPENGL_SHADER_ADD_S16_S16,
       "add_s16_s16/normal",
       SHADER_HEADER
       SHADER_WRITE_S16
       "#define XY gl_TexCoord[0].xy\n"
-      SHADER_READ_S16 ("input1")
-      SHADER_READ_S16 ("input2")
+      SHADER_READ_S16 ("source1")
+      SHADER_READ_S16 ("source2")
       "void main (void) {\n"
-      "  write_s16 (read_input1_s16 (XY) + read_input2_s16 (XY));\n"
+      "  write_s16 (read_source1_s16 (XY) + read_source2_s16 (XY));\n"
       "}\n",
       SHADER_HEADER_INTEGER
       SHADER_WRITE_S16_INTEGER
       "#define XY gl_TexCoord[0].xy\n"
-      SHADER_READ_S16_INTEGER ("input1")
-      SHADER_READ_S16_INTEGER ("input2")
+      SHADER_READ_S16_INTEGER ("source1")
+      SHADER_READ_S16_INTEGER ("source2")
       "void main (void) {\n"
-      "  write_s16 (read_input1_s16 (XY) + read_input2_s16 (XY));\n"
+      "  write_s16 (read_source1_s16 (XY) + read_source2_s16 (XY));\n"
       "}\n" },
   { SCHRO_OPENGL_SHADER_SUBTRACT_S16_U8,
       "subtract_s16_u8/normal",
@@ -768,37 +764,37 @@ SchroOpenGLShaderCode _schro_opengl_shader_code_list[] = {
       SHADER_CAST_S16_U8
       SHADER_WRITE_S16
       "#define XY gl_TexCoord[0].xy\n"
-      SHADER_READ_S16 ("input1")
-      SHADER_READ_U8 ("input2")
+      SHADER_READ_S16 ("source1")
+      SHADER_READ_U8 ("source2")
       "void main (void) {\n"
-      "  write_s16 (read_input1_s16 (XY) - cast_s16_u8 (read_input2_u8 (XY)));\n"
+      "  write_s16 (read_source1_s16 (XY) - cast_s16_u8 (read_source2_u8 (XY)));\n"
       "}\n",
       SHADER_HEADER_INTEGER
       SHADER_CAST_S16_U8_INTEGER
       SHADER_WRITE_S16_INTEGER
       "#define XY gl_TexCoord[0].xy\n"
-      SHADER_READ_S16_INTEGER ("input1")
-      SHADER_READ_U8_INTEGER ("input2")
+      SHADER_READ_S16_INTEGER ("source1")
+      SHADER_READ_U8_INTEGER ("source2")
       "void main (void) {\n"
-      "  write_s16 (read_input1_s16 (XY) - cast_s16_u8 (read_input2_u8 (XY)));\n"
+      "  write_s16 (read_source1_s16 (XY) - cast_s16_u8 (read_source2_u8 (XY)));\n"
       "}\n" },
   { SCHRO_OPENGL_SHADER_SUBTRACT_S16_S16,
       "subtract_s16_s16/normal",
       SHADER_HEADER
       SHADER_WRITE_S16
       "#define XY gl_TexCoord[0].xy\n"
-      SHADER_READ_S16 ("input1")
-      SHADER_READ_S16 ("input2")
+      SHADER_READ_S16 ("source1")
+      SHADER_READ_S16 ("source2")
       "void main (void) {\n"
-      "  write_s16 (read_input1_s16 (XY) - read_input2_s16 (XY));\n"
+      "  write_s16 (read_source1_s16 (XY) - read_source2_s16 (XY));\n"
       "}\n",
       SHADER_HEADER_INTEGER
       SHADER_WRITE_S16_INTEGER
       "#define XY gl_TexCoord[0].xy\n"
-      SHADER_READ_S16_INTEGER ("input1")
-      SHADER_READ_S16_INTEGER ("input2")
+      SHADER_READ_S16_INTEGER ("source1")
+      SHADER_READ_S16_INTEGER ("source2")
       "void main (void) {\n"
-      "  write_s16 (read_input1_s16 (XY) - read_input2_s16 (XY));\n"
+      "  write_s16 (read_source1_s16 (XY) - read_source2_s16 (XY));\n"
       "}\n" },
   { SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_DESLAURIERS_DUBUC_9_7_Lp,
       "iiwt_s16_filter_deslauriers_dubuc_9_7_lp/normal",
@@ -808,14 +804,14 @@ SchroOpenGLShaderCode _schro_opengl_shader_code_list[] = {
       "#define XY gl_TexCoord[0].xy\n"
       "uniform vec2 decrease1;\n"
       "uniform vec2 offset;\n"
-      SHADER_READ_S16 ("input")
+      SHADER_READ_S16 ("source")
       "float filter (float h1m, float h0) {\n"
       "  return divide_s16 (h1m + h0 + 2.0, 4.0);\n"
       "}\n"
       "void main (void) {\n"
-      "  float l0  = read_input_s16 (XY);\n"
-      "  float h1m = read_input_s16 (XY + offset - decrease1);\n"
-      "  float h0  = read_input_s16 (XY + offset);\n"
+      "  float l0  = read_source_s16 (XY);\n"
+      "  float h1m = read_source_s16 (XY + offset - decrease1);\n"
+      "  float h0  = read_source_s16 (XY + offset);\n"
       "  write_s16 (l0 - filter (h1m, h0));\n"
       "}\n",
       SHADER_HEADER_INTEGER
@@ -824,14 +820,14 @@ SchroOpenGLShaderCode _schro_opengl_shader_code_list[] = {
       "#define XY gl_TexCoord[0].xy\n"
       "uniform vec2 decrease1;\n"
       "uniform vec2 offset;\n"
-      SHADER_READ_S16_INTEGER ("input")
+      SHADER_READ_S16_INTEGER ("source")
       "int filter (int h1m, int h0) {\n"
       "  return divide_s16 (h1m + h0 + 2, 4);\n"
       "}\n"
       "void main (void) {\n"
-      "  int l0  = read_input_s16 (XY);\n"
-      "  int h1m = read_input_s16 (XY + offset - decrease1);\n"
-      "  int h0  = read_input_s16 (XY + offset);\n"
+      "  int l0  = read_source_s16 (XY);\n"
+      "  int h1m = read_source_s16 (XY + offset - decrease1);\n"
+      "  int h0  = read_source_s16 (XY + offset);\n"
       "  write_s16 (l0 - filter (h1m, h0));\n"
       "}\n" },
   { SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_DESLAURIERS_DUBUC_9_7_Hp,
@@ -844,16 +840,16 @@ SchroOpenGLShaderCode _schro_opengl_shader_code_list[] = {
       "uniform vec2 increase1;\n"
       "uniform vec2 increase2;\n"
       "uniform vec2 offset;\n"
-      SHADER_READ_S16 ("input")
+      SHADER_READ_S16 ("source")
       "float filter (float l1m, float l0, float l1p, float l2p) {\n"
       "  return divide_s16 (-l1m + 9.0 * (l0 + l1p) - l2p + 8.0, 16.0);\n"
       "}\n"
       "void main (void) {\n"
-      "  float l1m = read_input_s16 (XY - offset - decrease1);\n"
-      "  float l0  = read_input_s16 (XY - offset);\n"
-      "  float l1p = read_input_s16 (XY - offset + increase1);\n"
-      "  float l2p = read_input_s16 (XY - offset + increase2);\n"
-      "  float h0  = read_input_s16 (XY);\n"
+      "  float l1m = read_source_s16 (XY - offset - decrease1);\n"
+      "  float l0  = read_source_s16 (XY - offset);\n"
+      "  float l1p = read_source_s16 (XY - offset + increase1);\n"
+      "  float l2p = read_source_s16 (XY - offset + increase2);\n"
+      "  float h0  = read_source_s16 (XY);\n"
       "  write_s16 (h0 + filter (l1m, l0, l1p, l2p));\n"
       "}\n",
       SHADER_HEADER_INTEGER
@@ -864,16 +860,16 @@ SchroOpenGLShaderCode _schro_opengl_shader_code_list[] = {
       "uniform vec2 increase1;\n"
       "uniform vec2 increase2;\n"
       "uniform vec2 offset;\n"
-      SHADER_READ_S16_INTEGER ("input")
+      SHADER_READ_S16_INTEGER ("source")
       "int filter (int l1m, int l0, int l1p, int l2p) {\n"
       "  return divide_s16 (-l1m + 9 * (l0 + l1p) - l2p + 8, 16);\n"
       "}\n"
       "void main (void) {\n"
-      "  int l1m = read_input_s16 (XY - offset - decrease1);\n"
-      "  int l0  = read_input_s16 (XY - offset);\n"
-      "  int l1p = read_input_s16 (XY - offset + increase1);\n"
-      "  int l2p = read_input_s16 (XY - offset + increase2);\n"
-      "  int h0  = read_input_s16 (XY);\n"
+      "  int l1m = read_source_s16 (XY - offset - decrease1);\n"
+      "  int l0  = read_source_s16 (XY - offset);\n"
+      "  int l1p = read_source_s16 (XY - offset + increase1);\n"
+      "  int l2p = read_source_s16 (XY - offset + increase2);\n"
+      "  int h0  = read_source_s16 (XY);\n"
       "  write_s16 (h0 + filter (l1m, l0, l1p, l2p));\n"
       "}\n" },
   { SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_LE_GALL_5_3_Lp,
@@ -884,14 +880,14 @@ SchroOpenGLShaderCode _schro_opengl_shader_code_list[] = {
       "#define XY gl_TexCoord[0].xy\n"
       "uniform vec2 decrease1;\n"
       "uniform vec2 offset;\n"
-      SHADER_READ_S16 ("input")
+      SHADER_READ_S16 ("source")
       "float filter (float h1m, float h0) {\n"
       "  return divide_s16 (h1m + h0 + 2.0, 4.0);\n"
       "}\n"
       "void main (void) {\n"
-      "  float l0  = read_input_s16 (XY);\n"
-      "  float h1m = read_input_s16 (XY + offset - decrease1);\n"
-      "  float h0  = read_input_s16 (XY + offset);\n"
+      "  float l0  = read_source_s16 (XY);\n"
+      "  float h1m = read_source_s16 (XY + offset - decrease1);\n"
+      "  float h0  = read_source_s16 (XY + offset);\n"
       "  write_s16 (l0 - filter (h1m, h0));\n"
       "}\n",
       SHADER_HEADER_INTEGER
@@ -900,14 +896,14 @@ SchroOpenGLShaderCode _schro_opengl_shader_code_list[] = {
       "#define XY gl_TexCoord[0].xy\n"
       "uniform vec2 decrease1;\n"
       "uniform vec2 offset;\n"
-      SHADER_READ_S16_INTEGER ("input")
+      SHADER_READ_S16_INTEGER ("source")
       "int filter (int h1m, int h0) {\n"
       "  return divide_s16 (h1m + h0 + 2, 4);\n"
       "}\n"
       "void main (void) {\n"
-      "  int l0  = read_input_s16 (XY);\n"
-      "  int h1m = read_input_s16 (XY + offset - decrease1);\n"
-      "  int h0  = read_input_s16 (XY + offset);\n"
+      "  int l0  = read_source_s16 (XY);\n"
+      "  int h1m = read_source_s16 (XY + offset - decrease1);\n"
+      "  int h0  = read_source_s16 (XY + offset);\n"
       "  write_s16 (l0 - filter (h1m, h0));\n"
       "}\n" },
   { SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_LE_GALL_5_3_Hp,
@@ -918,14 +914,14 @@ SchroOpenGLShaderCode _schro_opengl_shader_code_list[] = {
       "#define XY gl_TexCoord[0].xy\n"
       "uniform vec2 increase1;\n"
       "uniform vec2 offset;\n"
-      SHADER_READ_S16 ("input")
+      SHADER_READ_S16 ("source")
       "float filter (float l0, float l1p) {\n"
       "  return divide_s16 (l0 + l1p + 1.0, 2.0);\n"
       "}\n"
       "void main (void) {\n"
-      "  float l0  = read_input_s16 (XY - offset);\n"
-      "  float l1p = read_input_s16 (XY - offset + increase1);\n"
-      "  float h0  = read_input_s16 (XY);\n"
+      "  float l0  = read_source_s16 (XY - offset);\n"
+      "  float l1p = read_source_s16 (XY - offset + increase1);\n"
+      "  float h0  = read_source_s16 (XY);\n"
       "  write_s16 (h0 + filter (l0, l1p));\n"
       "}\n",
       SHADER_HEADER_INTEGER
@@ -934,14 +930,14 @@ SchroOpenGLShaderCode _schro_opengl_shader_code_list[] = {
       "#define XY gl_TexCoord[0].xy\n"
       "uniform vec2 increase1;\n"
       "uniform vec2 offset;\n"
-      SHADER_READ_S16_INTEGER ("input")
+      SHADER_READ_S16_INTEGER ("source")
       "int filter (int l0, int l1p) {\n"
       "  return divide_s16 (l0 + l1p + 1, 2);\n"
       "}\n"
       "void main (void) {\n"
-      "  int l0  = read_input_s16 (XY - offset);\n"
-      "  int l1p = read_input_s16 (XY - offset + increase1);\n"
-      "  int h0  = read_input_s16 (XY);\n"
+      "  int l0  = read_source_s16 (XY - offset);\n"
+      "  int l1p = read_source_s16 (XY - offset + increase1);\n"
+      "  int h0  = read_source_s16 (XY);\n"
       "  write_s16 (h0 + filter (l0, l1p));\n"
       "}\n" },
   { SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_DESLAURIERS_DUBUC_13_7_Lp,
@@ -954,16 +950,16 @@ SchroOpenGLShaderCode _schro_opengl_shader_code_list[] = {
       "uniform vec2 decrease2;\n"
       "uniform vec2 increase1;\n"
       "uniform vec2 offset;\n"
-      SHADER_READ_S16 ("input")
+      SHADER_READ_S16 ("source")
       "float filter (float h2m, float h1m, float h0, float h1p) {\n"
       "  return divide_s16 (-h2m + 9.0 * (h1m + h0) - h1p + 16.0, 32.0);\n"
       "}\n"
       "void main (void) {\n"
-      "  float l0  = read_input_s16 (XY);\n"
-      "  float h2m = read_input_s16 (XY + offset - decrease2);\n"
-      "  float h1m = read_input_s16 (XY + offset - decrease1);\n"
-      "  float h0  = read_input_s16 (XY + offset);\n"
-      "  float h1p = read_input_s16 (XY + offset + increase1);\n"
+      "  float l0  = read_source_s16 (XY);\n"
+      "  float h2m = read_source_s16 (XY + offset - decrease2);\n"
+      "  float h1m = read_source_s16 (XY + offset - decrease1);\n"
+      "  float h0  = read_source_s16 (XY + offset);\n"
+      "  float h1p = read_source_s16 (XY + offset + increase1);\n"
       "  write_s16 (l0 - filter (h2m, h1m, h0, h1p));\n"
       "}\n",
       SHADER_HEADER_INTEGER
@@ -974,16 +970,16 @@ SchroOpenGLShaderCode _schro_opengl_shader_code_list[] = {
       "uniform vec2 decrease2;\n"
       "uniform vec2 increase1;\n"
       "uniform vec2 offset;\n"
-      SHADER_READ_S16_INTEGER ("input")
+      SHADER_READ_S16_INTEGER ("source")
       "int filter (int h2m, int h1m, int h0, int h1p) {\n"
       "  return divide_s16 (-h2m + 9 * (h1m + h0) - h1p + 16, 32);\n"
       "}\n"
       "void main (void) {\n"
-      "  int l0  = read_input_s16 (XY);\n"
-      "  int h2m = read_input_s16 (XY + offset - decrease2);\n"
-      "  int h1m = read_input_s16 (XY + offset - decrease1);\n"
-      "  int h0  = read_input_s16 (XY + offset);\n"
-      "  int h1p = read_input_s16 (XY + offset + increase1);\n"
+      "  int l0  = read_source_s16 (XY);\n"
+      "  int h2m = read_source_s16 (XY + offset - decrease2);\n"
+      "  int h1m = read_source_s16 (XY + offset - decrease1);\n"
+      "  int h0  = read_source_s16 (XY + offset);\n"
+      "  int h1p = read_source_s16 (XY + offset + increase1);\n"
       "  write_s16 (l0 - filter (h2m, h1m, h0, h1p));\n"
       "}\n" },
   { SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_DESLAURIERS_DUBUC_13_7_Hp,
@@ -996,16 +992,16 @@ SchroOpenGLShaderCode _schro_opengl_shader_code_list[] = {
       "uniform vec2 increase1;\n"
       "uniform vec2 increase2;\n"
       "uniform vec2 offset;\n"
-      SHADER_READ_S16 ("input")
+      SHADER_READ_S16 ("source")
       "float filter (float l1m, float l0, float l1p, float l2p) {\n"
       "  return divide_s16 (-l1m + 9.0 * (l0 + l1p) - l2p + 8.0, 16.0);\n"
       "}\n"
       "void main (void) {\n"
-      "  float l1m = read_input_s16 (XY - offset - decrease1);\n"
-      "  float l0  = read_input_s16 (XY - offset);\n"
-      "  float l1p = read_input_s16 (XY - offset + increase1);\n"
-      "  float l2p = read_input_s16 (XY - offset + increase2);\n"
-      "  float h0  = read_input_s16 (XY);\n"
+      "  float l1m = read_source_s16 (XY - offset - decrease1);\n"
+      "  float l0  = read_source_s16 (XY - offset);\n"
+      "  float l1p = read_source_s16 (XY - offset + increase1);\n"
+      "  float l2p = read_source_s16 (XY - offset + increase2);\n"
+      "  float h0  = read_source_s16 (XY);\n"
       "  write_s16 (h0 + filter (l1m, l0, l1p, l2p));\n"
       "}\n",
       SHADER_HEADER_INTEGER
@@ -1016,16 +1012,16 @@ SchroOpenGLShaderCode _schro_opengl_shader_code_list[] = {
       "uniform vec2 increase1;\n"
       "uniform vec2 increase2;\n"
       "uniform vec2 offset;\n"
-      SHADER_READ_S16_INTEGER ("input")
+      SHADER_READ_S16_INTEGER ("source")
       "int filter (int l1m, int l0, int l1p, int l2p) {\n"
       "  return divide_s16 (-l1m + 9 * (l0 + l1p) - l2p + 8, 16);\n"
       "}\n"
       "void main (void) {\n"
-      "  int l1m = read_input_s16 (XY - offset - decrease1);\n"
-      "  int l0  = read_input_s16 (XY - offset);\n"
-      "  int l1p = read_input_s16 (XY - offset + increase1);\n"
-      "  int l2p = read_input_s16 (XY - offset + increase2);\n"
-      "  int h0  = read_input_s16 (XY);\n"
+      "  int l1m = read_source_s16 (XY - offset - decrease1);\n"
+      "  int l0  = read_source_s16 (XY - offset);\n"
+      "  int l1p = read_source_s16 (XY - offset + increase1);\n"
+      "  int l2p = read_source_s16 (XY - offset + increase2);\n"
+      "  int h0  = read_source_s16 (XY);\n"
       "  write_s16 (h0 + filter (l1m, l0, l1p, l2p));\n"
       "}\n" },
   { SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_HAAR_Lp,
@@ -1034,26 +1030,26 @@ SchroOpenGLShaderCode _schro_opengl_shader_code_list[] = {
       SHADER_DIVIDE_S16
       SHADER_WRITE_S16
       "uniform vec2 offset;\n"
-      SHADER_READ_S16 ("input")
+      SHADER_READ_S16 ("source")
       "float filter (float h0) {\n"
       "  return divide_s16 (h0 + 1.0, 2.0);\n"
       "}\n"
       "void main (void) {\n"
-      "  float l0 = read_input_s16 (gl_TexCoord[0].xy);\n"
-      "  float h0 = read_input_s16 (gl_TexCoord[0].xy + offset);\n"
+      "  float l0 = read_source_s16 (gl_TexCoord[0].xy);\n"
+      "  float h0 = read_source_s16 (gl_TexCoord[0].xy + offset);\n"
       "  write_s16 (l0 - filter (h0));\n"
       "}\n",
       SHADER_HEADER_INTEGER
       SHADER_DIVIDE_S16_INTEGER
       SHADER_WRITE_S16_INTEGER
       "uniform vec2 offset;\n"
-      SHADER_READ_S16_INTEGER ("input")
+      SHADER_READ_S16_INTEGER ("source")
       "int filter (int h0) {\n"
       "  return divide_s16 (h0 + 1, 2);\n"
       "}\n"
       "void main (void) {\n"
-      "  int l0 = read_input_s16 (gl_TexCoord[0].xy);\n"
-      "  int h0 = read_input_s16 (gl_TexCoord[0].xy + offset);\n"
+      "  int l0 = read_source_s16 (gl_TexCoord[0].xy);\n"
+      "  int h0 = read_source_s16 (gl_TexCoord[0].xy + offset);\n"
       "  write_s16 (l0 - filter (h0));\n"
       "}\n" },
   { SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_HAAR_Hp,
@@ -1061,64 +1057,64 @@ SchroOpenGLShaderCode _schro_opengl_shader_code_list[] = {
       SHADER_HEADER
       SHADER_WRITE_S16
       "uniform vec2 offset;\n"
-      SHADER_READ_S16 ("input")
+      SHADER_READ_S16 ("source")
       "void main (void) {\n"
-      "  float l0 = read_input_s16 (gl_TexCoord[0].xy - offset);\n"
-      "  float h0 = read_input_s16 (gl_TexCoord[0].xy);\n"
+      "  float l0 = read_source_s16 (gl_TexCoord[0].xy - offset);\n"
+      "  float h0 = read_source_s16 (gl_TexCoord[0].xy);\n"
       "  write_s16 (h0 + l0);\n"
       "}\n",
       SHADER_HEADER_INTEGER
       SHADER_WRITE_S16_INTEGER
       "uniform vec2 offset;\n"
-      SHADER_READ_S16_INTEGER ("input")
+      SHADER_READ_S16_INTEGER ("source")
       "void main (void) {\n"
-      "  int l0 = read_input_s16 (gl_TexCoord[0].xy - offset);\n"
-      "  int h0 = read_input_s16 (gl_TexCoord[0].xy);\n"
+      "  int l0 = read_source_s16 (gl_TexCoord[0].xy - offset);\n"
+      "  int h0 = read_source_s16 (gl_TexCoord[0].xy);\n"
       "  write_s16 (h0 + l0);\n"
       "}\n" },
   { SCHRO_OPENGL_SHADER_IIWT_S16_VERTICAL_DEINTERLEAVE_L,
       "iiwt_s16_vertical_deinterleave/l",
       SHADER_HEADER
-      SHADER_COPY_S16 ("input")
+      SHADER_COPY_S16 ("source")
       "void main (void) {\n"
       "  float x = gl_TexCoord[0].x;\n"
       "  float y = floor (gl_TexCoord[0].y);\n"
       "  vec2 coordinate = vec2 (x, y * 2.0 + 0.5);\n"
-      "  copy_input_s16 (coordinate);\n"
+      "  copy_source_s16 (coordinate);\n"
       "}\n",
       SHADER_HEADER_INTEGER
-      SHADER_COPY_S16_INTEGER ("input")
+      SHADER_COPY_S16_INTEGER ("source")
       "void main (void) {\n"
       "  float x = gl_TexCoord[0].x;\n"
       "  float y = floor (gl_TexCoord[0].y);\n"
       "  vec2 coordinate = vec2 (x, y * 2.0 + 0.5);\n"
-      "  copy_input_s16 (coordinate);\n"
+      "  copy_source_s16 (coordinate);\n"
       "}\n" },
   { SCHRO_OPENGL_SHADER_IIWT_S16_VERTICAL_DEINTERLEAVE_H,
       "iiwt_s16_vertical_deinterleave/h",
       SHADER_HEADER
       "uniform vec2 offset;\n"
-      SHADER_COPY_S16 ("input")
+      SHADER_COPY_S16 ("source")
       "void main (void) {\n"
       "  float x = gl_TexCoord[0].x;\n"
       "  float y = floor (gl_TexCoord[0].y) - offset.y;\n"
       "  vec2 coordinate = vec2 (x, y * 2.0 + 1.5);\n"
-      "  copy_input_s16 (coordinate);\n"
+      "  copy_source_s16 (coordinate);\n"
       "}\n",
       SHADER_HEADER_INTEGER
       "uniform vec2 offset;\n"
-      SHADER_COPY_S16_INTEGER ("input")
+      SHADER_COPY_S16_INTEGER ("source")
       "void main (void) {\n"
       "  float x = gl_TexCoord[0].x;\n"
       "  float y = floor (gl_TexCoord[0].y) - offset.y;\n"
       "  vec2 coordinate = vec2 (x, y * 2.0 + 1.5);\n"
-      "  copy_input_s16 (coordinate);\n"
+      "  copy_source_s16 (coordinate);\n"
       "}\n" },
   { SCHRO_OPENGL_SHADER_IIWT_S16_VERTICAL_INTERLEAVE,
       "iiwt_s16_interleave/vertical",
       SHADER_HEADER
       "uniform vec2 offset;\n"
-      SHADER_COPY_S16 ("input")
+      SHADER_COPY_S16 ("source")
       "void main (void) {\n"
       "  float x = gl_TexCoord[0].x;\n"
       "  float y = floor (gl_TexCoord[0].y);\n"
@@ -1128,11 +1124,11 @@ SchroOpenGLShaderCode _schro_opengl_shader_code_list[] = {
       "    y = floor (y / 2.0) + offset.y;\n"
       "  }\n"
       "  vec2 coordinate = vec2 (x, y + 0.5);\n"
-      "  copy_input_s16 (coordinate);\n"
+      "  copy_source_s16 (coordinate);\n"
       "}\n",
       SHADER_HEADER_INTEGER
       "uniform vec2 offset;\n"
-      SHADER_COPY_S16_INTEGER ("input")
+      SHADER_COPY_S16_INTEGER ("source")
       "void main (void) {\n"
       "  float x = gl_TexCoord[0].x;\n"
       "  float y = floor (gl_TexCoord[0].y);\n"
@@ -1142,13 +1138,13 @@ SchroOpenGLShaderCode _schro_opengl_shader_code_list[] = {
       "    y = floor (y / 2.0) + offset.y;\n"
       "  }\n"
       "  vec2 coordinate = vec2 (x, y + 0.5);\n"
-      "  copy_input_s16 (coordinate);\n"
+      "  copy_source_s16 (coordinate);\n"
       "}\n" },
   { SCHRO_OPENGL_SHADER_IIWT_S16_HORIZONTAL_INTERLEAVE,
       "iiwt_s16_interleave/horizontal",
       SHADER_HEADER
       "uniform vec2 offset;\n"
-      SHADER_COPY_S16 ("input")
+      SHADER_COPY_S16 ("source")
       "void main (void) {\n"
       "  float x = floor (gl_TexCoord[0].x);\n"
       "  float y = gl_TexCoord[0].y;\n"
@@ -1158,11 +1154,11 @@ SchroOpenGLShaderCode _schro_opengl_shader_code_list[] = {
       "    x = floor (x / 2.0) + offset.x;\n"
       "  }\n"
       "  vec2 coordinate = vec2 (x + 0.5, y);\n"
-      "  copy_input_s16 (coordinate);\n"
+      "  copy_source_s16 (coordinate);\n"
       "}\n",
       SHADER_HEADER_INTEGER
       "uniform vec2 offset;\n"
-      SHADER_COPY_S16_INTEGER ("input")
+      SHADER_COPY_S16_INTEGER ("source")
       "void main (void) {\n"
       "  float x = floor (gl_TexCoord[0].x);\n"
       "  float y = gl_TexCoord[0].y;\n"
@@ -1172,23 +1168,23 @@ SchroOpenGLShaderCode _schro_opengl_shader_code_list[] = {
       "    x = floor (x / 2.0) + offset.x;\n"
       "  }\n"
       "  vec2 coordinate = vec2 (x + 0.5, y);\n"
-      "  copy_input_s16 (coordinate);\n"
+      "  copy_source_s16 (coordinate);\n"
       "}\n" },
   { SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_SHIFT,
       "iiwt_s16_filter_shift/normal",
       SHADER_HEADER
       SHADER_DIVIDE_S16
       SHADER_WRITE_S16
-      SHADER_READ_S16 ("input")
+      SHADER_READ_S16 ("source")
       "void main (void) {\n"
-      "  write_s16 (divide_s16 (read_input_s16 (gl_TexCoord[0].xy) + 1.0, 2.0));\n"
+      "  write_s16 (divide_s16 (read_source_s16 (gl_TexCoord[0].xy) + 1.0, 2.0));\n"
       "}\n",
       SHADER_HEADER_INTEGER
       SHADER_DIVIDE_S16_INTEGER
       SHADER_WRITE_S16_INTEGER
-      SHADER_READ_S16_INTEGER ("input")
+      SHADER_READ_S16_INTEGER ("source")
       "void main (void) {\n"
-      "  write_s16 (divide_s16 (read_input_s16 (gl_TexCoord[0].xy) + 1, 2));\n"
+      "  write_s16 (divide_s16 (read_source_s16 (gl_TexCoord[0].xy) + 1, 2));\n"
       "}\n" },
   { SCHRO_OPENGL_SHADER_UPSAMPLE_U8,
       "upsample_u8/normal",
@@ -1205,16 +1201,16 @@ SchroOpenGLShaderCode _schro_opengl_shader_code_list[] = {
       "uniform vec2 increase2;\n"
       "uniform vec2 increase3;\n"
       "uniform vec2 increase4;\n"
-      SHADER_READ_U8 ("input")
+      SHADER_READ_U8 ("source")
       "void main (void) {\n"
-      "  float s3m = cast_s16_u8 (read_input_u8 (XY - decrease3));\n"
-      "  float s2m = cast_s16_u8 (read_input_u8 (XY - decrease2));\n"
-      "  float s1m = cast_s16_u8 (read_input_u8 (XY - decrease1));\n"
-      "  float s0  = cast_s16_u8 (read_input_u8 (XY));\n"
-      "  float s1p = cast_s16_u8 (read_input_u8 (XY + increase1));\n"
-      "  float s2p = cast_s16_u8 (read_input_u8 (XY + increase2));\n"
-      "  float s3p = cast_s16_u8 (read_input_u8 (XY + increase3));\n"
-      "  float s4p = cast_s16_u8 (read_input_u8 (XY + increase4));\n"
+      "  float s3m = cast_s16_u8 (read_source_u8 (XY - decrease3));\n"
+      "  float s2m = cast_s16_u8 (read_source_u8 (XY - decrease2));\n"
+      "  float s1m = cast_s16_u8 (read_source_u8 (XY - decrease1));\n"
+      "  float s0  = cast_s16_u8 (read_source_u8 (XY));\n"
+      "  float s1p = cast_s16_u8 (read_source_u8 (XY + increase1));\n"
+      "  float s2p = cast_s16_u8 (read_source_u8 (XY + increase2));\n"
+      "  float s3p = cast_s16_u8 (read_source_u8 (XY + increase3));\n"
+      "  float s4p = cast_s16_u8 (read_source_u8 (XY + increase4));\n"
       "  float sum = divide_s16 (-s3m + 3.0 * s2m - 7.0 * s1m + 21.0 * s0 + 21.0 * s1p - 7.0 * s2p + 3.0 * s3p - s4p + 16.0, 32.0);\n"
       "  write_u8 (cast_u8_s16 (sum));\n"
       "}\n",
@@ -1231,16 +1227,16 @@ SchroOpenGLShaderCode _schro_opengl_shader_code_list[] = {
       "uniform vec2 increase2;\n"
       "uniform vec2 increase3;\n"
       "uniform vec2 increase4;\n"
-      SHADER_READ_U8_INTEGER ("input")
+      SHADER_READ_U8_INTEGER ("source")
       "void main (void) {\n"
-      "  int s3m = cast_s16_u8 (read_input_u8 (XY - decrease3));\n"
-      "  int s2m = cast_s16_u8 (read_input_u8 (XY - decrease2));\n"
-      "  int s1m = cast_s16_u8 (read_input_u8 (XY - decrease1));\n"
-      "  int s0  = cast_s16_u8 (read_input_u8 (XY));\n"
-      "  int s1p = cast_s16_u8 (read_input_u8 (XY + increase1));\n"
-      "  int s2p = cast_s16_u8 (read_input_u8 (XY + increase2));\n"
-      "  int s3p = cast_s16_u8 (read_input_u8 (XY + increase3));\n"
-      "  int s4p = cast_s16_u8 (read_input_u8 (XY + increase4));\n"
+      "  int s3m = cast_s16_u8 (read_source_u8 (XY - decrease3));\n"
+      "  int s2m = cast_s16_u8 (read_source_u8 (XY - decrease2));\n"
+      "  int s1m = cast_s16_u8 (read_source_u8 (XY - decrease1));\n"
+      "  int s0  = cast_s16_u8 (read_source_u8 (XY));\n"
+      "  int s1p = cast_s16_u8 (read_source_u8 (XY + increase1));\n"
+      "  int s2p = cast_s16_u8 (read_source_u8 (XY + increase2));\n"
+      "  int s3p = cast_s16_u8 (read_source_u8 (XY + increase3));\n"
+      "  int s4p = cast_s16_u8 (read_source_u8 (XY + increase4));\n"
       "  int sum = divide_s16 (-s3m + 3 * s2m - 7 * s1m + 21 * s0 + 21 * s1p - 7 * s2p + 3 * s3p - s4p + 16, 32);\n"
       "  write_u8 (cast_u8_s16 (sum));\n"
       "}\n" },
@@ -1349,16 +1345,16 @@ SchroOpenGLShaderCode _schro_opengl_shader_code_list[] = {
       SHADER_HEADER
       SHADER_DIVIDE_S16
       SHADER_WRITE_S16
-      SHADER_READ_S16 ("input")
+      SHADER_READ_S16 ("source")
       "void main (void) {\n"
-      "  write_s16 (divide_s16 (read_input_s16 (gl_TexCoord[0].xy) - 8160.0, 64.0));\n"
+      "  write_s16 (divide_s16 (read_source_s16 (gl_TexCoord[0].xy) - 8160.0, 64.0));\n"
       "}\n",
       SHADER_HEADER_INTEGER
       SHADER_DIVIDE_S16_INTEGER
       SHADER_WRITE_S16_INTEGER
-      SHADER_READ_S16_INTEGER ("input")
+      SHADER_READ_S16_INTEGER ("source")
       "void main (void) {\n"
-      "  write_s16 (divide_s16 (read_input_s16 (gl_TexCoord[0].xy) - 8160, 64));\n"
+      "  write_s16 (divide_s16 (read_source_s16 (gl_TexCoord[0].xy) - 8160, 64));\n"
       "}\n" },
   { SCHRO_OPENGL_SHADER_OBMC_RENDER_DC,
       "obmc_render_dc/normal",
@@ -2965,9 +2961,6 @@ schro_opengl_shader_resolve_uniform_locations (SchroOpenGLShader* shader)
   GET_UNIFORM_LOCATION (increase2);
   GET_UNIFORM_LOCATION (increase3);
   GET_UNIFORM_LOCATION (increase4);
-  GET_UNIFORM_LOCATION (input);
-  GET_UNIFORM_LOCATION (input1);
-  GET_UNIFORM_LOCATION (input2);
   GET_UNIFORM_LOCATION (linear_weight);
   GET_UNIFORM_LOCATION (linear_weight_ref1);
   GET_UNIFORM_LOCATION (linear_weight_ref2);
@@ -2992,6 +2985,9 @@ schro_opengl_shader_resolve_uniform_locations (SchroOpenGLShader* shader)
   GET_UNIFORM_LOCATION (ref_weight);
   GET_UNIFORM_LOCATION (ref_weight1);
   GET_UNIFORM_LOCATION (ref_weight2);
+  GET_UNIFORM_LOCATION (source);
+  GET_UNIFORM_LOCATION (source1);
+  GET_UNIFORM_LOCATION (source2);
   GET_UNIFORM_LOCATION (spatial_weight);
   GET_UNIFORM_LOCATION (u2);
   GET_UNIFORM_LOCATION (u4);
@@ -3036,76 +3032,6 @@ schro_opengl_shader_bind_ayuv (SchroOpenGLShader* shader, GLuint texture)
 }
 
 void
-schro_opengl_shader_bind_input (SchroOpenGLShader* shader, GLuint texture)
-{
-  switch (shader->index) {
-    case SCHRO_OPENGL_SHADER_COPY_U8:
-    case SCHRO_OPENGL_SHADER_COPY_S16:
-    case SCHRO_OPENGL_SHADER_CONVERT_U8_S16:
-    case SCHRO_OPENGL_SHADER_CONVERT_S16_U8:
-    case SCHRO_OPENGL_SHADER_CONVERT_U8_U8:
-    case SCHRO_OPENGL_SHADER_CONVERT_S16_S16:
-    case SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_DESLAURIERS_DUBUC_9_7_Lp:
-    case SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_DESLAURIERS_DUBUC_9_7_Hp:
-    case SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_LE_GALL_5_3_Lp:
-    case SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_LE_GALL_5_3_Hp:
-    case SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_DESLAURIERS_DUBUC_13_7_Lp:
-    case SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_DESLAURIERS_DUBUC_13_7_Hp:
-    case SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_HAAR_Lp:
-    case SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_HAAR_Hp:
-    case SCHRO_OPENGL_SHADER_IIWT_S16_VERTICAL_DEINTERLEAVE_L:
-    case SCHRO_OPENGL_SHADER_IIWT_S16_VERTICAL_DEINTERLEAVE_H:
-    case SCHRO_OPENGL_SHADER_IIWT_S16_VERTICAL_INTERLEAVE:
-    case SCHRO_OPENGL_SHADER_IIWT_S16_HORIZONTAL_INTERLEAVE:
-    case SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_SHIFT:
-    case SCHRO_OPENGL_SHADER_UPSAMPLE_U8:
-    case SCHRO_OPENGL_SHADER_OBMC_SHIFT:
-      glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
-      glUniform1iARB (shader->uniforms->input, 0);
-      break;
-    default:
-      SCHRO_ASSERT (0);
-      break;
-  }
-}
-
-void
-schro_opengl_shader_bind_input1 (SchroOpenGLShader* shader, GLuint texture)
-{
-  switch (shader->index) {
-    case SCHRO_OPENGL_SHADER_ADD_S16_U8:
-    case SCHRO_OPENGL_SHADER_ADD_S16_S16:
-    case SCHRO_OPENGL_SHADER_SUBTRACT_S16_U8:
-    case SCHRO_OPENGL_SHADER_SUBTRACT_S16_S16:
-      glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
-      glUniform1iARB (shader->uniforms->input1, 0);
-      break;
-    default:
-      SCHRO_ASSERT (0);
-      break;
-  }
-}
-
-void
-schro_opengl_shader_bind_input2 (SchroOpenGLShader* shader, GLuint texture)
-{
-  switch (shader->index) {
-    case SCHRO_OPENGL_SHADER_ADD_S16_U8:
-    case SCHRO_OPENGL_SHADER_ADD_S16_S16:
-    case SCHRO_OPENGL_SHADER_SUBTRACT_S16_U8:
-    case SCHRO_OPENGL_SHADER_SUBTRACT_S16_S16:
-      glActiveTextureARB (GL_TEXTURE0_ARB + 1);
-      glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
-      glUniform1iARB (shader->uniforms->input2, 1);
-      glActiveTextureARB (GL_TEXTURE0_ARB);
-      break;
-    default:
-      SCHRO_ASSERT (0);
-      break;
-  }
-}
-
-void
 schro_opengl_shader_bind_previous (SchroOpenGLShader* shader, GLuint texture)
 {
   switch (shader->index) {
@@ -3136,6 +3062,76 @@ schro_opengl_shader_bind_previous (SchroOpenGLShader* shader, GLuint texture)
     case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_3b_WEIGHT:
       glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
       glUniform1iARB (shader->uniforms->previous, 0);
+      break;
+    default:
+      SCHRO_ASSERT (0);
+      break;
+  }
+}
+
+void
+schro_opengl_shader_bind_source (SchroOpenGLShader* shader, GLuint texture)
+{
+  switch (shader->index) {
+    case SCHRO_OPENGL_SHADER_COPY_U8:
+    case SCHRO_OPENGL_SHADER_COPY_S16:
+    case SCHRO_OPENGL_SHADER_CONVERT_U8_S16:
+    case SCHRO_OPENGL_SHADER_CONVERT_S16_U8:
+    case SCHRO_OPENGL_SHADER_CONVERT_U8_U8:
+    case SCHRO_OPENGL_SHADER_CONVERT_S16_S16:
+    case SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_DESLAURIERS_DUBUC_9_7_Lp:
+    case SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_DESLAURIERS_DUBUC_9_7_Hp:
+    case SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_LE_GALL_5_3_Lp:
+    case SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_LE_GALL_5_3_Hp:
+    case SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_DESLAURIERS_DUBUC_13_7_Lp:
+    case SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_DESLAURIERS_DUBUC_13_7_Hp:
+    case SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_HAAR_Lp:
+    case SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_HAAR_Hp:
+    case SCHRO_OPENGL_SHADER_IIWT_S16_VERTICAL_DEINTERLEAVE_L:
+    case SCHRO_OPENGL_SHADER_IIWT_S16_VERTICAL_DEINTERLEAVE_H:
+    case SCHRO_OPENGL_SHADER_IIWT_S16_VERTICAL_INTERLEAVE:
+    case SCHRO_OPENGL_SHADER_IIWT_S16_HORIZONTAL_INTERLEAVE:
+    case SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_SHIFT:
+    case SCHRO_OPENGL_SHADER_UPSAMPLE_U8:
+    case SCHRO_OPENGL_SHADER_OBMC_SHIFT:
+      glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
+      glUniform1iARB (shader->uniforms->source, 0);
+      break;
+    default:
+      SCHRO_ASSERT (0);
+      break;
+  }
+}
+
+void
+schro_opengl_shader_bind_source1 (SchroOpenGLShader* shader, GLuint texture)
+{
+  switch (shader->index) {
+    case SCHRO_OPENGL_SHADER_ADD_S16_U8:
+    case SCHRO_OPENGL_SHADER_ADD_S16_S16:
+    case SCHRO_OPENGL_SHADER_SUBTRACT_S16_U8:
+    case SCHRO_OPENGL_SHADER_SUBTRACT_S16_S16:
+      glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
+      glUniform1iARB (shader->uniforms->source1, 0);
+      break;
+    default:
+      SCHRO_ASSERT (0);
+      break;
+  }
+}
+
+void
+schro_opengl_shader_bind_source2 (SchroOpenGLShader* shader, GLuint texture)
+{
+  switch (shader->index) {
+    case SCHRO_OPENGL_SHADER_ADD_S16_U8:
+    case SCHRO_OPENGL_SHADER_ADD_S16_S16:
+    case SCHRO_OPENGL_SHADER_SUBTRACT_S16_U8:
+    case SCHRO_OPENGL_SHADER_SUBTRACT_S16_S16:
+      glActiveTextureARB (GL_TEXTURE0_ARB + 1);
+      glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
+      glUniform1iARB (shader->uniforms->source2, 1);
+      glActiveTextureARB (GL_TEXTURE0_ARB);
       break;
     default:
       SCHRO_ASSERT (0);

@@ -350,7 +350,7 @@ schro_opengl_canvas_push (SchroOpenGLCanvas *dest, SchroFrameData *src)
 
       glGetIntegerv (GL_TEXTURE_BINDING_RECTANGLE_ARB, &texture);
 
-      schro_opengl_shader_bind_input (shader, texture);
+      schro_opengl_shader_bind_source (shader, texture);
     }
 
     schro_opengl_render_quad (0, 0, width, height);
@@ -359,7 +359,7 @@ schro_opengl_canvas_push (SchroOpenGLCanvas *dest, SchroFrameData *src)
       glUseProgramObjectARB (0);
     }
 
-    glFlush ();
+    SCHRO_OPENGL_FLUSH
 
     glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, 0);
 

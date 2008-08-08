@@ -100,9 +100,6 @@ struct _SchroOpenGLUniforms {
   GLint increase2;
   GLint increase3;
   GLint increase4;
-  GLint input;
-  GLint input1;
-  GLint input2;
   GLint linear_weight;
   GLint linear_weight_ref1;
   GLint linear_weight_ref2;
@@ -127,6 +124,9 @@ struct _SchroOpenGLUniforms {
   GLint ref_weight;
   GLint ref_weight1;
   GLint ref_weight2;
+  GLint source;
+  GLint source1;
+  GLint source2;
   GLint spatial_weight;
   GLint u2;
   GLint u4;
@@ -155,10 +155,10 @@ struct _SchroOpenGLUniforms {
 void schro_opengl_shader_resolve_uniform_locations (SchroOpenGLShader* shader);
 
 void schro_opengl_shader_bind_ayuv (SchroOpenGLShader* shader, GLuint texture);
-void schro_opengl_shader_bind_input (SchroOpenGLShader* shader, GLuint texture);
-void schro_opengl_shader_bind_input1 (SchroOpenGLShader* shader, GLuint texture);
-void schro_opengl_shader_bind_input2 (SchroOpenGLShader* shader, GLuint texture);
 void schro_opengl_shader_bind_previous (SchroOpenGLShader* shader, GLuint texture);
+void schro_opengl_shader_bind_source (SchroOpenGLShader* shader, GLuint texture);
+void schro_opengl_shader_bind_source1 (SchroOpenGLShader* shader, GLuint texture);
+void schro_opengl_shader_bind_source2 (SchroOpenGLShader* shader, GLuint texture);
 void schro_opengl_shader_bind_spatial_weight (SchroOpenGLShader* shader, GLuint texture);
 void schro_opengl_shader_bind_u2 (SchroOpenGLShader* shader, GLuint texture);
 void schro_opengl_shader_bind_u4 (SchroOpenGLShader* shader, GLuint texture);

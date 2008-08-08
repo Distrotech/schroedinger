@@ -68,7 +68,6 @@ schro_opengl_open_display (SchroOpenGL *opengl, const char *display_name)
   }
 
   XSynchronize (opengl->display, True); // True for debug, False for speed
-  XSetErrorHandler (schro_opengl_x_error_handler);
 
   opengl->root = DefaultRootWindow (opengl->display);
   opengl->screen = DefaultScreen (opengl->display);
@@ -266,6 +265,8 @@ void schro_opengl_init (void)
 #if SCHRO_OPENGL_XLOCKDISPLAY
   XInitThreads ();
 #endif
+
+  XSetErrorHandler (schro_opengl_x_error_handler);
 }
 
 SchroOpenGL *

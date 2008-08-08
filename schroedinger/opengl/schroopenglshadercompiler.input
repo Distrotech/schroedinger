@@ -5,10 +5,10 @@ shader copy: ###################################################################
 
   func void main (void):
     u8:
-      copy_input_u8 (gl_TexCoord[0].xy)
+      copy_source_u8 (gl_TexCoord[0].xy)
 
     s16:
-      copy_input_s16 (gl_TexCoord[0].xy)
+      copy_source_s16 (gl_TexCoord[0].xy)
 
 
 
@@ -22,16 +22,16 @@ shader convert: ################################################################
 
   func void main (void):
     u8_s16:
-      write_u8 (cast_u8_s16 (read_input_s16 (gl_TexCoord[0].xy) + 128))
+      write_u8 (cast_u8_s16 (read_source_s16 (gl_TexCoord[0].xy) + 128))
 
     s16_u8:
-      write_s16 (cast_s16_u8 (read_input_u8 (gl_TexCoord[0].xy)) - 128)
+      write_s16 (cast_s16_u8 (read_source_u8 (gl_TexCoord[0].xy)) - 128)
 
     u8_u8:
-      copy_input_u8 (gl_TexCoord[0].xy)
+      copy_source_u8 (gl_TexCoord[0].xy)
 
     s16_s16:
-      copy_input_s16 (gl_TexCoord[0].xy)
+      copy_source_s16 (gl_TexCoord[0].xy)
 
 
 
@@ -192,7 +192,7 @@ shader add_s16_u8: #############################################################
     XY gl_TexCoord[0].xy
 
   func void main (void):
-    write_s16 (read_input1_s16 (XY) + cast_s16_u8 (read_input2_u8 (XY)))
+    write_s16 (read_source1_s16 (XY) + cast_s16_u8 (read_source2_u8 (XY)))
 
 
 
@@ -206,7 +206,7 @@ shader add_s16_s16: ############################################################
     XY gl_TexCoord[0].xy
 
   func void main (void):
-    write_s16 (read_input1_s16 (XY) + read_input2_s16 (XY))
+    write_s16 (read_source1_s16 (XY) + read_source2_s16 (XY))
 
 
 
@@ -220,7 +220,7 @@ shader subtract_s16_u8: ########################################################
     XY gl_TexCoord[0].xy
 
   func void main (void):
-    write_s16 (read_input1_s16 (XY) - cast_s16_u8 (read_input2_u8 (XY)))
+    write_s16 (read_source1_s16 (XY) - cast_s16_u8 (read_source2_u8 (XY)))
 
 
 
@@ -234,7 +234,7 @@ shader subtract_s16_s16: #######################################################
     XY gl_TexCoord[0].xy
 
   func void main (void):
-    write_s16 (read_input1_s16 (XY) - read_input2_s16 (XY))
+    write_s16 (read_source1_s16 (XY) - read_source2_s16 (XY))
 
 
 
@@ -293,9 +293,9 @@ shader iiwt_s16_filter_deslauriers_dubuc_9_7_lp: ###############################
     return divide_s16 (h1m + h0 + 2, 4)
 
   func void main (void):
-    var_s16 l0  = read_input_s16 (XY)                      # A[2 ∗ n]
-    var_s16 h1m = read_input_s16 (XY + offset - decrease1) # A[2 ∗ n - 1]
-    var_s16 h0  = read_input_s16 (XY + offset)             # A[2 ∗ n + 1]
+    var_s16 l0  = read_source_s16 (XY)                      # A[2 ∗ n]
+    var_s16 h1m = read_source_s16 (XY + offset - decrease1) # A[2 ∗ n - 1]
+    var_s16 h0  = read_source_s16 (XY + offset)             # A[2 ∗ n + 1]
 
     write_s16 (l0 - filter (h1m, h0))
 
@@ -319,11 +319,11 @@ shader iiwt_s16_filter_deslauriers_dubuc_9_7_hp: ###############################
     return divide_s16 (-l1m + 9 * (l0 + l1p) - l2p + 8, 16)
 
   func void main (void):
-    var_s16 l1m = read_input_s16 (XY - offset - decrease1) # A[2 ∗ n - 2]
-    var_s16 l0  = read_input_s16 (XY - offset)             # A[2 ∗ n]
-    var_s16 l1p = read_input_s16 (XY - offset + increase1) # A[2 ∗ n + 2]
-    var_s16 l2p = read_input_s16 (XY - offset + increase2) # A[2 ∗ n + 4]
-    var_s16 h0  = read_input_s16 (XY)                      # A[2 ∗ n + 1]
+    var_s16 l1m = read_source_s16 (XY - offset - decrease1) # A[2 ∗ n - 2]
+    var_s16 l0  = read_source_s16 (XY - offset)             # A[2 ∗ n]
+    var_s16 l1p = read_source_s16 (XY - offset + increase1) # A[2 ∗ n + 2]
+    var_s16 l2p = read_source_s16 (XY - offset + increase2) # A[2 ∗ n + 4]
+    var_s16 h0  = read_source_s16 (XY)                      # A[2 ∗ n + 1]
 
     write_s16 (h0 + filter (l1m, l0, l1p, l2p))
 
@@ -345,9 +345,9 @@ shader iiwt_s16_filter_le_gall_5_3_lp: #########################################
     return divide_s16 (h1m + h0 + 2, 4)
 
   func void main (void):
-    var_s16 l0  = read_input_s16 (XY)                      # A[2 ∗ n]
-    var_s16 h1m = read_input_s16 (XY + offset - decrease1) # A[2 ∗ n - 1]
-    var_s16 h0  = read_input_s16 (XY + offset)             # A[2 ∗ n + 1]
+    var_s16 l0  = read_source_s16 (XY)                      # A[2 ∗ n]
+    var_s16 h1m = read_source_s16 (XY + offset - decrease1) # A[2 ∗ n - 1]
+    var_s16 h0  = read_source_s16 (XY + offset)             # A[2 ∗ n + 1]
 
     write_s16 (l0 - filter (h1m, h0))
 
@@ -369,9 +369,9 @@ shader iiwt_s16_filter_le_gall_5_3_hp: #########################################
     return divide_s16 (l0 + l1p + 1, 2)
 
   func void main (void):
-    var_s16 l0  = read_input_s16 (XY - offset)             # A[2 ∗ n]
-    var_s16 l1p = read_input_s16 (XY - offset + increase1) # A[2 ∗ n + 2]
-    var_s16 h0  = read_input_s16 (XY)                      # A[2 ∗ n + 1]
+    var_s16 l0  = read_source_s16 (XY - offset)             # A[2 ∗ n]
+    var_s16 l1p = read_source_s16 (XY - offset + increase1) # A[2 ∗ n + 2]
+    var_s16 h0  = read_source_s16 (XY)                      # A[2 ∗ n + 1]
 
     write_s16 (h0 + filter (l0, l1p))
 
@@ -396,11 +396,11 @@ shader iiwt_s16_filter_deslauriers_dubuc_13_7_lp: ##############################
     return divide_s16 (-h2m + 9 * (h1m + h0) - h1p + 16, 32)
 
   func void main (void):
-    var_s16 l0  = read_input_s16 (XY)                      # A[2 ∗ n]
-    var_s16 h2m = read_input_s16 (XY + offset - decrease2) # A[2 ∗ n - 3]
-    var_s16 h1m = read_input_s16 (XY + offset - decrease1) # A[2 ∗ n - 1]
-    var_s16 h0  = read_input_s16 (XY + offset)             # A[2 ∗ n + 1]
-    var_s16 h1p = read_input_s16 (XY + offset + increase1) # A[2 ∗ n + 3]
+    var_s16 l0  = read_source_s16 (XY)                      # A[2 ∗ n]
+    var_s16 h2m = read_source_s16 (XY + offset - decrease2) # A[2 ∗ n - 3]
+    var_s16 h1m = read_source_s16 (XY + offset - decrease1) # A[2 ∗ n - 1]
+    var_s16 h0  = read_source_s16 (XY + offset)             # A[2 ∗ n + 1]
+    var_s16 h1p = read_source_s16 (XY + offset + increase1) # A[2 ∗ n + 3]
 
     write_s16 (l0 - filter (h2m, h1m, h0, h1p))
 
@@ -425,11 +425,11 @@ shader iiwt_s16_filter_deslauriers_dubuc_13_7_hp: ##############################
     return divide_s16 (-l1m + 9 * (l0 + l1p) - l2p + 8, 16)
 
   func void main (void):
-    var_s16 l1m = read_input_s16 (XY - offset - decrease1) # A[2 ∗ n - 2]
-    var_s16 l0  = read_input_s16 (XY - offset)             # A[2 ∗ n]
-    var_s16 l1p = read_input_s16 (XY - offset + increase1) # A[2 ∗ n + 2]
-    var_s16 l2p = read_input_s16 (XY - offset + increase2) # A[2 ∗ n + 4]
-    var_s16 h0  = read_input_s16 (XY)                      # A[2 ∗ n + 1]
+    var_s16 l1m = read_source_s16 (XY - offset - decrease1) # A[2 ∗ n - 2]
+    var_s16 l0  = read_source_s16 (XY - offset)             # A[2 ∗ n]
+    var_s16 l1p = read_source_s16 (XY - offset + increase1) # A[2 ∗ n + 2]
+    var_s16 l2p = read_source_s16 (XY - offset + increase2) # A[2 ∗ n + 4]
+    var_s16 h0  = read_source_s16 (XY)                      # A[2 ∗ n + 1]
 
     write_s16 (h0 + filter (l1m, l0, l1p, l2p))
 
@@ -447,8 +447,8 @@ shader iiwt_s16_filter_haar_lp: ################################################
     return divide_s16 (h0 + 1, 2)
 
   func void main (void):
-    var_s16 l0 = read_input_s16 (gl_TexCoord[0].xy)          # A[2 ∗ n]
-    var_s16 h0 = read_input_s16 (gl_TexCoord[0].xy + offset) # A[2 ∗ n + 1]
+    var_s16 l0 = read_source_s16 (gl_TexCoord[0].xy)          # A[2 ∗ n]
+    var_s16 h0 = read_source_s16 (gl_TexCoord[0].xy + offset) # A[2 ∗ n + 1]
 
     write_s16 (l0 - filter (h0))
 
@@ -463,8 +463,8 @@ shader iiwt_s16_filter_haar_hp: ################################################
     vec2 offset # = vec2 (width / 2.0, 0.0) or vec2 (0.0, height / 2.0)
 
   func void main (void):
-    var_s16 l0 = read_input_s16 (gl_TexCoord[0].xy - offset) # A[2 ∗ n]
-    var_s16 h0 = read_input_s16 (gl_TexCoord[0].xy)          # A[2 ∗ n + 1]
+    var_s16 l0 = read_source_s16 (gl_TexCoord[0].xy - offset) # A[2 ∗ n]
+    var_s16 h0 = read_source_s16 (gl_TexCoord[0].xy)          # A[2 ∗ n + 1]
 
     write_s16 (h0 + l0)
 
@@ -498,7 +498,7 @@ shader iiwt_s16_vertical_deinterleave: #########################################
     h:
       vec2 coordinate = vec2 (x, y * 2.0 + 1.5)
 
-    copy_input_s16 (coordinate)
+    copy_source_s16 (coordinate)
 
 
 
@@ -540,7 +540,7 @@ shader iiwt_s16_interleave: ####################################################
       # shift y coordinate from texel edge n.0 to texel center n.5
       vec2 coordinate = vec2 (x + 0.5, y)
 
-    copy_input_s16 (coordinate)
+    copy_source_s16 (coordinate)
 
 
 
@@ -549,7 +549,7 @@ shader iiwt_s16_filter_shift: ##################################################
     normal SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_SHIFT
 
   func void main (void):
-    write_s16 (divide_s16 (read_input_s16 (gl_TexCoord[0].xy) + 1, 2))
+    write_s16 (divide_s16 (read_source_s16 (gl_TexCoord[0].xy) + 1, 2))
 
 
 
@@ -570,14 +570,14 @@ shader upsample_u8: ############################################################
     vec2 increase4
 
   func void main (void):
-    var_s16 s3m = cast_s16_u8 (read_input_u8 (XY - decrease3)) # S[n - 3]
-    var_s16 s2m = cast_s16_u8 (read_input_u8 (XY - decrease2)) # S[n - 2]
-    var_s16 s1m = cast_s16_u8 (read_input_u8 (XY - decrease1)) # S[n - 1]
-    var_s16 s0  = cast_s16_u8 (read_input_u8 (XY))             # S[n]
-    var_s16 s1p = cast_s16_u8 (read_input_u8 (XY + increase1)) # S[n + 1]
-    var_s16 s2p = cast_s16_u8 (read_input_u8 (XY + increase2)) # S[n + 2]
-    var_s16 s3p = cast_s16_u8 (read_input_u8 (XY + increase3)) # S[n + 3]
-    var_s16 s4p = cast_s16_u8 (read_input_u8 (XY + increase4)) # S[n + 4]
+    var_s16 s3m = cast_s16_u8 (read_source_u8 (XY - decrease3)) # S[n - 3]
+    var_s16 s2m = cast_s16_u8 (read_source_u8 (XY - decrease2)) # S[n - 2]
+    var_s16 s1m = cast_s16_u8 (read_source_u8 (XY - decrease1)) # S[n - 1]
+    var_s16 s0  = cast_s16_u8 (read_source_u8 (XY))             # S[n]
+    var_s16 s1p = cast_s16_u8 (read_source_u8 (XY + increase1)) # S[n + 1]
+    var_s16 s2p = cast_s16_u8 (read_source_u8 (XY + increase2)) # S[n + 2]
+    var_s16 s3p = cast_s16_u8 (read_source_u8 (XY + increase3)) # S[n + 3]
+    var_s16 s4p = cast_s16_u8 (read_source_u8 (XY + increase4)) # S[n + 4]
     var_s16 sum = divide_s16 (-s3m + 3 * s2m - 7 * s1m + 21 * s0 \
         + 21 * s1p - 7 * s2p + 3 * s3p - s4p + 16, 32)
 
@@ -648,7 +648,7 @@ shader obmc_shift: #############################################################
     normal SCHRO_OPENGL_SHADER_OBMC_SHIFT
 
   func void main (void):
-    write_s16 (divide_s16 (read_input_s16 (gl_TexCoord[0].xy) - 8160, 64))
+    write_s16 (divide_s16 (read_source_s16 (gl_TexCoord[0].xy) - 8160, 64))
 
 
 

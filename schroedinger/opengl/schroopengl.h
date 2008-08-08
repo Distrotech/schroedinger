@@ -14,6 +14,13 @@ SCHRO_BEGIN_DECLS
 #define SCHRO_OPENGL_CHECK_FRAMEBUFFER \
     schro_opengl_check_framebuffer (__FILE__, __LINE__, __FUNCTION__);
 
+#if 1
+#define SCHRO_OPENGL_FLUSH \
+    glFlush ();
+#else
+#define SCHRO_OPENGL_FLUSH
+#endif
+
 /*typedef enum _SchroOpenGLPipelineType {
   SCHRO_OPENGL_PIPELINE_TYPE_FIXED_POINT = 0,
   //SCHRO_OPENGL_PIPELINE_TYPE_FLOAT, // FIXME: investigate this
