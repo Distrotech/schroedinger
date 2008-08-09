@@ -67,5 +67,13 @@ This could trigger a bug in which reference pictures are not added
 to the reference queue before pictures are loaded. That's why I'm going to 
 rewrite the queue.    
 
-On the account of me not entirely getting SchroMotion I'm going to do
-part of it my way in another branch.
+The added dynamic range from the obmc is (hopefully) correctly shifted
+out now. Artefacts remain on the image. They get worse as motion
+vectors are not assumed to be zero, so that might mean that the
+decoding of the motion vectors doesn't work.
+The flickering of the image suggests that weights are not shifted out 
+correctly. (The colours do no longer flicker but the luma component does).
+I have no real explanation for the difference between chroma and video
+components. 
+
+

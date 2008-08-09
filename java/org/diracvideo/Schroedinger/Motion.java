@@ -135,17 +135,17 @@ class Motion {
 	chroma_h_shift = f.chromaHShift();
 	chroma_v_shift = f.chromaVShift();
 	for(int k = 0; k < out.length; k++) {
-	    if(k == 0) {
+	    //	    if(k == 0) {
 		xbsep = par.xbsep_luma;
 		ybsep = par.ybsep_luma;
 		xblen = par.xblen_luma;
 		yblen = par.yblen_luma;
-	    } else {
+		/*	    } else {
 		xbsep = par.xbsep_luma >> chroma_h_shift;
 		ybsep = par.ybsep_luma >> chroma_v_shift;
 		xblen = par.xblen_luma >> chroma_h_shift;
 		yblen = par.yblen_luma >> chroma_v_shift;
-	    }
+		} */
 	    block = new Block(new Dimension(xblen, yblen));
 	    width = out[k].s.width;
 	    height = out[k].s.height;
@@ -165,6 +165,8 @@ class Motion {
 	    for(int j = 0; j < par.y_num_blocks; j++)
 		for(int i = 0; i < par.x_num_blocks; i++)
 		    predictBlock(out[k], i, j, k);
+	    out[k].shiftOut(6,5);
+	    out[k].clip(7);
 	}
     }
 
@@ -174,23 +176,19 @@ class Motion {
 	int ystart = j*yblen - yoffset;
 	int ystop = Math.min(height - 1, (j+1)*yblen + yoffset);
 	Vector mv = getVector(i,j);
-	if(!mv.using_global && k != 0) {
-	    mv = mv.scale(chroma_h_shift, chroma_v_shift);
-	}
 	for(int y = Math.max(ystart, 0); y < ystop; y++) {
 	    int q = y - ystart;
 	    for(int x = Math.max(xstart, 0); x < xstop; x++) {
 		int p = x - xstart;
 		short val;
 		if(mv.pred_mode == 0) {
-		    val = (short)mv.dc[k];
+		    val = (short)(mv.dc[k]+32);
 		} else {
 		    val = predictPixel(mv, x, y, k);
 		}
 		block.set(p, q,  out.pixel(x, y) + val);
 	    }
 	}
-	block.shiftOut(5);
 	accumalateBlock(xstart, ystart, out);
     }
 
@@ -204,26 +202,30 @@ class Motion {
 	    }
 	}
 	short weight = (short)(par.picture_weight_1 + par.picture_weight_2);
+	short val = 0;
 	int px, py;
 	switch(mv.pred_mode) {
 	case 1:
 	    px = (x << par.mv_precision) + mv.dx[0];
 	    py = (y << par.mv_precision) + mv.dy[0];
-	    return (short)(weight*predictSubPixel(0, px, py));
+	    val = (short)(weight*predictSubPixel(0, px, py));
+	    break;
 	case 2:
 	    px = (x << par.mv_precision) + mv.dx[1];
 	    py = (y << par.mv_precision) + mv.dy[1];
-	    return (short)(weight*predictSubPixel(1, px, py));
+	    val = (short)(weight*predictSubPixel(1, px, py));
+	    break;
 	case 3:
-	    px = (x << par.mv_precision) + mv.dx[0];
-	    py = (y << par.mv_precision) + mv.dy[0];
-	    short val = (short)(par.picture_weight_1*predictSubPixel(0, px, py));
+	    px = (x << par.mv_precision) + mv.dx[0] ;
+	    py = (y << par.mv_precision) + mv.dy[0] ;
+	    val = (short)(par.picture_weight_1*predictSubPixel(0, px, py));
 	    px = (x << par.mv_precision) + mv.dx[1];
 	    py = (x << par.mv_precision) + mv.dy[1];
-	    return (short)(val + par.picture_weight_2*predictSubPixel(1, px, py));
+	    val += (short)(par.picture_weight_2*predictSubPixel(1, px, py));
 	default:
-	    return 0;
+	    break;
 	}
+	return (short)Util.roundShift(val, weight);
     }
 
     private short predictSubPixel(int ref, int px, int py) {
