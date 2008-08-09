@@ -67,12 +67,12 @@ public final class DecoderTest {
 	    byte[] packet;
 	    while(dec.getVideoFormat() == null) {
 		packet = readPacket(in);
-		dec.push(packet, 0);
+		dec.push(packet, 0, packet.length);
 	    }
 	    win = createWindow(dec);
 	    while(in.available() > 0) {
 		packet = readPacket(in);
-		dec.push(packet, 0);
+		dec.push(packet, 0, packet.length);
 		if(dec.full())
 		    dec.run();
 		if(dec.done())
@@ -80,7 +80,7 @@ public final class DecoderTest {
 	    }
 	    dec.status = Decoder.Status.DONE;
 	    in.close();
-	    other_thread.join();
+	    other_thread.join(); 
 	    win.setVisible(false);
 	    win.dispose();
 	} catch(IOException e) {

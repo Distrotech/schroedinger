@@ -26,7 +26,7 @@ public class Decoder {
 	out = new Queue(4);
 	fault = new Picture();
     }
-    
+     
     /** Push:
      * @param d byte array containing stream data
      * @param o offset in the byte array
@@ -38,7 +38,7 @@ public class Decoder {
      * should only ever have to push such segments to 
      * the decoder. */
 
-    public synchronized void push(byte d[], int o) throws Exception {
+    public synchronized void push(byte d[], int o, int l) throws Exception {
 	push(new Buffer(d,o));
     }
 
@@ -64,7 +64,8 @@ public class Decoder {
 		return;
 	    }
 	    dispatchBuffer(buf.sub(0,n)); /* add complete packet */
-	    push(buf.sub(n));  /* push rest */
+	    if(buf.size() > n)
+		push(buf.sub(n));  /* push rest */
 	} else {
 	    if(next.size() < 13) { /* again, no complete header */
 		buf = next.cat(buf);
@@ -80,7 +81,8 @@ public class Decoder {
 		if(next.size() > n)
 		    buf = next.sub(n).cat(buf); 
 		next = null;
-		push(buf);
+		if(buf.size() > 0)
+		    push(buf);
 		return;
 	    }
 	    if(next.size() + buf.size() >= n) { 
@@ -89,7 +91,8 @@ public class Decoder {
 		next = next.cat(buf.sub(0, copy));
 		dispatchBuffer(next);
 		next = null;
-		push(buf.sub(copy));
+		if(buf.size() > copy)
+		    push(buf.sub(copy));
 		return;
 	    }
 	    /* incomplete packet in both buffers */
