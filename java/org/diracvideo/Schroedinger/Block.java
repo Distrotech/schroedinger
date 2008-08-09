@@ -174,10 +174,9 @@ public final class Block {
     }
 
     public void shiftOut(int b, int a) {
-	int add = (1 << a);
 	for(int y = 0; y < s.height; y++)
 	    for(int x = 0; x < s.width; x++)
-		set(x, y, (short)((pixel(x, y) + add) >> b));
+		set(x, y, (short)((pixel(x, y) + a) >> b));
     }
 
     public void clip(int b) {

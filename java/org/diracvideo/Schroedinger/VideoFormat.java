@@ -150,9 +150,7 @@ public class VideoFormat {
 	    this.height = u.decodeUint();
 	}
 	if(u.decodeBool()) { /* chroma format */
-	    int c = u.decodeUint();
-	    chroma_format = (c == 0 ? 0444 : 
-			     (c == 1 ? 0422 : 0420));
+	    chroma_format = u.decodeUint();
 	}
 
 	if(u.decodeBool()) { /* scan format */
@@ -265,14 +263,14 @@ public class VideoFormat {
 
     public void getPictureChromaSize(int[] out) {
 	out[0] = Util.roundUpShift(this.width, chromaHShift());
-	out[1] = Util.roundUpShift(this.height,chromaVShift() + interlaced_coding); 
+	out[1] = Util.roundUpShift(this.height,chromaVShift()); 
     }
 
     public int chromaHShift() {
-	return (chroma_format == 0444 ? 0 : 1);
+	return (chroma_format > 0 ? 1 : 0);
     }
 
     public int chromaVShift() {
-	return (chroma_format == 0420 ? 1 : 0);
+	return (chroma_format > 1 ? 1 : 0) + interlaced_coding;
     }
 }
