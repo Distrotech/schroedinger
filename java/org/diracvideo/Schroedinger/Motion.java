@@ -17,7 +17,17 @@ class Motion {
     int xoffset, yoffset, max_fast_x, max_fast_y;
     short obmc[], weight_x[], weight_y[];
     Block block, tmp_ref[];
-    
+
+    static int ARITH_SUPERBLOCK = 0;
+    static int ARITH_PRED_MODE = 1;
+    static int ARITH_REF1_X = 2;
+    static int ARITH_REF1_Y = 3;
+    static int ARITH_REF2_X = 4;
+    static int ARITH_REF2_Y = 5;
+    static int ARITH_DC_0 = 6;
+    static int ARITH_DC_1 = 7;
+    static int ARITH_DC_2 = 8;
+
     public Motion(Parameters p, Picture r[]) {
 	par = p;
 	refs = r;
@@ -85,20 +95,23 @@ class Motion {
 	if(mv.pred_mode == 0) {
 	    int pred[] = new int[3];
 	    dcPrediction(x,y,pred);
-	    mv.dc[0] = pred[0] + ar[6].decodeSint(Context.LUMA_DC_CONT_BIN1,
+	    mv.dc[0] = pred[0] + 
+		ar[ARITH_DC_0].decodeSint(Context.LUMA_DC_CONT_BIN1,
 						  Context.LUMA_DC_VALUE,
 						  Context.LUMA_DC_SIGN);
-	    mv.dc[1] = pred[1] + ar[7].decodeSint(Context.CHROMA1_DC_CONT_BIN1,
+	    mv.dc[1] = pred[1] + 
+		ar[ARITH_DC_1].decodeSint(Context.CHROMA1_DC_CONT_BIN1,
 						  Context.CHROMA1_DC_VALUE,
 						  Context.CHROMA1_DC_SIGN);
-	    mv.dc[2] = pred[2] + ar[8].decodeSint(Context.CHROMA2_DC_CONT_BIN1,
-						  Context.CHROMA2_DC_VALUE,
-						  Context.CHROMA2_DC_SIGN);
+	    mv.dc[2] = pred[2] + 
+		ar[ARITH_DC_2].decodeSint(Context.CHROMA2_DC_CONT_BIN1,
+							   Context.CHROMA2_DC_VALUE,
+							   Context.CHROMA2_DC_SIGN);
 	} else {
 	    int pred_x, pred_y;
 	    if(par.have_global_motion) {
 		int pred = globalPrediction(x,y);
-		pred ^= ar[1].decodeBit(Context.GLOBAL_BLOCK);
+		pred ^= ar[ARITH_SUPERBLOCK].decodeBit(Context.GLOBAL_BLOCK);
 		mv.using_global = (pred == 0 ? false : true);
 	    } else {
 		mv.using_global = false;
@@ -106,29 +119,26 @@ class Motion {
 	    if(!mv.using_global) {
 		if((mv.pred_mode & 1) != 0) {
 		    vectorPrediction(mv,x,y,1);
-		    mv.dx[0] += ar[2].decodeSint(Context.MV_REF1_H_CONT_BIN1,
-						 Context.MV_REF1_H_VALUE, 
-						 Context.MV_REF1_H_SIGN);
-		    mv.dy[0] += ar[3].decodeSint(Context.MV_REF1_V_CONT_BIN1, 
-						 Context.MV_REF1_V_VALUE,
-						 Context.MV_REF1_V_SIGN);
+		    mv.dx[0] += 
+			ar[ARITH_REF1_X].decodeSint(Context.MV_REF1_H_CONT_BIN1,
+						    Context.MV_REF1_H_VALUE, 
+						    Context.MV_REF1_H_SIGN);
+		    mv.dy[0] +=
+			ar[ARITH_REF1_Y].decodeSint(Context.MV_REF1_V_CONT_BIN1, 
+						    Context.MV_REF1_V_VALUE,
+						    Context.MV_REF1_V_SIGN);
 		}
 		if((mv.pred_mode & 2) != 0) {
 		    vectorPrediction(mv, x, y, 2);
-		    mv.dx[1] += ar[4].decodeSint(Context.MV_REF2_H_CONT_BIN1,
+		    mv.dx[1] += ar[ARITH_REF2_X].decodeSint(Context.MV_REF2_H_CONT_BIN1,
 						 Context.MV_REF2_H_VALUE, 
 						 Context.MV_REF2_H_SIGN);
-		    mv.dy[1] += ar[5].decodeSint(Context.MV_REF2_V_CONT_BIN1, 
+		    mv.dy[1] += ar[ARITH_REF2_Y].decodeSint(Context.MV_REF2_V_CONT_BIN1, 
 						 Context.MV_REF2_V_VALUE,
 						 Context.MV_REF2_V_SIGN);
 
 		}
-	    } else {
-		mv.dx[0] = 0;
-		mv.dx[1] = 0;
-		mv.dy[0] = 0;
-		mv.dy[1] = 0;
-	    }
+	    } 
 	}
     }
 
@@ -137,23 +147,17 @@ class Motion {
 	chroma_h_shift = f.chromaHShift();
 	chroma_v_shift = f.chromaVShift();
 	for(int k = 0; k < out.length; k++) {
-	    if(par.num_refs == 1)
-		out[k].d = refs[0].getComponent(k).d;
-	    else
-		out[k].d = refs[1].getComponent(k).d;
-	    if(true)
-		continue;
 	    if(k == 0) {
 		xbsep = par.xbsep_luma;
 		ybsep = par.ybsep_luma;
 		xblen = par.xblen_luma;
 		yblen = par.yblen_luma;
-	    } else {
+	    } /* else {
 		xbsep = par.xbsep_luma >> chroma_h_shift;
-		ybsep = par.ybsep_luma >> chroma_v_shift;
 		xblen = par.xblen_luma >> chroma_h_shift;
+		ybsep = par.ybsep_luma >> chroma_v_shift;
 		yblen = par.yblen_luma >> chroma_v_shift;
-	    }
+		} */
 	    block = new Block(new Dimension(xblen, yblen));
 	    width = out[k].s.width;
 	    height = out[k].s.height;
@@ -173,6 +177,8 @@ class Motion {
 	    for(int j = 0; j < par.y_num_blocks; j++)
 		for(int i = 0; i < par.x_num_blocks; i++)
 		    predictBlock(out[k], i, j, k);
+	    out[k].shiftOut(6, 32);
+	    out[k].clip(7);
 	}
     }
 
@@ -182,7 +188,7 @@ class Motion {
 	int ystart = j*yblen - yoffset;
 	int ystop = Math.min(height - 1, (j+1)*yblen + yoffset);
 	Vector mv = getVector(i,j);
-	if(!mv.using_global && k != 0) 
+	if(k != 0  && !mv.using_global)
 	    mv = mv.scale(chroma_h_shift, chroma_v_shift);
 	for(int y = Math.max(ystart, 0); y < ystop; y++) {
 	    int q = y - ystart;
@@ -209,30 +215,55 @@ class Motion {
 	    }
 	}
 	short weight = (short)(par.picture_weight_1 + par.picture_weight_2);
-	int val, add = (1 << (par.mv_precision - 1)), 
-	    shift = par.mv_precision;
+	short val = 0;
 	int px, py;
 	switch(mv.pred_mode) {
 	case 1:
 	    px = (x << par.mv_precision) + mv.dx[0];
 	    py = (y << par.mv_precision) + mv.dy[0];
-	    val = predictSubPixel(0, px, py)*weight;
-	    return (short)((val + add) >> shift);
+	    val = (short)(weight*predictSubPixel(0, px, py));
+	    break;
 	case 2:
 	    px = (x << par.mv_precision) + mv.dx[1];
 	    py = (y << par.mv_precision) + mv.dy[1];
-	    val = predictSubPixel(1, px, py);
-	    return (short)Util.roundShift(val*weight, par.mv_precision);
+	    val = (short)(weight*predictSubPixel(1, px, py));
+	    break;
 	case 3:
 	    px = (x << par.mv_precision) + mv.dx[0];
 	    py = (y << par.mv_precision) + mv.dy[0];
 	    val = (short)(par.picture_weight_1*predictSubPixel(0, px, py));
 	    px = (x << par.mv_precision) + mv.dx[1];
 	    py = (x << par.mv_precision) + mv.dy[1];
-	    val += par.picture_weight_2*predictSubPixel(1, px, py);
-	    return (short)Util.roundShift(val, par.mv_precision);
+	    val += (short)(par.picture_weight_2*predictSubPixel(1, px, py));
 	default:
-	    return 0;
+	    break;
+	}
+	return (short)Util.roundShift(val, par.picture_weight_bits);
+    }
+
+    private void accumalateBlock(int x, int y, Block frame) {
+	for(int j = 0; j < yblen; j++) {
+	    int inLine = block.line(j);
+	    int outLine = frame.index(x, y + j);
+	    int w_y = weight_y[j];
+	    if(y + j < yoffset) {
+		w_y += weight_y[2*yoffset - j - 1];
+	    }
+	    if(y + j >= par.y_num_blocks * ybsep - yoffset) {
+		w_y += weight_y[2*(yblen - yoffset) - j - 1];
+	    }
+	    if(y + j < 0 || y + j >= frame.s.height) continue;
+	    for(int i = 0; i < xblen; i++) {
+		if(x + i < 0 || x + i >= frame.s.width) continue;
+		int w_x = weight_x[i];
+		if(x + i < xoffset) {
+		    w_x += weight_x[2*xoffset - i - 1];
+		}
+		if(x + i >= par.x_num_blocks * xbsep - xoffset) {
+		    w_x += weight_x[2*(xblen - xoffset) - i - 1];
+		}
+		frame.d[i + outLine] = (short)(block.d[i + inLine] * w_x * w_y);
+	    }
 	}
     }
 
@@ -240,14 +271,23 @@ class Motion {
 	if(par.mv_precision < 2) { 
 	    return tmp_ref[ref].real(px, py); 
 	}
-	return 0;
-    }
+	int prec = par.mv_precision;
+	int add = 1 << (prec - 1);
+	int hx = px >> (prec-1);
+	int hy = py >> (prec-1);
+	int rx = px - (hx << (prec-1));
+	int ry = py - (hy << (prec-1));
+	int w00,w01, w10, w11;
+	w00 = (add - rx)*(add - ry);
+	w01 = (add - rx)*ry;
+	w10 = rx*(add - ry);
+	w11 = rx*ry;
+	int val = w00*tmp_ref[ref].real(px, py) + 
+	    w01*tmp_ref[ref].real(px + 1, py) +
+	    w10*tmp_ref[ref].real(px, py + 1) + 
+	    w11*tmp_ref[ref].real(px + 1, py + 1);
+	return (short)((val + (1 << (2*prec-3))) >> (2*prec - 2));
 
-    private void accumalateBlock(int x, int y, Block frame) {
-	try {
-	    block.copyTo(frame.sub(new Point(x, y), block.s));
-	} catch(IndexOutOfBoundsException e) {}
-	
     }
 
     private void initOBMCWeight() {

@@ -241,7 +241,7 @@ public class Picture {
 	    decodeRefs();
 	    initializeMCFrames();
 	    decodeMotionCompensate();
-	    if(zero_residual) {
+	    if(true) {
 		iwt_frame = mc_frame;
 	    } else {
 		for(int i = 0; i < 3; i++)

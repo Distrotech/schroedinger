@@ -65,7 +65,38 @@ player seems to be hardwired on vorbis/theora.
 The current queue's pop() method does not preserve coded order.
 This could trigger a bug in which reference pictures are not added
 to the reference queue before pictures are loaded. That's why I'm going to 
-rewrite the queue.    
+rewrite the queue. (this has been done in the other branch queue).
 
-Reasons for the weird motion ref image and their fixes:
-x	Incorrect reference frames
+
+The added dynamic range from the obmc is (hopefully) correctly shifted
+out now. Artefacts remain on the image. 
+The `strange 5 bits shiftout' is explained by the fact that getPixel()
+rounded too agressively by using the weight as the shift value, instead
+of the weight bits. So that is explained and resolved.
+
+I suspect that there is a similar error in the handling of chroma components
+which causes the `stripes' effect. Unfortunately I do not now where.
+
+The blockyness of the image suggests one of four things
+1 The prediction of vectors is wrong
+2 The decoding (i.e. reading from buffers) of vectors is wrong
+3 The applying of vectors is wrong.
+4 It is something I don't know yet.
+
+For step 1 and 2 it is unlikely to be either of these because I copied them
+nearly verbatim from the schroedinger codebase. Step 3 could well be,
+step 4 would be a bit annoying but then again it could be true.
+
+Now for something slightly different, it seems that 320x180 streams
+with MC are decoding at somewhat-near-realtime. Which is good, except
+for the fact that MC doesn't all work yet.
+
+About cortado: I should probably fix the decoder to handle more
+advanced things, like skipping pictures if they are too late. I'm
+wondering if I can convince SchroDec to do this since I would hate
+having synchronisation logic in the Decoder class. (I probaly can by
+adding a skip() method to the decoder).
+
+I started on lowdelay decoding in a branch called slice but I can't convince
+either dirac_encoder or schroenc to actually make a lowdelay syntax stream,
+so that work has stalled.

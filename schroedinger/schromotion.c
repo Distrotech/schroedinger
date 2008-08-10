@@ -4,6 +4,7 @@
 #endif
 #include <schroedinger/schro.h>
 #include <liboil/liboil.h>
+#include <stdio.h>
 #include <string.h>
 #include <schroedinger/schrooil.h>
 
@@ -489,7 +490,6 @@ schro_motion_block_predict_block (SchroMotion *motion, int x, int y, int k,
   SchroMotionVector *mv;
 
   mv = &motion->motion_vectors[j*params->x_num_blocks + i];
-
   switch (mv->pred_mode) {
     case 0:
       get_dc_block (motion, i, j, k, x, y);

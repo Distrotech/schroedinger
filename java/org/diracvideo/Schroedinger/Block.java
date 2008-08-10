@@ -80,7 +80,7 @@ public final class Block {
 
     /** Pixel at a given point, checked */
     public short real(int x, int y) {
-	return pixel(Util.clamp(x, 0, s.width - 1), 
+	return pixel(Util.clamp(x, 0, s.width - 1),
 		     Util.clamp(y, 0, s.height - 1));
     }
 
@@ -174,11 +174,19 @@ public final class Block {
 	return r;
     }
 
-    public void shiftOut(int b) {
-	int add = (1 << (b - 1));
+    public void shiftOut(int b, int a) {
 	for(int y = 0; y < s.height; y++)
 	    for(int x = 0; x < s.width; x++)
-		set(x, y, (short)((pixel(x, y) + add) >> b));
+		set(x, y, (short)((pixel(x, y) + a) >> b));
+    }
+
+    public void clip(int b) {
+	int l = -(1 << b), h = (1 << b) - 1;
+	for(int y = 0; y < s.height; y++) {
+	    int line = line(y);
+	    for(int x = 0; x < s.width; x++) 
+		d[line+x] = (short)Util.clamp(d[line+x], l, h);
+	}
     }
 
     /** A test method which fills the block with a checkers pattern 

@@ -1583,6 +1583,42 @@ schro_decoder_parse_picture_prediction_parameters (SchroPicture *picture)
   MARKER();
 }
 
+#if 0
+
+static void schro_vector_print(SchroMotionVector *vec) {
+  int i;
+  SchroMotionVectorDC *dc;
+  dc = (SchroMotionVectorDC*) (vec);
+  if(vec->using_global) {
+    puts("Global Vector");    
+  } else {
+    switch(vec->pred_mode) {
+    case 0:
+      puts("Intra Vector");
+      for(i = 0; i < 3; i++) {
+	printf("DC[%d] = %d\n", i,  dc->dc[i]);
+      }
+      break;
+    case 1:
+      puts("Ref1 Vector");
+      printf("dx[0] = %d\ndy[0] = %d\n", vec->dx[0], vec->dy[0]);
+      break;
+    case 2:
+      puts("Ref2 Vector");
+      printf("dx[1] = %d\ndy[1] = %d\n", vec->dx[1], vec->dy[1]);
+      break;
+    case 3:
+      puts("Ref1And2 Vector");
+      for(i = 0; i < 2; i++) {
+	printf("dx[%d] = %d\ndy[%d] = %d\n", i, vec->dx[i], i, vec->dy[i]);
+      }
+      break;
+    }
+  }
+}
+
+#endif
+
 enum {
   SCHRO_DECODER_ARITH_SUPERBLOCK,
   SCHRO_DECODER_ARITH_PRED_MODE,

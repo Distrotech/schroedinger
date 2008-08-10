@@ -4,7 +4,12 @@ import java.awt.Point;
 
 public class GeneralTest {
     public static void main(String a[]) {
-	testShort();
+	testShift();
+    }
+
+    private static void testShift() {
+	int i = 16;
+	System.err.format("%d %d %d\n",  i >> 0, i >> 1, i >> 2);
     }
 
     private static void testShort() {
