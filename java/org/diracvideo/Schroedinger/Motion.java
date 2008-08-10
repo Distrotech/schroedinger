@@ -175,7 +175,7 @@ class Motion {
 	    for(int j = 0; j < par.y_num_blocks; j++)
 		for(int i = 0; i < par.x_num_blocks; i++)
 		    predictBlock(out[k], i, j, k);
-	    out[k].shiftOut(5, 16);
+	    out[k].shiftOut(6, 32);
 	    out[k].clip(7);
 	}
     }
@@ -186,7 +186,7 @@ class Motion {
 	int ystart = j*yblen - yoffset;
 	int ystop = Math.min(height - 1, (j+1)*yblen + yoffset);
 	Vector mv = getVector(i,j);
-	if(k != 0)
+	if(k != 0  && !mv.using_global)
 	    mv = mv.scale(chroma_h_shift, chroma_v_shift);
 	for(int y = Math.max(ystart, 0); y < ystop; y++) {
 	    int q = y - ystart;
@@ -237,14 +237,30 @@ class Motion {
 	default:
 	    break;
 	}
-	return (short)Util.roundShift(val, weight);
+	return (short)Util.roundShift(val, par.picture_weight_bits);
     }
 
     private short predictSubPixel(int ref, int px, int py) {
 	if(par.mv_precision < 2) { 
 	    return tmp_ref[ref].real(px, py); 
 	}
-	return 0;
+	int prec = par.mv_precision;
+	int add = 1 << (prec - 1);
+	int hx = px >> (prec-1);
+	int hy = py >> (prec-1);
+	int rx = px - (hx << (prec-1));
+	int ry = py - (hy << (prec-1));
+	int w00,w01, w10, w11;
+	w00 = (add - rx)*(add - ry);
+	w01 = (add - rx)*ry;
+	w10 = rx*(add - ry);
+	w11 = rx*ry;
+	int val = w00*tmp_ref[ref].real(px, py) + 
+	    w01*tmp_ref[ref].real(px + 1, py) +
+	    w10*tmp_ref[ref].real(px, py + 1) + 
+	    w11*tmp_ref[ref].real(px + 1, py + 1);
+	return (short)((val + (1 << (2*prec-3))) >> (2*prec - 2));
+
     }
 
     private void accumalateBlock(int x, int y, Block frame) {

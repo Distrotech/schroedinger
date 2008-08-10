@@ -65,15 +65,33 @@ player seems to be hardwired on vorbis/theora.
 The current queue's pop() method does not preserve coded order.
 This could trigger a bug in which reference pictures are not added
 to the reference queue before pictures are loaded. That's why I'm going to 
-rewrite the queue.    
+rewrite the queue. (this has been done in the other branch queue).
 
 The added dynamic range from the obmc is (hopefully) correctly shifted
-out now. Artefacts remain on the image. They get worse as motion
-vectors are not assumed to be zero, so that might mean that the
-decoding of the motion vectors doesn't work.
-The flickering of the image suggests that weights are not shifted out 
-correctly. (The colours do no longer flicker but the luma component does).
-I have no real explanation for the difference between chroma and video
-components. 
+out now. Artefacts remain on the image. 
+The `strange 5 bits shiftout' is explained by the fact that getPixel()
+rounded too agressively by using the weight as the shift value, instead
+of the weight bits. So that is explained and resolved.
 
+I suspect that there is a similar error in the handling of chroma components
+which causes the `stripes' effect. Unfortunately I do not now where.
 
+The blockyness of the image suggests one of four things
+1 The prediction of vectors is wrong
+2 The decoding (i.e. reading from buffers) of vectors is wrong
+3 The applying of vectors is wrong.
+4 It is something I don't know yet.
+
+For step 1 and 2 it is unlikely to be either of these because I copied them
+nearly verbatim from the schroedinger codebase. Step 3 could well be,
+step 4 would be a bit annoying but then again it could be true.
+
+Now for something slightly different, it seems that 320x180 streams
+with MC are decoding at somewhat-near-realtime. Which is good, except
+for the fact that MC doesn't all work yet.
+
+About cortado: I should probably fix the decoder to handle more
+advanced things, like skipping pictures if they are too late. I'm
+wondering if I can convince SchroDec to do this since I would hate
+having synchronisation logic in the Decoder class. (I probaly can by
+adding a skip() method to the decoder).
