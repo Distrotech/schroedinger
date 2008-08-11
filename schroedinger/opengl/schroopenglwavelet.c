@@ -57,17 +57,13 @@ schro_opengl_wavelet_vertical_deinterleave (SchroFrameData *frame_data)
   SCHRO_OPENGL_CHECK_ERROR
 
   #define SWAP_DESTINATION_AND_SOURCE \
-      temp = dest; \
-      dest = src; \
-      src = temp; \
+      temp = dest; dest = src; src = temp; \
       SCHRO_ASSERT (dest != src);
 
-  #define BIND_FRAMEBUFFER_AND_TEXTURE(_shader) \
-      do { \
-        glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, dest->framebuffer); \
-        schro_opengl_shader_bind_source (_shader, src->texture); \
-        SCHRO_OPENGL_CHECK_ERROR \
-      } while (0)
+  #define BIND_FRAMEBUFFER_AND_TEXTURE \
+      glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, dest->framebuffer); \
+      schro_opengl_shader_bind_source (src->texture); \
+      SCHRO_OPENGL_CHECK_ERROR
 
   dest = canvas->secondary;
   src = canvas;
@@ -75,7 +71,7 @@ schro_opengl_wavelet_vertical_deinterleave (SchroFrameData *frame_data)
   /* pass 1: vertical deinterleave */
   glUseProgramObjectARB (shader_vertical_deinterleave_l->program);
 
-  BIND_FRAMEBUFFER_AND_TEXTURE (shader_vertical_deinterleave_l);
+  BIND_FRAMEBUFFER_AND_TEXTURE
 
   schro_opengl_render_quad (0, 0, width, height / 2);
 
@@ -94,7 +90,7 @@ schro_opengl_wavelet_vertical_deinterleave (SchroFrameData *frame_data)
   glUseProgramObjectARB (shader_copy->program);
 
   SWAP_DESTINATION_AND_SOURCE
-  BIND_FRAMEBUFFER_AND_TEXTURE (shader_copy);
+  BIND_FRAMEBUFFER_AND_TEXTURE
 
   schro_opengl_render_quad (0, 0, width, height);
 
@@ -279,17 +275,13 @@ schro_opengl_wavelet_inverse_transform (SchroFrameData *frame_data,
   SCHRO_OPENGL_CHECK_ERROR
 
   #define SWAP_DESTINATION_AND_SOURCE \
-      temp = dest; \
-      dest = src; \
-      src = temp; \
+      temp = dest; dest = src; src = temp; \
       SCHRO_ASSERT (dest != src);
 
-  #define BIND_FRAMEBUFFER_AND_TEXTURE(_shader) \
-      do { \
-        glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, dest->framebuffer); \
-        schro_opengl_shader_bind_source (_shader, src->texture); \
-        SCHRO_OPENGL_CHECK_ERROR \
-      } while (0)
+  #define BIND_FRAMEBUFFER_AND_TEXTURE \
+      glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, dest->framebuffer); \
+      schro_opengl_shader_bind_source (src->texture); \
+      SCHRO_OPENGL_CHECK_ERROR
 
   dest = canvas->secondary;
   src = canvas;
@@ -297,7 +289,7 @@ schro_opengl_wavelet_inverse_transform (SchroFrameData *frame_data,
   /* pass 1: vertical filtering => XL + f(XH) = XL' */
   glUseProgramObjectARB (shader_filter_lp->program);
 
-  BIND_FRAMEBUFFER_AND_TEXTURE (shader_filter_lp);
+  BIND_FRAMEBUFFER_AND_TEXTURE
 
   schro_opengl_shader_bind_offset (shader_filter_lp, 0, subband_height);
 
@@ -324,7 +316,7 @@ schro_opengl_wavelet_inverse_transform (SchroFrameData *frame_data,
   /* copy XH */
   glUseProgramObjectARB (shader_copy->program);
 
-  schro_opengl_shader_bind_source (shader_copy, src->texture);
+  schro_opengl_shader_bind_source (src->texture);
 
   schro_opengl_render_quad (0, subband_height, width, subband_height);
 
@@ -336,7 +328,7 @@ schro_opengl_wavelet_inverse_transform (SchroFrameData *frame_data,
   glUseProgramObjectARB (shader_filter_hp->program);
 
   SWAP_DESTINATION_AND_SOURCE
-  BIND_FRAMEBUFFER_AND_TEXTURE (shader_filter_hp);
+  BIND_FRAMEBUFFER_AND_TEXTURE
 
   schro_opengl_shader_bind_offset (shader_filter_hp, 0, subband_height);
 
@@ -363,7 +355,7 @@ schro_opengl_wavelet_inverse_transform (SchroFrameData *frame_data,
   /* copy XL' */
   glUseProgramObjectARB (shader_copy->program);
 
-  schro_opengl_shader_bind_source (shader_copy, src->texture);
+  schro_opengl_shader_bind_source (src->texture);
 
   schro_opengl_render_quad (0, 0, width, subband_height);
 
@@ -375,7 +367,7 @@ schro_opengl_wavelet_inverse_transform (SchroFrameData *frame_data,
   glUseProgramObjectARB (shader_vertical_interleave->program);
 
   SWAP_DESTINATION_AND_SOURCE
-  BIND_FRAMEBUFFER_AND_TEXTURE (shader_vertical_interleave);
+  BIND_FRAMEBUFFER_AND_TEXTURE
 
   schro_opengl_shader_bind_offset (shader_vertical_interleave, 0,
       subband_height);
@@ -390,7 +382,7 @@ schro_opengl_wavelet_inverse_transform (SchroFrameData *frame_data,
   glUseProgramObjectARB (shader_filter_lp->program);
 
   SWAP_DESTINATION_AND_SOURCE
-  BIND_FRAMEBUFFER_AND_TEXTURE (shader_filter_lp);
+  BIND_FRAMEBUFFER_AND_TEXTURE
 
   schro_opengl_shader_bind_offset (shader_filter_lp, subband_width, 0);
 
@@ -417,7 +409,7 @@ schro_opengl_wavelet_inverse_transform (SchroFrameData *frame_data,
   /* copy H */
   glUseProgramObjectARB (shader_copy->program);
 
-  schro_opengl_shader_bind_source (shader_copy, src->texture);
+  schro_opengl_shader_bind_source (src->texture);
 
   schro_opengl_render_quad (subband_width, 0, subband_width, height);
 
@@ -429,7 +421,7 @@ schro_opengl_wavelet_inverse_transform (SchroFrameData *frame_data,
   glUseProgramObjectARB (shader_filter_hp->program);
 
   SWAP_DESTINATION_AND_SOURCE
-  BIND_FRAMEBUFFER_AND_TEXTURE (shader_filter_hp);
+  BIND_FRAMEBUFFER_AND_TEXTURE
 
   schro_opengl_shader_bind_offset (shader_filter_hp, subband_width, 0);
 
@@ -456,7 +448,7 @@ schro_opengl_wavelet_inverse_transform (SchroFrameData *frame_data,
   /* copy L' */
   glUseProgramObjectARB (shader_copy->program);
 
-  schro_opengl_shader_bind_source (shader_copy, src->texture);
+  schro_opengl_shader_bind_source (src->texture);
 
   schro_opengl_render_quad (0, 0, subband_width, height);
 
@@ -468,7 +460,7 @@ schro_opengl_wavelet_inverse_transform (SchroFrameData *frame_data,
   glUseProgramObjectARB (shader_horizontal_interleave->program);
 
   SWAP_DESTINATION_AND_SOURCE
-  BIND_FRAMEBUFFER_AND_TEXTURE (shader_horizontal_interleave);
+  BIND_FRAMEBUFFER_AND_TEXTURE
 
   schro_opengl_shader_bind_offset (shader_horizontal_interleave, width / 2, 0);
 
@@ -483,7 +475,7 @@ schro_opengl_wavelet_inverse_transform (SchroFrameData *frame_data,
     glUseProgramObjectARB (shader_filter_shift->program);
 
     SWAP_DESTINATION_AND_SOURCE
-    BIND_FRAMEBUFFER_AND_TEXTURE (shader_filter_shift);
+    BIND_FRAMEBUFFER_AND_TEXTURE
 
     schro_opengl_render_quad (0, 0, width, height);
 
@@ -497,7 +489,7 @@ schro_opengl_wavelet_inverse_transform (SchroFrameData *frame_data,
     glUseProgramObjectARB (shader_copy->program);
 
     SWAP_DESTINATION_AND_SOURCE
-    BIND_FRAMEBUFFER_AND_TEXTURE (shader_copy);
+    BIND_FRAMEBUFFER_AND_TEXTURE
 
     schro_opengl_render_quad (0, 0, width, height);
 

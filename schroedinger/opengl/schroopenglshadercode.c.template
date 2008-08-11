@@ -380,6 +380,17 @@ schro_opengl_shader_resolve_uniform_locations (SchroOpenGLShader* shader)
 ===== UNIFORM RESOLVERS =====
 
   #undef GET_UNIFORM_LOCATION
+
+  glUseProgramObjectARB (shader->program);
+
+  #define UNIFORM(_name, _read_slot) \
+      glUniform1iARB (shader->uniforms->_name, _read_slot)
+
+===== UNIFORM READ SLOT BINDINGS =====
+
+  #undef UNIFORM
+
+  glUseProgramObjectARB (0);
 }
 
 ===== UNIFORM BIND FUNCTIONS =====

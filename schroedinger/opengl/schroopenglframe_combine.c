@@ -162,22 +162,22 @@ schro_opengl_frame_combine_with_shader (SchroFrame *dest, SchroFrame *src,
 
     schro_opengl_setup_viewport (width, height);
 
-    glBindFramebufferEXT (GL_FRAMEBUFFER_EXT,
-        dest_canvas->secondary->framebuffer);
-
     switch (SCHRO_FRAME_FORMAT_DEPTH (dest_canvas->format)) {
       case SCHRO_FRAME_FORMAT_DEPTH_U8:
         glUseProgramObjectARB (shader_copy_u8->program);
-        schro_opengl_shader_bind_source (shader_copy_u8, dest_canvas->texture);
         break;
       case SCHRO_FRAME_FORMAT_DEPTH_S16:
         glUseProgramObjectARB (shader_copy_s16->program);
-        schro_opengl_shader_bind_source (shader_copy_s16, dest_canvas->texture);
         break;
       default:
         SCHRO_ASSERT (0);
         break;
     }
+
+    glBindFramebufferEXT (GL_FRAMEBUFFER_EXT,
+        dest_canvas->secondary->framebuffer);
+
+    schro_opengl_shader_bind_source (dest_canvas->texture);
 
     schro_opengl_render_quad (0, 0, width, height);
 
@@ -188,9 +188,8 @@ schro_opengl_frame_combine_with_shader (SchroFrame *dest, SchroFrame *src,
 
     glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, dest_canvas->framebuffer);
 
-    schro_opengl_shader_bind_source1 (shader_combine,
-        dest_canvas->secondary->texture);
-    schro_opengl_shader_bind_source2 (shader_combine, src_canvas->texture);
+    schro_opengl_shader_bind_source1 (dest_canvas->secondary->texture);
+    schro_opengl_shader_bind_source2 (src_canvas->texture);
 
     schro_opengl_render_quad (0, 0, width, height);
 

@@ -3013,670 +3013,250 @@ schro_opengl_shader_resolve_uniform_locations (SchroOpenGLShader* shader)
   GET_UNIFORM_LOCATION (yuyv);
 
   #undef GET_UNIFORM_LOCATION
+
+  glUseProgramObjectARB (shader->program);
+
+  #define UNIFORM(_name, _read_slot) \
+      glUniform1iARB (shader->uniforms->_name, _read_slot)
+
+  UNIFORM (ayuv, 0);
+  UNIFORM (previous, 2);
+  UNIFORM (source, 0);
+  UNIFORM (source1, 9);
+  UNIFORM (source2, 0);
+  UNIFORM (spatial_weight, 3);
+  UNIFORM (u2, 5);
+  UNIFORM (u4, 7);
+  UNIFORM (upsampled, 0);
+  UNIFORM (upsampled1, 4);
+  UNIFORM (upsampled1_ref1, 9);
+  UNIFORM (upsampled1_ref2, 8);
+  UNIFORM (upsampled2, 1);
+  UNIFORM (upsampled2_ref1, 6);
+  UNIFORM (upsampled2_ref2, 7);
+  UNIFORM (upsampled3, 0);
+  UNIFORM (upsampled3_ref1, 1);
+  UNIFORM (upsampled3_ref2, 0);
+  UNIFORM (upsampled4, 5);
+  UNIFORM (upsampled4_ref1, 5);
+  UNIFORM (upsampled4_ref2, 4);
+  UNIFORM (upsampled_ref1, 1);
+  UNIFORM (upsampled_ref2, 0);
+  UNIFORM (uyvy, 0);
+  UNIFORM (v2, 6);
+  UNIFORM (v4, 8);
+  UNIFORM (y4, 4);
+  UNIFORM (yuyv, 0);
+
+  #undef UNIFORM
+
+  glUseProgramObjectARB (0);
 }
 
 void
-schro_opengl_shader_bind_ayuv (SchroOpenGLShader* shader, GLuint texture)
+schro_opengl_shader_bind_ayuv (GLuint texture)
 {
-  switch (shader->index) {
-    case SCHRO_OPENGL_SHADER_CONVERT_U8_Y4_AYUV:
-    case SCHRO_OPENGL_SHADER_CONVERT_U8_U4_AYUV:
-    case SCHRO_OPENGL_SHADER_CONVERT_U8_V4_AYUV:
-      glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
-      glUniform1iARB (shader->uniforms->ayuv, 0);
-      break;
-    default:
-      SCHRO_ASSERT (0);
-      break;
-  }
+  glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
 }
 
 void
-schro_opengl_shader_bind_previous (SchroOpenGLShader* shader, GLuint texture)
+schro_opengl_shader_bind_previous (GLuint texture)
 {
-  switch (shader->index) {
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_DC:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_0:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_0_WEIGHT:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_3a:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_3a_WEIGHT:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_3b:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_3b_WEIGHT:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_0_0:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_0_0_WEIGHT:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_0_3a:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_0_3a_WEIGHT:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_0_3b:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_0_3b_WEIGHT:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_0:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_0_WEIGHT:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_3a:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_3a_WEIGHT:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_3b:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_3b_WEIGHT:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_0:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_0_WEIGHT:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_3a:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_3a_WEIGHT:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_3b:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_3b_WEIGHT:
-      glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
-      glUniform1iARB (shader->uniforms->previous, 0);
-      break;
-    default:
-      SCHRO_ASSERT (0);
-      break;
-  }
+  glActiveTextureARB (GL_TEXTURE0_ARB + 2);
+  glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
+  glActiveTextureARB (GL_TEXTURE0_ARB);
 }
 
 void
-schro_opengl_shader_bind_source (SchroOpenGLShader* shader, GLuint texture)
+schro_opengl_shader_bind_source (GLuint texture)
 {
-  switch (shader->index) {
-    case SCHRO_OPENGL_SHADER_COPY_U8:
-    case SCHRO_OPENGL_SHADER_COPY_S16:
-    case SCHRO_OPENGL_SHADER_CONVERT_U8_S16:
-    case SCHRO_OPENGL_SHADER_CONVERT_S16_U8:
-    case SCHRO_OPENGL_SHADER_CONVERT_U8_U8:
-    case SCHRO_OPENGL_SHADER_CONVERT_S16_S16:
-    case SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_DESLAURIERS_DUBUC_9_7_Lp:
-    case SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_DESLAURIERS_DUBUC_9_7_Hp:
-    case SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_LE_GALL_5_3_Lp:
-    case SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_LE_GALL_5_3_Hp:
-    case SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_DESLAURIERS_DUBUC_13_7_Lp:
-    case SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_DESLAURIERS_DUBUC_13_7_Hp:
-    case SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_HAAR_Lp:
-    case SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_HAAR_Hp:
-    case SCHRO_OPENGL_SHADER_IIWT_S16_VERTICAL_DEINTERLEAVE_L:
-    case SCHRO_OPENGL_SHADER_IIWT_S16_VERTICAL_DEINTERLEAVE_H:
-    case SCHRO_OPENGL_SHADER_IIWT_S16_VERTICAL_INTERLEAVE:
-    case SCHRO_OPENGL_SHADER_IIWT_S16_HORIZONTAL_INTERLEAVE:
-    case SCHRO_OPENGL_SHADER_IIWT_S16_FILTER_SHIFT:
-    case SCHRO_OPENGL_SHADER_UPSAMPLE_U8:
-    case SCHRO_OPENGL_SHADER_OBMC_SHIFT:
-      glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
-      glUniform1iARB (shader->uniforms->source, 0);
-      break;
-    default:
-      SCHRO_ASSERT (0);
-      break;
-  }
+  glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
 }
 
 void
-schro_opengl_shader_bind_source1 (SchroOpenGLShader* shader, GLuint texture)
+schro_opengl_shader_bind_source1 (GLuint texture)
 {
-  switch (shader->index) {
-    case SCHRO_OPENGL_SHADER_ADD_S16_U8:
-    case SCHRO_OPENGL_SHADER_ADD_S16_S16:
-    case SCHRO_OPENGL_SHADER_SUBTRACT_S16_U8:
-    case SCHRO_OPENGL_SHADER_SUBTRACT_S16_S16:
-      glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
-      glUniform1iARB (shader->uniforms->source1, 0);
-      break;
-    default:
-      SCHRO_ASSERT (0);
-      break;
-  }
+  glActiveTextureARB (GL_TEXTURE0_ARB + 9);
+  glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
+  glActiveTextureARB (GL_TEXTURE0_ARB);
 }
 
 void
-schro_opengl_shader_bind_source2 (SchroOpenGLShader* shader, GLuint texture)
+schro_opengl_shader_bind_source2 (GLuint texture)
 {
-  switch (shader->index) {
-    case SCHRO_OPENGL_SHADER_ADD_S16_U8:
-    case SCHRO_OPENGL_SHADER_ADD_S16_S16:
-    case SCHRO_OPENGL_SHADER_SUBTRACT_S16_U8:
-    case SCHRO_OPENGL_SHADER_SUBTRACT_S16_S16:
-      glActiveTextureARB (GL_TEXTURE0_ARB + 1);
-      glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
-      glUniform1iARB (shader->uniforms->source2, 1);
-      glActiveTextureARB (GL_TEXTURE0_ARB);
-      break;
-    default:
-      SCHRO_ASSERT (0);
-      break;
-  }
+  glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
 }
 
 void
-schro_opengl_shader_bind_spatial_weight (SchroOpenGLShader* shader, GLuint texture)
+schro_opengl_shader_bind_spatial_weight (GLuint texture)
 {
-  switch (shader->index) {
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_DC:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_0:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_0_WEIGHT:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_3a:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_3a_WEIGHT:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_3b:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_3b_WEIGHT:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_0_0:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_0_0_WEIGHT:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_0_3a:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_0_3a_WEIGHT:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_0_3b:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_0_3b_WEIGHT:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_0:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_0_WEIGHT:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_3a:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_3a_WEIGHT:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_3b:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_3b_WEIGHT:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_0:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_0_WEIGHT:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_3a:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_3a_WEIGHT:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_3b:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_3b_WEIGHT:
-      glActiveTextureARB (GL_TEXTURE0_ARB + 1);
-      glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
-      glUniform1iARB (shader->uniforms->spatial_weight, 1);
-      glActiveTextureARB (GL_TEXTURE0_ARB);
-      break;
-    default:
-      SCHRO_ASSERT (0);
-      break;
-  }
+  glActiveTextureARB (GL_TEXTURE0_ARB + 3);
+  glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
+  glActiveTextureARB (GL_TEXTURE0_ARB);
 }
 
 void
-schro_opengl_shader_bind_u2 (SchroOpenGLShader* shader, GLuint texture)
+schro_opengl_shader_bind_u2 (GLuint texture)
 {
-  switch (shader->index) {
-    case SCHRO_OPENGL_SHADER_CONVERT_YUYV_U8_422:
-      glActiveTextureARB (GL_TEXTURE0_ARB + 1);
-      glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
-      glUniform1iARB (shader->uniforms->u2, 1);
-      glActiveTextureARB (GL_TEXTURE0_ARB);
-      break;
-    case SCHRO_OPENGL_SHADER_CONVERT_UYVY_U8_422:
-      glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
-      glUniform1iARB (shader->uniforms->u2, 0);
-      break;
-    default:
-      SCHRO_ASSERT (0);
-      break;
-  }
+  glActiveTextureARB (GL_TEXTURE0_ARB + 5);
+  glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
+  glActiveTextureARB (GL_TEXTURE0_ARB);
 }
 
 void
-schro_opengl_shader_bind_u4 (SchroOpenGLShader* shader, GLuint texture)
+schro_opengl_shader_bind_u4 (GLuint texture)
 {
-  switch (shader->index) {
-    case SCHRO_OPENGL_SHADER_CONVERT_AYUV_U8_444:
-      glActiveTextureARB (GL_TEXTURE0_ARB + 1);
-      glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
-      glUniform1iARB (shader->uniforms->u4, 1);
-      glActiveTextureARB (GL_TEXTURE0_ARB);
-      break;
-    default:
-      SCHRO_ASSERT (0);
-      break;
-  }
+  glActiveTextureARB (GL_TEXTURE0_ARB + 7);
+  glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
+  glActiveTextureARB (GL_TEXTURE0_ARB);
 }
 
 void
-schro_opengl_shader_bind_upsampled (SchroOpenGLShader* shader, GLuint texture)
+schro_opengl_shader_bind_upsampled (GLuint texture)
 {
-  switch (shader->index) {
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_0:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_0_WEIGHT:
-      glActiveTextureARB (GL_TEXTURE0_ARB + 2);
-      glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
-      glUniform1iARB (shader->uniforms->upsampled, 2);
-      glActiveTextureARB (GL_TEXTURE0_ARB);
-      break;
-    default:
-      SCHRO_ASSERT (0);
-      break;
-  }
+  glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
 }
 
 void
-schro_opengl_shader_bind_upsampled1 (SchroOpenGLShader* shader, GLuint texture)
+schro_opengl_shader_bind_upsampled1 (GLuint texture)
 {
-  switch (shader->index) {
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_3a:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_3a_WEIGHT:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_3b:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_3b_WEIGHT:
-      glActiveTextureARB (GL_TEXTURE0_ARB + 2);
-      glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
-      glUniform1iARB (shader->uniforms->upsampled1, 2);
-      glActiveTextureARB (GL_TEXTURE0_ARB);
-      break;
-    default:
-      SCHRO_ASSERT (0);
-      break;
-  }
+  glActiveTextureARB (GL_TEXTURE0_ARB + 4);
+  glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
+  glActiveTextureARB (GL_TEXTURE0_ARB);
 }
 
 void
-schro_opengl_shader_bind_upsampled1_ref1 (SchroOpenGLShader* shader, GLuint texture)
+schro_opengl_shader_bind_upsampled1_ref1 (GLuint texture)
 {
-  switch (shader->index) {
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_0:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_0_WEIGHT:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_3a:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_3a_WEIGHT:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_3b:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_3b_WEIGHT:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_0:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_0_WEIGHT:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_3a:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_3a_WEIGHT:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_3b:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_3b_WEIGHT:
-      glActiveTextureARB (GL_TEXTURE0_ARB + 2);
-      glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
-      glUniform1iARB (shader->uniforms->upsampled1_ref1, 2);
-      glActiveTextureARB (GL_TEXTURE0_ARB);
-      break;
-    default:
-      SCHRO_ASSERT (0);
-      break;
-  }
+  glActiveTextureARB (GL_TEXTURE0_ARB + 9);
+  glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
+  glActiveTextureARB (GL_TEXTURE0_ARB);
 }
 
 void
-schro_opengl_shader_bind_upsampled1_ref2 (SchroOpenGLShader* shader, GLuint texture)
+schro_opengl_shader_bind_upsampled1_ref2 (GLuint texture)
 {
-  switch (shader->index) {
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_0_3a:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_0_3a_WEIGHT:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_0_3b:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_0_3b_WEIGHT:
-      glActiveTextureARB (GL_TEXTURE0_ARB + 3);
-      glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
-      glUniform1iARB (shader->uniforms->upsampled1_ref2, 3);
-      glActiveTextureARB (GL_TEXTURE0_ARB);
-      break;
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_3a:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_3a_WEIGHT:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_3b:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_3b_WEIGHT:
-      glActiveTextureARB (GL_TEXTURE0_ARB + 4);
-      glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
-      glUniform1iARB (shader->uniforms->upsampled1_ref2, 4);
-      glActiveTextureARB (GL_TEXTURE0_ARB);
-      break;
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_3a:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_3a_WEIGHT:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_3b:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_3b_WEIGHT:
-      glActiveTextureARB (GL_TEXTURE0_ARB + 6);
-      glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
-      glUniform1iARB (shader->uniforms->upsampled1_ref2, 6);
-      glActiveTextureARB (GL_TEXTURE0_ARB);
-      break;
-    default:
-      SCHRO_ASSERT (0);
-      break;
-  }
+  glActiveTextureARB (GL_TEXTURE0_ARB + 8);
+  glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
+  glActiveTextureARB (GL_TEXTURE0_ARB);
 }
 
 void
-schro_opengl_shader_bind_upsampled2 (SchroOpenGLShader* shader, GLuint texture)
+schro_opengl_shader_bind_upsampled2 (GLuint texture)
 {
-  switch (shader->index) {
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_3a:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_3a_WEIGHT:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_3b:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_3b_WEIGHT:
-      glActiveTextureARB (GL_TEXTURE0_ARB + 3);
-      glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
-      glUniform1iARB (shader->uniforms->upsampled2, 3);
-      glActiveTextureARB (GL_TEXTURE0_ARB);
-      break;
-    default:
-      SCHRO_ASSERT (0);
-      break;
-  }
+  glActiveTextureARB (GL_TEXTURE0_ARB + 1);
+  glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
+  glActiveTextureARB (GL_TEXTURE0_ARB);
 }
 
 void
-schro_opengl_shader_bind_upsampled2_ref1 (SchroOpenGLShader* shader, GLuint texture)
+schro_opengl_shader_bind_upsampled2_ref1 (GLuint texture)
 {
-  switch (shader->index) {
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_0:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_0_WEIGHT:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_3a:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_3a_WEIGHT:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_3b:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_3b_WEIGHT:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_0:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_0_WEIGHT:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_3a:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_3a_WEIGHT:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_3b:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_3b_WEIGHT:
-      glActiveTextureARB (GL_TEXTURE0_ARB + 3);
-      glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
-      glUniform1iARB (shader->uniforms->upsampled2_ref1, 3);
-      glActiveTextureARB (GL_TEXTURE0_ARB);
-      break;
-    default:
-      SCHRO_ASSERT (0);
-      break;
-  }
+  glActiveTextureARB (GL_TEXTURE0_ARB + 6);
+  glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
+  glActiveTextureARB (GL_TEXTURE0_ARB);
 }
 
 void
-schro_opengl_shader_bind_upsampled2_ref2 (SchroOpenGLShader* shader, GLuint texture)
+schro_opengl_shader_bind_upsampled2_ref2 (GLuint texture)
 {
-  switch (shader->index) {
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_0_3a:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_0_3a_WEIGHT:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_0_3b:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_0_3b_WEIGHT:
-      glActiveTextureARB (GL_TEXTURE0_ARB + 4);
-      glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
-      glUniform1iARB (shader->uniforms->upsampled2_ref2, 4);
-      glActiveTextureARB (GL_TEXTURE0_ARB);
-      break;
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_3a:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_3a_WEIGHT:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_3b:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_3b_WEIGHT:
-      glActiveTextureARB (GL_TEXTURE0_ARB + 5);
-      glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
-      glUniform1iARB (shader->uniforms->upsampled2_ref2, 5);
-      glActiveTextureARB (GL_TEXTURE0_ARB);
-      break;
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_3a:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_3a_WEIGHT:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_3b:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_3b_WEIGHT:
-      glActiveTextureARB (GL_TEXTURE0_ARB + 7);
-      glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
-      glUniform1iARB (shader->uniforms->upsampled2_ref2, 7);
-      glActiveTextureARB (GL_TEXTURE0_ARB);
-      break;
-    default:
-      SCHRO_ASSERT (0);
-      break;
-  }
+  glActiveTextureARB (GL_TEXTURE0_ARB + 7);
+  glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
+  glActiveTextureARB (GL_TEXTURE0_ARB);
 }
 
 void
-schro_opengl_shader_bind_upsampled3 (SchroOpenGLShader* shader, GLuint texture)
+schro_opengl_shader_bind_upsampled3 (GLuint texture)
 {
-  switch (shader->index) {
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_3b:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_3b_WEIGHT:
-      glActiveTextureARB (GL_TEXTURE0_ARB + 4);
-      glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
-      glUniform1iARB (shader->uniforms->upsampled3, 4);
-      glActiveTextureARB (GL_TEXTURE0_ARB);
-      break;
-    default:
-      SCHRO_ASSERT (0);
-      break;
-  }
+  glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
 }
 
 void
-schro_opengl_shader_bind_upsampled3_ref1 (SchroOpenGLShader* shader, GLuint texture)
+schro_opengl_shader_bind_upsampled3_ref1 (GLuint texture)
 {
-  switch (shader->index) {
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_0:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_0_WEIGHT:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_3a:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_3a_WEIGHT:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_3b:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_3b_WEIGHT:
-      glActiveTextureARB (GL_TEXTURE0_ARB + 4);
-      glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
-      glUniform1iARB (shader->uniforms->upsampled3_ref1, 4);
-      glActiveTextureARB (GL_TEXTURE0_ARB);
-      break;
-    default:
-      SCHRO_ASSERT (0);
-      break;
-  }
+  glActiveTextureARB (GL_TEXTURE0_ARB + 1);
+  glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
+  glActiveTextureARB (GL_TEXTURE0_ARB);
 }
 
 void
-schro_opengl_shader_bind_upsampled3_ref2 (SchroOpenGLShader* shader, GLuint texture)
+schro_opengl_shader_bind_upsampled3_ref2 (GLuint texture)
 {
-  switch (shader->index) {
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_0_3b:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_0_3b_WEIGHT:
-      glActiveTextureARB (GL_TEXTURE0_ARB + 5);
-      glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
-      glUniform1iARB (shader->uniforms->upsampled3_ref2, 5);
-      glActiveTextureARB (GL_TEXTURE0_ARB);
-      break;
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_3b:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_3b_WEIGHT:
-      glActiveTextureARB (GL_TEXTURE0_ARB + 6);
-      glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
-      glUniform1iARB (shader->uniforms->upsampled3_ref2, 6);
-      glActiveTextureARB (GL_TEXTURE0_ARB);
-      break;
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_3b:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_3b_WEIGHT:
-      glActiveTextureARB (GL_TEXTURE0_ARB + 8);
-      glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
-      glUniform1iARB (shader->uniforms->upsampled3_ref2, 8);
-      glActiveTextureARB (GL_TEXTURE0_ARB);
-      break;
-    default:
-      SCHRO_ASSERT (0);
-      break;
-  }
+  glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
 }
 
 void
-schro_opengl_shader_bind_upsampled4 (SchroOpenGLShader* shader, GLuint texture)
+schro_opengl_shader_bind_upsampled4 (GLuint texture)
 {
-  switch (shader->index) {
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_3b:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_REF_PREC_3b_WEIGHT:
-      glActiveTextureARB (GL_TEXTURE0_ARB + 5);
-      glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
-      glUniform1iARB (shader->uniforms->upsampled4, 5);
-      glActiveTextureARB (GL_TEXTURE0_ARB);
-      break;
-    default:
-      SCHRO_ASSERT (0);
-      break;
-  }
+  glActiveTextureARB (GL_TEXTURE0_ARB + 5);
+  glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
+  glActiveTextureARB (GL_TEXTURE0_ARB);
 }
 
 void
-schro_opengl_shader_bind_upsampled4_ref1 (SchroOpenGLShader* shader, GLuint texture)
+schro_opengl_shader_bind_upsampled4_ref1 (GLuint texture)
 {
-  switch (shader->index) {
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_0:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_0_WEIGHT:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_3a:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_3a_WEIGHT:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_3b:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_3b_WEIGHT:
-      glActiveTextureARB (GL_TEXTURE0_ARB + 5);
-      glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
-      glUniform1iARB (shader->uniforms->upsampled4_ref1, 5);
-      glActiveTextureARB (GL_TEXTURE0_ARB);
-      break;
-    default:
-      SCHRO_ASSERT (0);
-      break;
-  }
+  glActiveTextureARB (GL_TEXTURE0_ARB + 5);
+  glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
+  glActiveTextureARB (GL_TEXTURE0_ARB);
 }
 
 void
-schro_opengl_shader_bind_upsampled4_ref2 (SchroOpenGLShader* shader, GLuint texture)
+schro_opengl_shader_bind_upsampled4_ref2 (GLuint texture)
 {
-  switch (shader->index) {
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_0_3b:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_0_3b_WEIGHT:
-      glActiveTextureARB (GL_TEXTURE0_ARB + 6);
-      glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
-      glUniform1iARB (shader->uniforms->upsampled4_ref2, 6);
-      glActiveTextureARB (GL_TEXTURE0_ARB);
-      break;
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_3b:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_3b_WEIGHT:
-      glActiveTextureARB (GL_TEXTURE0_ARB + 7);
-      glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
-      glUniform1iARB (shader->uniforms->upsampled4_ref2, 7);
-      glActiveTextureARB (GL_TEXTURE0_ARB);
-      break;
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_3b:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_3b_WEIGHT:
-      glActiveTextureARB (GL_TEXTURE0_ARB + 9);
-      glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
-      glUniform1iARB (shader->uniforms->upsampled4_ref2, 9);
-      glActiveTextureARB (GL_TEXTURE0_ARB);
-      break;
-    default:
-      SCHRO_ASSERT (0);
-      break;
-  }
+  glActiveTextureARB (GL_TEXTURE0_ARB + 4);
+  glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
+  glActiveTextureARB (GL_TEXTURE0_ARB);
 }
 
 void
-schro_opengl_shader_bind_upsampled_ref1 (SchroOpenGLShader* shader, GLuint texture)
+schro_opengl_shader_bind_upsampled_ref1 (GLuint texture)
 {
-  switch (shader->index) {
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_0_0:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_0_0_WEIGHT:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_0_3a:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_0_3a_WEIGHT:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_0_3b:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_0_3b_WEIGHT:
-      glActiveTextureARB (GL_TEXTURE0_ARB + 2);
-      glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
-      glUniform1iARB (shader->uniforms->upsampled_ref1, 2);
-      glActiveTextureARB (GL_TEXTURE0_ARB);
-      break;
-    default:
-      SCHRO_ASSERT (0);
-      break;
-  }
+  glActiveTextureARB (GL_TEXTURE0_ARB + 1);
+  glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
+  glActiveTextureARB (GL_TEXTURE0_ARB);
 }
 
 void
-schro_opengl_shader_bind_upsampled_ref2 (SchroOpenGLShader* shader, GLuint texture)
+schro_opengl_shader_bind_upsampled_ref2 (GLuint texture)
 {
-  switch (shader->index) {
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_0_0:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_0_0_WEIGHT:
-      glActiveTextureARB (GL_TEXTURE0_ARB + 3);
-      glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
-      glUniform1iARB (shader->uniforms->upsampled_ref2, 3);
-      glActiveTextureARB (GL_TEXTURE0_ARB);
-      break;
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_0:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3a_0_WEIGHT:
-      glActiveTextureARB (GL_TEXTURE0_ARB + 4);
-      glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
-      glUniform1iARB (shader->uniforms->upsampled_ref2, 4);
-      glActiveTextureARB (GL_TEXTURE0_ARB);
-      break;
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_0:
-    case SCHRO_OPENGL_SHADER_OBMC_RENDER_BIREF_PREC_3b_0_WEIGHT:
-      glActiveTextureARB (GL_TEXTURE0_ARB + 6);
-      glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
-      glUniform1iARB (shader->uniforms->upsampled_ref2, 6);
-      glActiveTextureARB (GL_TEXTURE0_ARB);
-      break;
-    default:
-      SCHRO_ASSERT (0);
-      break;
-  }
+  glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
 }
 
 void
-schro_opengl_shader_bind_uyvy (SchroOpenGLShader* shader, GLuint texture)
+schro_opengl_shader_bind_uyvy (GLuint texture)
 {
-  switch (shader->index) {
-    case SCHRO_OPENGL_SHADER_CONVERT_U8_Y4_UYVY:
-    case SCHRO_OPENGL_SHADER_CONVERT_U8_U2_UYVY:
-    case SCHRO_OPENGL_SHADER_CONVERT_U8_V2_UYVY:
-      glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
-      glUniform1iARB (shader->uniforms->uyvy, 0);
-      break;
-    default:
-      SCHRO_ASSERT (0);
-      break;
-  }
+  glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
 }
 
 void
-schro_opengl_shader_bind_v2 (SchroOpenGLShader* shader, GLuint texture)
+schro_opengl_shader_bind_v2 (GLuint texture)
 {
-  switch (shader->index) {
-    case SCHRO_OPENGL_SHADER_CONVERT_YUYV_U8_422:
-      glActiveTextureARB (GL_TEXTURE0_ARB + 3);
-      glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
-      glUniform1iARB (shader->uniforms->v2, 3);
-      glActiveTextureARB (GL_TEXTURE0_ARB);
-      break;
-    case SCHRO_OPENGL_SHADER_CONVERT_UYVY_U8_422:
-      glActiveTextureARB (GL_TEXTURE0_ARB + 2);
-      glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
-      glUniform1iARB (shader->uniforms->v2, 2);
-      glActiveTextureARB (GL_TEXTURE0_ARB);
-      break;
-    default:
-      SCHRO_ASSERT (0);
-      break;
-  }
+  glActiveTextureARB (GL_TEXTURE0_ARB + 6);
+  glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
+  glActiveTextureARB (GL_TEXTURE0_ARB);
 }
 
 void
-schro_opengl_shader_bind_v4 (SchroOpenGLShader* shader, GLuint texture)
+schro_opengl_shader_bind_v4 (GLuint texture)
 {
-  switch (shader->index) {
-    case SCHRO_OPENGL_SHADER_CONVERT_AYUV_U8_444:
-      glActiveTextureARB (GL_TEXTURE0_ARB + 2);
-      glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
-      glUniform1iARB (shader->uniforms->v4, 2);
-      glActiveTextureARB (GL_TEXTURE0_ARB);
-      break;
-    default:
-      SCHRO_ASSERT (0);
-      break;
-  }
+  glActiveTextureARB (GL_TEXTURE0_ARB + 8);
+  glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
+  glActiveTextureARB (GL_TEXTURE0_ARB);
 }
 
 void
-schro_opengl_shader_bind_y4 (SchroOpenGLShader* shader, GLuint texture)
+schro_opengl_shader_bind_y4 (GLuint texture)
 {
-  switch (shader->index) {
-    case SCHRO_OPENGL_SHADER_CONVERT_YUYV_U8_422:
-    case SCHRO_OPENGL_SHADER_CONVERT_AYUV_U8_444:
-      glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
-      glUniform1iARB (shader->uniforms->y4, 0);
-      break;
-    case SCHRO_OPENGL_SHADER_CONVERT_UYVY_U8_422:
-      glActiveTextureARB (GL_TEXTURE0_ARB + 1);
-      glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
-      glUniform1iARB (shader->uniforms->y4, 1);
-      glActiveTextureARB (GL_TEXTURE0_ARB);
-      break;
-    default:
-      SCHRO_ASSERT (0);
-      break;
-  }
+  glActiveTextureARB (GL_TEXTURE0_ARB + 4);
+  glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
+  glActiveTextureARB (GL_TEXTURE0_ARB);
 }
 
 void
-schro_opengl_shader_bind_yuyv (SchroOpenGLShader* shader, GLuint texture)
+schro_opengl_shader_bind_yuyv (GLuint texture)
 {
-  switch (shader->index) {
-    case SCHRO_OPENGL_SHADER_CONVERT_U8_Y4_YUYV:
-    case SCHRO_OPENGL_SHADER_CONVERT_U8_U2_YUYV:
-    case SCHRO_OPENGL_SHADER_CONVERT_U8_V2_YUYV:
-      glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
-      glUniform1iARB (shader->uniforms->yuyv, 0);
-      break;
-    default:
-      SCHRO_ASSERT (0);
-      break;
-  }
+  glBindTexture (GL_TEXTURE_RECTANGLE_ARB, texture);
 }
 
 void

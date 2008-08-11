@@ -151,16 +151,16 @@ schro_opengl_motion_render_ref_block (SchroOpenGLMotion *opengl_motion,
 
   #define UNIFORMS_PREC_0_BLOCK(_ref, _texture, _offset, _x, _y) \
       do { \
-        schro_opengl_shader_bind_##_texture (shader, \
-            opengl_motion->src_canvases[_ref][0]->texture); \
+        schro_opengl_shader_bind_##_texture \
+            (opengl_motion->src_canvases[_ref][0]->texture); \
         schro_opengl_shader_bind_##_offset (shader, (_x) - x, (_y) - y); \
       } while (0)
 
   #define UNIFORMS_PREC_1_BLOCK(_ref, _texture, _offset, _x, _y) \
       do { \
         int sub = (((_y) & 1) << 1) | ((_x) & 1); \
-        schro_opengl_shader_bind_##_texture (shader, \
-            opengl_motion->src_canvases[_ref][sub]->texture); \
+        schro_opengl_shader_bind_##_texture \
+            (opengl_motion->src_canvases[_ref][sub]->texture); \
         schro_opengl_shader_bind_##_offset (shader, ((_x) >> 1) - x, \
             ((_y) >> 1) - y); \
       } while (0)
@@ -322,16 +322,16 @@ schro_opengl_motion_render_biref_block (SchroOpenGLMotion *opengl_motion,
 
   #define UNIFORMS_PREC_0_BLOCK(_ref, _texture, _offset, _x, _y) \
       do { \
-        schro_opengl_shader_bind_##_texture (shader, \
-            opengl_motion->src_canvases[_ref][0]->texture); \
+        schro_opengl_shader_bind_##_texture \
+            (opengl_motion->src_canvases[_ref][0]->texture); \
         schro_opengl_shader_bind_##_offset (shader, (_x) - x, (_y) - y); \
       } while (0)
 
   #define UNIFORMS_PREC_1_BLOCK(_ref, _texture, _offset, _x, _y) \
       do { \
         int sub = (((_y) & 1) << 1) | ((_x) & 1); \
-        schro_opengl_shader_bind_##_texture (shader, \
-            opengl_motion->src_canvases[_ref][sub]->texture); \
+        schro_opengl_shader_bind_##_texture \
+            (opengl_motion->src_canvases[_ref][sub]->texture); \
         schro_opengl_shader_bind_##_offset (shader, ((_x) >> 1) - x, \
             ((_y) >> 1) - y); \
       } while (0)
@@ -844,8 +844,7 @@ schro_opengl_motion_render (SchroMotion *motion, SchroFrame *dest)
 
         glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, dest_canvas->framebuffer);
 
-        schro_opengl_shader_bind_source (shader_copy,
-            dest_canvas->secondary->texture);
+        schro_opengl_shader_bind_source (dest_canvas->secondary->texture);
 
         schro_opengl_render_quad (0, 0, motion->width, motion->height);
 
@@ -857,83 +856,7 @@ schro_opengl_motion_render (SchroMotion *motion, SchroFrame *dest)
       glBindFramebufferEXT (GL_FRAMEBUFFER_EXT,
           dest_canvas->secondary->framebuffer);
 
-      //glBindTexture (GL_TEXTURE_RECTANGLE_ARB, dest_canvas->texture);
-      // FIXME: to be removed by a better texture slot allocation in the shader compiler
-      glUseProgramObjectARB (opengl_motion.shader_dc->program);
-      schro_opengl_shader_bind_previous (opengl_motion.shader_dc,
-          dest_canvas->texture);
-      glUseProgramObjectARB (opengl_motion.shader_ref_prec_0->program);
-      schro_opengl_shader_bind_previous (opengl_motion.shader_ref_prec_0,
-          dest_canvas->texture);
-      glUseProgramObjectARB (opengl_motion.shader_ref_prec_0_weight->program);
-      schro_opengl_shader_bind_previous (opengl_motion.shader_ref_prec_0_weight,
-          dest_canvas->texture);
-      glUseProgramObjectARB (opengl_motion.shader_ref_prec_3a->program);
-      schro_opengl_shader_bind_previous (opengl_motion.shader_ref_prec_3a,
-          dest_canvas->texture);
-      glUseProgramObjectARB (opengl_motion.shader_ref_prec_3a_weight->program);
-      schro_opengl_shader_bind_previous (opengl_motion.shader_ref_prec_3a_weight,
-          dest_canvas->texture);
-      glUseProgramObjectARB (opengl_motion.shader_ref_prec_3b->program);
-      schro_opengl_shader_bind_previous (opengl_motion.shader_ref_prec_3b,
-          dest_canvas->texture);
-      glUseProgramObjectARB (opengl_motion.shader_ref_prec_3b_weight->program);
-      schro_opengl_shader_bind_previous (opengl_motion.shader_ref_prec_3b_weight,
-          dest_canvas->texture);
-      glUseProgramObjectARB (opengl_motion.shader_biref_prec_0_0->program);
-      schro_opengl_shader_bind_previous (opengl_motion.shader_biref_prec_0_0,
-          dest_canvas->texture);
-      glUseProgramObjectARB (opengl_motion.shader_biref_prec_0_0_weight->program);
-      schro_opengl_shader_bind_previous (opengl_motion.shader_biref_prec_0_0_weight,
-          dest_canvas->texture);
-      glUseProgramObjectARB (opengl_motion.shader_biref_prec_0_3a->program);
-      schro_opengl_shader_bind_previous (opengl_motion.shader_biref_prec_0_3a,
-          dest_canvas->texture);
-      glUseProgramObjectARB (opengl_motion.shader_biref_prec_0_3a_weight->program);
-      schro_opengl_shader_bind_previous (opengl_motion.shader_biref_prec_0_3a_weight,
-          dest_canvas->texture);
-      glUseProgramObjectARB (opengl_motion.shader_biref_prec_0_3b->program);
-      schro_opengl_shader_bind_previous (opengl_motion.shader_biref_prec_0_3b,
-          dest_canvas->texture);
-      glUseProgramObjectARB (opengl_motion.shader_biref_prec_0_3b_weight->program);
-      schro_opengl_shader_bind_previous (opengl_motion.shader_biref_prec_0_3b_weight,
-          dest_canvas->texture);
-      glUseProgramObjectARB (opengl_motion.shader_biref_prec_3a_0->program);
-      schro_opengl_shader_bind_previous (opengl_motion.shader_biref_prec_3a_0,
-          dest_canvas->texture);
-      glUseProgramObjectARB (opengl_motion.shader_biref_prec_3a_0_weight->program);
-      schro_opengl_shader_bind_previous (opengl_motion.shader_biref_prec_3a_0_weight,
-          dest_canvas->texture);
-      glUseProgramObjectARB (opengl_motion.shader_biref_prec_3a_3a->program);
-      schro_opengl_shader_bind_previous (opengl_motion.shader_biref_prec_3a_3a,
-          dest_canvas->texture);
-      glUseProgramObjectARB (opengl_motion.shader_biref_prec_3a_3a_weight->program);
-      schro_opengl_shader_bind_previous (opengl_motion.shader_biref_prec_3a_3a_weight,
-          dest_canvas->texture);
-      glUseProgramObjectARB (opengl_motion.shader_biref_prec_3a_3b->program);
-      schro_opengl_shader_bind_previous (opengl_motion.shader_biref_prec_3a_3b,
-          dest_canvas->texture);
-      glUseProgramObjectARB (opengl_motion.shader_biref_prec_3a_3b_weight->program);
-      schro_opengl_shader_bind_previous (opengl_motion.shader_biref_prec_3a_3b_weight,
-          dest_canvas->texture);
-      glUseProgramObjectARB (opengl_motion.shader_biref_prec_3b_0->program);
-      schro_opengl_shader_bind_previous (opengl_motion.shader_biref_prec_3b_0,
-          dest_canvas->texture);
-      glUseProgramObjectARB (opengl_motion.shader_biref_prec_3b_0_weight->program);
-      schro_opengl_shader_bind_previous (opengl_motion.shader_biref_prec_3b_0_weight,
-          dest_canvas->texture);
-      glUseProgramObjectARB (opengl_motion.shader_biref_prec_3b_3a->program);
-      schro_opengl_shader_bind_previous (opengl_motion.shader_biref_prec_3b_3a,
-          dest_canvas->texture);
-      glUseProgramObjectARB (opengl_motion.shader_biref_prec_3b_3a_weight->program);
-      schro_opengl_shader_bind_previous (opengl_motion.shader_biref_prec_3b_3a_weight,
-          dest_canvas->texture);
-      glUseProgramObjectARB (opengl_motion.shader_biref_prec_3b_3b->program);
-      schro_opengl_shader_bind_previous (opengl_motion.shader_biref_prec_3b_3b,
-          dest_canvas->texture);
-      glUseProgramObjectARB (opengl_motion.shader_biref_prec_3b_3b_weight->program);
-      schro_opengl_shader_bind_previous (opengl_motion.shader_biref_prec_3b_3b_weight,
-          dest_canvas->texture);
+      schro_opengl_shader_bind_previous (dest_canvas->texture);
 
       SCHRO_OPENGL_CHECK_ERROR
 
@@ -950,86 +873,8 @@ schro_opengl_motion_render (SchroMotion *motion, SchroFrame *dest)
           if (previous_spatial_weight_block != spatial_weight_block) {
             previous_spatial_weight_block = spatial_weight_block;
 
-            /*glActiveTextureARB (GL_TEXTURE1_ARB);
-            glBindTexture (GL_TEXTURE_RECTANGLE_ARB,
-                spatial_weight_block->canvas->texture);
-            glActiveTextureARB (GL_TEXTURE0_ARB);*/
-            // FIXME: to be removed by a better texture slot allocation in the shader compiler
-            glUseProgramObjectARB (opengl_motion.shader_dc->program);
-            schro_opengl_shader_bind_spatial_weight (opengl_motion.shader_dc,
-                spatial_weight_block->canvas->texture);
-            glUseProgramObjectARB (opengl_motion.shader_ref_prec_0->program);
-            schro_opengl_shader_bind_spatial_weight (opengl_motion.shader_ref_prec_0,
-                spatial_weight_block->canvas->texture);
-            glUseProgramObjectARB (opengl_motion.shader_ref_prec_0_weight->program);
-            schro_opengl_shader_bind_spatial_weight (opengl_motion.shader_ref_prec_0_weight,
-                spatial_weight_block->canvas->texture);
-            glUseProgramObjectARB (opengl_motion.shader_ref_prec_3a->program);
-            schro_opengl_shader_bind_spatial_weight (opengl_motion.shader_ref_prec_3a,
-                spatial_weight_block->canvas->texture);
-            glUseProgramObjectARB (opengl_motion.shader_ref_prec_3a_weight->program);
-            schro_opengl_shader_bind_spatial_weight (opengl_motion.shader_ref_prec_3a_weight,
-                spatial_weight_block->canvas->texture);
-            glUseProgramObjectARB (opengl_motion.shader_ref_prec_3b->program);
-            schro_opengl_shader_bind_spatial_weight (opengl_motion.shader_ref_prec_3b,
-                spatial_weight_block->canvas->texture);
-            glUseProgramObjectARB (opengl_motion.shader_ref_prec_3b_weight->program);
-            schro_opengl_shader_bind_spatial_weight (opengl_motion.shader_ref_prec_3b_weight,
-                spatial_weight_block->canvas->texture);
-            glUseProgramObjectARB (opengl_motion.shader_biref_prec_0_0->program);
-            schro_opengl_shader_bind_spatial_weight (opengl_motion.shader_biref_prec_0_0,
-                spatial_weight_block->canvas->texture);
-            glUseProgramObjectARB (opengl_motion.shader_biref_prec_0_0_weight->program);
-            schro_opengl_shader_bind_spatial_weight (opengl_motion.shader_biref_prec_0_0_weight,
-                spatial_weight_block->canvas->texture);
-            glUseProgramObjectARB (opengl_motion.shader_biref_prec_0_3a->program);
-            schro_opengl_shader_bind_spatial_weight (opengl_motion.shader_biref_prec_0_3a,
-                spatial_weight_block->canvas->texture);
-            glUseProgramObjectARB (opengl_motion.shader_biref_prec_0_3a_weight->program);
-            schro_opengl_shader_bind_spatial_weight (opengl_motion.shader_biref_prec_0_3a_weight,
-                spatial_weight_block->canvas->texture);
-            glUseProgramObjectARB (opengl_motion.shader_biref_prec_0_3b->program);
-            schro_opengl_shader_bind_spatial_weight (opengl_motion.shader_biref_prec_0_3b,
-                spatial_weight_block->canvas->texture);
-            glUseProgramObjectARB (opengl_motion.shader_biref_prec_0_3b_weight->program);
-            schro_opengl_shader_bind_spatial_weight (opengl_motion.shader_biref_prec_0_3b_weight,
-                spatial_weight_block->canvas->texture);
-            glUseProgramObjectARB (opengl_motion.shader_biref_prec_3a_0->program);
-            schro_opengl_shader_bind_spatial_weight (opengl_motion.shader_biref_prec_3a_0,
-                spatial_weight_block->canvas->texture);
-            glUseProgramObjectARB (opengl_motion.shader_biref_prec_3a_0_weight->program);
-            schro_opengl_shader_bind_spatial_weight (opengl_motion.shader_biref_prec_3a_0_weight,
-                spatial_weight_block->canvas->texture);
-            glUseProgramObjectARB (opengl_motion.shader_biref_prec_3a_3a->program);
-            schro_opengl_shader_bind_spatial_weight (opengl_motion.shader_biref_prec_3a_3a,
-                spatial_weight_block->canvas->texture);
-            glUseProgramObjectARB (opengl_motion.shader_biref_prec_3a_3a_weight->program);
-            schro_opengl_shader_bind_spatial_weight (opengl_motion.shader_biref_prec_3a_3a_weight,
-                spatial_weight_block->canvas->texture);
-            glUseProgramObjectARB (opengl_motion.shader_biref_prec_3a_3b->program);
-            schro_opengl_shader_bind_spatial_weight (opengl_motion.shader_biref_prec_3a_3b,
-                spatial_weight_block->canvas->texture);
-            glUseProgramObjectARB (opengl_motion.shader_biref_prec_3a_3b_weight->program);
-            schro_opengl_shader_bind_spatial_weight (opengl_motion.shader_biref_prec_3a_3b_weight,
-                spatial_weight_block->canvas->texture);
-            glUseProgramObjectARB (opengl_motion.shader_biref_prec_3b_0->program);
-            schro_opengl_shader_bind_spatial_weight (opengl_motion.shader_biref_prec_3b_0,
-                spatial_weight_block->canvas->texture);
-            glUseProgramObjectARB (opengl_motion.shader_biref_prec_3b_0_weight->program);
-            schro_opengl_shader_bind_spatial_weight (opengl_motion.shader_biref_prec_3b_0_weight,
-                spatial_weight_block->canvas->texture);
-            glUseProgramObjectARB (opengl_motion.shader_biref_prec_3b_3a->program);
-            schro_opengl_shader_bind_spatial_weight (opengl_motion.shader_biref_prec_3b_3a,
-                spatial_weight_block->canvas->texture);
-            glUseProgramObjectARB (opengl_motion.shader_biref_prec_3b_3a_weight->program);
-            schro_opengl_shader_bind_spatial_weight (opengl_motion.shader_biref_prec_3b_3a_weight,
-                spatial_weight_block->canvas->texture);
-            glUseProgramObjectARB (opengl_motion.shader_biref_prec_3b_3b->program);
-            schro_opengl_shader_bind_spatial_weight (opengl_motion.shader_biref_prec_3b_3b,
-                spatial_weight_block->canvas->texture);
-            glUseProgramObjectARB (opengl_motion.shader_biref_prec_3b_3b_weight->program);
-            schro_opengl_shader_bind_spatial_weight (opengl_motion.shader_biref_prec_3b_3b_weight,
-                spatial_weight_block->canvas->texture);
+            schro_opengl_shader_bind_spatial_weight
+                (spatial_weight_block->canvas->texture);
           }
 
           schro_opengl_motion_render_block (&opengl_motion, i, x, y, u, v);
@@ -1045,8 +890,7 @@ schro_opengl_motion_render (SchroMotion *motion, SchroFrame *dest)
 
     glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, dest_canvas->framebuffer);
 
-    schro_opengl_shader_bind_source (shader_shift,
-        dest_canvas->secondary->texture);
+    schro_opengl_shader_bind_source (dest_canvas->secondary->texture);
 
     schro_opengl_render_quad (0, 0, motion->width, motion->height);
 

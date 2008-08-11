@@ -137,7 +137,7 @@ schro_opengl_frame_convert_with_shader (SchroFrame *dest, SchroFrame *src,
 
     glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, dest_canvas->framebuffer);
 
-    schro_opengl_shader_bind_source (shader, src_canvas->texture);
+    schro_opengl_shader_bind_source (src_canvas->texture);
 
     SCHRO_OPENGL_CHECK_ERROR
 
@@ -150,8 +150,9 @@ schro_opengl_frame_convert_with_shader (SchroFrame *dest, SchroFrame *src,
 #if SCHRO_OPENGL_UNBIND_TEXTURES
     glBindTexture (GL_TEXTURE_RECTANGLE_ARB, 0);
 #endif
-    glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, 0);
   }
+
+  glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, 0);
 
   schro_opengl_unlock_context (src_canvas->opengl);
 }
@@ -159,7 +160,7 @@ schro_opengl_frame_convert_with_shader (SchroFrame *dest, SchroFrame *src,
 static void
 schro_opengl_frame_unpack_with_shader (SchroFrame *dest, SchroFrame *src,
     int shader_y_index, int shader_u_index, int shader_v_index,
-    void (*bind_texture)(SchroOpenGLShader *, GLenum texture))
+    void (*bind_texture) (GLenum texture))
 {
   int i;
   int width, height;
@@ -198,7 +199,7 @@ schro_opengl_frame_unpack_with_shader (SchroFrame *dest, SchroFrame *src,
 
     glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, dest_canvas->framebuffer);
 
-    bind_texture (shader, src_canvas->texture);
+    bind_texture (src_canvas->texture);
 
     SCHRO_OPENGL_CHECK_ERROR
 
@@ -219,10 +220,9 @@ schro_opengl_frame_unpack_with_shader (SchroFrame *dest, SchroFrame *src,
 
 static void
 schro_opengl_frame_pack_with_shader (SchroFrame *dest, SchroFrame *src,
-    int shader_index,
-    void (*bind_y_texture)(SchroOpenGLShader *, GLenum texture),
-    void (*bind_u_texture)(SchroOpenGLShader *, GLenum texture),
-    void (*bind_v_texture)(SchroOpenGLShader *, GLenum texture))
+    int shader_index, void (*bind_y_texture) (GLenum texture),
+    void (*bind_u_texture) (GLenum texture),
+    void (*bind_v_texture) (GLenum texture))
 {
   int width, height;
   SchroOpenGLCanvas *dest_canvas = NULL;
@@ -264,9 +264,9 @@ schro_opengl_frame_pack_with_shader (SchroFrame *dest, SchroFrame *src,
 
   glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, dest_canvas->framebuffer);
 
-  bind_y_texture (shader, src_y_canvas->texture);
-  bind_u_texture (shader, src_u_canvas->texture);
-  bind_v_texture (shader, src_v_canvas->texture);
+  bind_y_texture (src_y_canvas->texture);
+  bind_u_texture (src_u_canvas->texture);
+  bind_v_texture (src_v_canvas->texture);
 
   SCHRO_OPENGL_CHECK_ERROR
 

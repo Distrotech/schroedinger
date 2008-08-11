@@ -3,6 +3,7 @@
 import re
 import sys
 
+# FIXME: use has_key and setdefault
 
 
 def error (message):
@@ -28,6 +29,11 @@ def compare_uniform_bind_signatures (a, b):
     return -1
 
   return 1
+
+
+
+def compare_uniform_names (a, b):
+  return cmp (a.name, b.name)
 
 
 
@@ -159,19 +165,80 @@ class Block (Item):
 
 
 
-class Uniform:
-  def __init__ (self, shader_index, type, name, read_define, read_slot,
-      is_dependent):
-    if read_slot > 9:
-      error ("read slot for " + repr (name) + " is out of bounds in shader "
-          + repr (shader_index) + ". expecting a value in [0..9] but found "
-          + repr (read_slot))
+uniform_name_shader_indices = {} # keyed by uniform name
+uniform_name_read_slots = {} # keyed by uniform name
+shader_index_read_slots = {} # keyed by shader index
 
+
+
+def reallocate_read_slots ():
+  # check for uniforms that represent the only read slot in all shaders that
+  # contain it. to such a uniform the optimal read slot 0 can be assigned
+  # interferencefree
+  for uniform_name in uniform_name_read_slots.keys ():
+    for shader_index in uniform_name_shader_indices[uniform_name]:
+      if len (shader_index_read_slots[shader_index]) > 1:
+        break
+    else:
+      for shader_index in uniform_name_shader_indices[uniform_name]:
+        shader_index_read_slots[shader_index] = [0]
+
+      uniform_name_read_slots[uniform_name] = 0
+
+  # check for uniforms that have an out-of-bounds read slot
+  for uniform_name in uniform_name_read_slots.keys ():
+    if uniform_name_read_slots[uniform_name] < 10:
+      continue
+
+    free_read_slots = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+    # remove all read slots from the freelist that are already in use by other
+    # shaders that contain this uniform. afterwards the freelist only contains
+    # valid read slots that are free in all shaders that contain this uniform
+    for shader_index in uniform_name_shader_indices[uniform_name]:
+      for read_slot in shader_index_read_slots[shader_index]:
+        if read_slot in free_read_slots:
+          free_read_slots.remove (read_slot)
+
+    if len (free_read_slots) == 0:
+      error ("no free read slot to reallocate " + repr (uniform_name) + " to")
+
+    # pick the first valid and free read slot to assign it to the uniform with
+    # an invalid read slot
+    for shader_index in uniform_name_shader_indices[uniform_name]:
+      shader_index_read_slots[shader_index].remove \
+          (uniform_name_read_slots[uniform_name])
+      shader_index_read_slots[shader_index] += [free_read_slots[0]]
+
+    uniform_name_read_slots[uniform_name] = free_read_slots[0]
+
+
+
+class Uniform:
+  def __init__ (self, shader_index, type, name, read_define, is_dependent):
     self.shader_index = shader_index
     self.type = type
     self.name = name
     self.read_define = read_define
-    self.read_slot = read_slot
+    self.read_slot = -1
+
+    if len (self.read_define) > 0:
+      if self.name not in uniform_name_shader_indices.keys ():
+        uniform_name_shader_indices[self.name] = [self.shader_index]
+      else:
+        uniform_name_shader_indices[self.name] += [self.shader_index]
+
+      if self.name in uniform_name_read_slots.keys ():
+        self.read_slot = uniform_name_read_slots[self.name]
+      else:
+        self.read_slot = len (uniform_name_read_slots.keys ())
+        uniform_name_read_slots[self.name] = self.read_slot
+
+      if self.shader_index not in shader_index_read_slots.keys ():
+        shader_index_read_slots[self.shader_index] = [self.read_slot]
+      else:
+        shader_index_read_slots[self.shader_index] += [self.read_slot]
+
     self.is_dependent = is_dependent
     self.glsl_mappings = {
         "integer" : {
@@ -243,6 +310,14 @@ class Uniform:
         "var4_u8"  : "v0, v1, v2, v3",
         "var4_s16" : "v0, v1, v2, v3"}
 
+  def update_read_slot (self):
+    if len (self.read_define) > 0:
+      self.read_slot = uniform_name_read_slots[self.name]
+
+      if self.read_slot > 9:
+        error ("uniform " + repr (self.name) + " has invalid read slot "
+            + repr (self.read_slot) + " in shader " + repr (self.shader_index))
+
   def print_glsl (self, mode):
     if self.is_dependent:
       return ""
@@ -258,6 +333,10 @@ class Uniform:
           + self.name + ";\\n\"\n"
 
   def print_bind_signature (self):
+    if len (self.read_define) > 0:
+      return "schro_opengl_shader_bind_" + self.name + " (" \
+          + self.signature_mappings[self.type] + ")"
+
     return "schro_opengl_shader_bind_" + self.name \
         + " (SchroOpenGLShader* shader, " + self.signature_mappings[self.type] \
         + ")"
@@ -269,19 +348,15 @@ class Uniform:
     if parameter_mapping == "texture":
       if self.read_slot > 0:
         return \
-            "      glActiveTextureARB (GL_TEXTURE0_ARB + " \
+            "  glActiveTextureARB (GL_TEXTURE0_ARB + " \
             + repr (self.read_slot) + ");\n" \
-            "      glBindTexture (GL_TEXTURE_RECTANGLE_ARB, " \
+            "  glBindTexture (GL_TEXTURE_RECTANGLE_ARB, " \
             + parameter_mapping + ");\n" \
-            "      " + bind_mapping + " (shader->uniforms->" + self.name \
-            + ", " + repr (self.read_slot) + ");\n" \
-            "      glActiveTextureARB (GL_TEXTURE0_ARB);\n"
+            "  glActiveTextureARB (GL_TEXTURE0_ARB);\n"
       else:
         return \
-            "      glBindTexture (GL_TEXTURE_RECTANGLE_ARB, " \
-            + parameter_mapping + ");\n" \
-            "      " + bind_mapping + " (shader->uniforms->" + self.name \
-            + ", " + repr (self.read_slot) + ");\n"
+            "  glBindTexture (GL_TEXTURE_RECTANGLE_ARB, " \
+            + parameter_mapping + ");\n"
     else:
       return \
           "      " + bind_mapping + " (shader->uniforms->" + self.name \
@@ -404,7 +479,7 @@ class Shader:
       if builtin in self.builtin_uniforms.keys ():
         for uniform in self.builtin_uniforms[builtin]:
           self.add_uniform (Uniform (self.index, uniform[0], uniform[1], "",
-              -1, True))
+              True))
 
   def parse_define (self, line):
     if line.matches_version (self.version):
@@ -425,7 +500,7 @@ class Shader:
             + line.content + "' at line " + repr (line.number))
 
       self.add_uniform (Uniform (self.index, match.group (1), match.group (2),
-          "", -1, False))
+          "", False))
 
   def parse_builtins (self, block):
     for child in block.children:
@@ -468,9 +543,7 @@ class Shader:
               read_define += "_RAW"
 
             self.add_uniform (Uniform (self.index, "sampler", match.group (1),
-                read_define, self.next_read_slot, False))
-
-            self.next_read_slot += 1
+                read_define, False))
 
             string = string[match.span ()[1]:]
             match = read_call_re.search (string)
@@ -491,9 +564,7 @@ class Shader:
               error ("internal match error")
 
             self.add_uniform (Uniform (self.index, "sampler", match.group (1),
-                read_define, self.next_read_slot, False))
-
-            self.next_read_slot += 1
+                read_define, False))
 
             string = string[match.span ()[1]:]
             match = copy_call_re.search (string)
@@ -631,7 +702,31 @@ class Shader:
 
     return string + "      \"" + indent + "}\\n\"\n"
 
+  def check_uniform_read_slots (self):
+    used_read_slots = {}
 
+    for uniform in self.uniforms.values ():
+      if len (uniform.read_define) > 0:
+        if uniform.read_slot < 0 or uniform.read_slot > 9:
+          error ("uniform " + repr (uniform.name) + " of shader "
+              + repr (self.index) + " has a read define "
+              + repr (uniform.read_define) + " set but an invalid read slot "
+              + repr (uniform.read_slot))
+      elif uniform.read_slot != -1:
+        if len (uniform.read_define) == 0:
+          error ("uniform " + repr (uniform.name) + " of shader "
+              + repr (self.index) + " has a read slot "
+              + repr (uniform.read_slot) + " assigned but no read define "
+              + repr (uniform.read_define))
+
+      if uniform.read_slot != -1:
+        if uniform.read_slot in used_read_slots.keys ():
+          error ("read slot " + repr (uniform.read_slot)
+              + " assigned to uniform " + repr (uniform.name) + " of shader "
+              + repr (self.index) + " is already in use by uniform "
+              + repr (used_read_slots[uniform.read_slot]))
+
+        used_read_slots[uniform.read_slot] = uniform.name
 
 class ShaderBunch:
   def __init__ (self):
@@ -847,6 +942,16 @@ if __name__ == "__main__":
         else:
           uniforms[uniform_bind_signature] += [uniform]
 
+  reallocate_read_slots ()
+
+  for list in uniforms.values ():
+    for uniform in list:
+      uniform.update_read_slot ()
+
+  for shader_bunch in shader_bunches:
+    for shader in shader_bunch.shaders:
+      shader.check_uniform_read_slots ()
+
   uniform_names.sort ()
   uniform_bind_signatures.sort (compare_uniform_bind_signatures)
 
@@ -889,10 +994,21 @@ if __name__ == "__main__":
   output_c = output_c.replace ("===== UNIFORM RESOLVERS =====\n",
       output_c_uniform_resolvers)
 
+  output_c_uniform_read_slot_bindings = ""
+
+  for uniform_name in uniform_names:
+    if uniform_name in uniform_name_read_slots:
+      output_c_uniform_read_slot_bindings \
+          += "  UNIFORM (" + uniform_name + ", " + repr (uniform_name_read_slots[uniform_name]) + ");\n"
+
+  output_c = output_c.replace ("===== UNIFORM READ SLOT BINDINGS =====\n",
+      output_c_uniform_read_slot_bindings)
+
   output_c_uniform_bind_functions = ""
 
   for uniform_bind_signature in uniform_bind_signatures:
     output_c_uniform_bind = {"integer" : "", "float" : ""}
+    output_c_uniform_bind_is_texture = False
 
     for mode in output_c_uniform_bind.keys ():
       uniform_bind_cases = []
@@ -900,6 +1016,9 @@ if __name__ == "__main__":
 
       for uniform in uniforms[uniform_bind_signature]:
         uniform_bind_case = uniform.print_bind_case (mode)
+
+        if uniform.read_slot != -1:
+          output_c_uniform_bind_is_texture = True
 
         if uniform_bind_case not in uniform_bind_cases:
           uniform_bind_cases += [uniform_bind_case]
@@ -911,11 +1030,16 @@ if __name__ == "__main__":
           uniform_bind_case_shader_indices[uniform_bind_case] \
               += [uniform.shader_index]
 
-      for uniform_bind_case in uniform_bind_cases:
-        for shader_index in uniform_bind_case_shader_indices[uniform_bind_case]:
-          output_c_uniform_bind[mode] += "    case " + shader_index + ":\n"
+      if output_c_uniform_bind_is_texture:
+        for uniform_bind_case in uniform_bind_cases:
+          output_c_uniform_bind[mode] += uniform_bind_case
+      else:
+        for uniform_bind_case in uniform_bind_cases:
+          for shader_index in \
+              uniform_bind_case_shader_indices[uniform_bind_case]:
+            output_c_uniform_bind[mode] += "    case " + shader_index + ":\n"
 
-        output_c_uniform_bind[mode] += uniform_bind_case + "      break;\n"
+          output_c_uniform_bind[mode] += uniform_bind_case + "      break;\n"
 
     if output_c_uniform_bind["integer"] != output_c_uniform_bind["float"]:
       output_c_uniform_bind_functions += \
@@ -937,15 +1061,21 @@ if __name__ == "__main__":
           "  }\n" \
           "}\n\n"
     else:
-      output_c_uniform_bind_functions += \
-          "void\n" + uniform_bind_signature + "\n{\n" \
-          "  switch (shader->index) {\n" \
-          + output_c_uniform_bind["integer"] \
-          + "    default:\n" \
-          "      SCHRO_ASSERT (0);\n"\
-          "      break;\n"\
-          "  }\n" \
-          "}\n\n"
+      if output_c_uniform_bind_is_texture:
+        output_c_uniform_bind_functions += \
+            "void\n" + uniform_bind_signature + "\n{\n" \
+            + output_c_uniform_bind["integer"] \
+            + "}\n\n"
+      else:
+        output_c_uniform_bind_functions += \
+            "void\n" + uniform_bind_signature + "\n{\n" \
+            "  switch (shader->index) {\n" \
+            + output_c_uniform_bind["integer"] \
+            + "    default:\n" \
+            "      SCHRO_ASSERT (0);\n"\
+            "      break;\n"\
+            "  }\n" \
+            "}\n\n"
 
   output_c = output_c.replace ("===== UNIFORM BIND FUNCTIONS =====\n\n",
       output_c_uniform_bind_functions)

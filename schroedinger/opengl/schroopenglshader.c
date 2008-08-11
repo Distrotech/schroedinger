@@ -161,7 +161,7 @@ schro_opengl_shader_new (int index, const char* name, const char* code)
 
   handle = glCreateShaderObjectARB (GL_FRAGMENT_SHADER_ARB);
 
-  glShaderSourceARB (handle, 1, (const char**)&code, 0);
+  glShaderSourceARB (handle, 1, (const char **) &code, 0);
   glCompileShaderARB (handle);
 
   ok = schro_opengl_shader_check_status (handle, GL_OBJECT_COMPILE_STATUS_ARB,

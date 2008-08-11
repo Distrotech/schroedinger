@@ -13,7 +13,6 @@ struct _SchroOpenGLShader {
   GLhandleARB program;
   SchroOpenGLUniforms* uniforms;
   int is_integer;
-
 };
 
 SchroOpenGLShaderLibrary *schro_opengl_shader_library_new (SchroOpenGL *opengl);
