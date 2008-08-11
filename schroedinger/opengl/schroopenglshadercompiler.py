@@ -3,7 +3,6 @@
 import re
 import sys
 
-# FIXME: use has_key and setdefault
 
 
 def error (message):
@@ -47,6 +46,14 @@ def compare_uniforms_integer (a, b):
 
 
 
+class EmptyListDict (dict):
+  def __missing__ (self, key):
+    self[key] = []
+
+    return self[key]
+
+
+
 class Item:
   def __init__ (self):
     self.version = ".*"
@@ -58,7 +65,7 @@ class Item:
 
 class Line (Item):
   def __init__ (self, number, string):
-    Item.__init__(self)
+    Item.__init__ (self)
 
     self.number = number
     self.level = 0
@@ -93,13 +100,13 @@ class Line (Item):
     return string
 
   def decrease_level (self):
-    self.level = self.level - 1
+    self.level -= 1
 
 
 
 class Block (Item):
   def __init__ (self):
-    Item.__init__(self)
+    Item.__init__ (self)
 
     self.header = None
     self.children = []
@@ -165,9 +172,9 @@ class Block (Item):
 
 
 
-uniform_name_shader_indices = {} # keyed by uniform name
+uniform_name_shader_indices = EmptyListDict () # keyed by uniform name
 uniform_name_read_slots = {} # keyed by uniform name
-shader_index_read_slots = {} # keyed by shader index
+shader_index_read_slots = EmptyListDict () # keyed by shader index
 
 
 
@@ -175,7 +182,7 @@ def reallocate_read_slots ():
   # check for uniforms that represent the only read slot in all shaders that
   # contain it. to such a uniform the optimal read slot 0 can be assigned
   # interferencefree
-  for uniform_name in uniform_name_read_slots.keys ():
+  for uniform_name in uniform_name_read_slots:
     for shader_index in uniform_name_shader_indices[uniform_name]:
       if len (shader_index_read_slots[shader_index]) > 1:
         break
@@ -186,7 +193,7 @@ def reallocate_read_slots ():
       uniform_name_read_slots[uniform_name] = 0
 
   # check for uniforms that have an out-of-bounds read slot
-  for uniform_name in uniform_name_read_slots.keys ():
+  for uniform_name in uniform_name_read_slots:
     if uniform_name_read_slots[uniform_name] < 10:
       continue
 
@@ -223,21 +230,15 @@ class Uniform:
     self.read_slot = -1
 
     if len (self.read_define) > 0:
-      if self.name not in uniform_name_shader_indices.keys ():
-        uniform_name_shader_indices[self.name] = [self.shader_index]
-      else:
-        uniform_name_shader_indices[self.name] += [self.shader_index]
+      uniform_name_shader_indices[self.name] += [self.shader_index]
 
-      if self.name in uniform_name_read_slots.keys ():
+      if self.name in uniform_name_read_slots:
         self.read_slot = uniform_name_read_slots[self.name]
       else:
-        self.read_slot = len (uniform_name_read_slots.keys ())
+        self.read_slot = len (uniform_name_read_slots)
         uniform_name_read_slots[self.name] = self.read_slot
 
-      if self.shader_index not in shader_index_read_slots.keys ():
-        shader_index_read_slots[self.shader_index] = [self.read_slot]
-      else:
-        shader_index_read_slots[self.shader_index] += [self.read_slot]
+      shader_index_read_slots[self.shader_index] += [self.read_slot]
 
     self.is_dependent = is_dependent
     self.glsl_mappings = {
@@ -322,7 +323,7 @@ class Uniform:
     if self.is_dependent:
       return ""
 
-    if mode not in self.glsl_mappings.keys ():
+    if mode not in self.glsl_mappings:
       error ("internal mode error")
 
     if len (self.read_define) > 0:
@@ -422,7 +423,7 @@ class Shader:
     self.next_read_slot = 0
 
   def add_uniform (self, uniform):
-    if uniform.name in self.uniforms.keys ():
+    if uniform.name in self.uniforms:
       if self.uniforms[uniform.name].type != uniform.type:
         error ("uniform name '" + repr (uniform.name)
             + "' within a shader must be unique")
@@ -464,7 +465,7 @@ class Shader:
     used_builtins = []
 
     for builtin in self.used_builtins:
-      if builtin in self.builtin_dependencies.keys ():
+      if builtin in self.builtin_dependencies:
         builtin_dependency = self.builtin_dependencies[builtin]
 
         if builtin_dependency not in used_builtins:
@@ -476,7 +477,7 @@ class Shader:
     self.used_builtins = used_builtins
 
     for builtin in self.used_builtins:
-      if builtin in self.builtin_uniforms.keys ():
+      if builtin in self.builtin_uniforms:
         for uniform in self.builtin_uniforms[builtin]:
           self.add_uniform (Uniform (self.index, uniform[0], uniform[1], "",
               True))
@@ -506,7 +507,7 @@ class Shader:
     for child in block.children:
       if isinstance (child, Line):
         if child.matches_version (self.version):
-          for builtin in self.available_builtins.keys ():
+          for builtin in self.available_builtins:
             if re.search ("([^a-zA-Z0-9_]|^)" + builtin + "([^a-zA-Z0-9_]|$)", \
                 child.content) is not None and \
                 builtin not in self.used_builtins:
@@ -575,8 +576,8 @@ class Shader:
         error ("internal type error")
 
   def replace_vars_with_glsl (self, string, type):
-    if type in self.glsl_var_mappings.keys ():
-      for key in self.glsl_var_mappings[type].keys ():
+    if type in self.glsl_var_mappings:
+      for key in self.glsl_var_mappings[type]:
         string = re.sub ("([^a-zA-Z0-9_]|^)" + key + " ",
             "\\1" + self.glsl_var_mappings[type][key] + " ", string)
     else:
@@ -720,13 +721,15 @@ class Shader:
               + repr (uniform.read_define))
 
       if uniform.read_slot != -1:
-        if uniform.read_slot in used_read_slots.keys ():
+        if uniform.read_slot in used_read_slots:
           error ("read slot " + repr (uniform.read_slot)
               + " assigned to uniform " + repr (uniform.name) + " of shader "
               + repr (self.index) + " is already in use by uniform "
               + repr (used_read_slots[uniform.read_slot]))
 
         used_read_slots[uniform.read_slot] = uniform.name
+
+
 
 class ShaderBunch:
   def __init__ (self):
@@ -922,7 +925,7 @@ if __name__ == "__main__":
   for shader_bunch in shader_bunches:
     for shader in shader_bunch.shaders:
       for uniform in shader.uniforms.values ():
-        if uniform.name in uniform_types.keys ():
+        if uniform.name in uniform_types:
           if uniform_types[uniform.name] != uniform.type:
             error ("expecting uniform type be consistent per uniform name, "
                 "but found '" + uniform_types[uniform.name] + " "
@@ -999,7 +1002,8 @@ if __name__ == "__main__":
   for uniform_name in uniform_names:
     if uniform_name in uniform_name_read_slots:
       output_c_uniform_read_slot_bindings \
-          += "  UNIFORM (" + uniform_name + ", " + repr (uniform_name_read_slots[uniform_name]) + ");\n"
+          += "  UNIFORM (" + uniform_name + ", " \
+          + repr (uniform_name_read_slots[uniform_name]) + ");\n"
 
   output_c = output_c.replace ("===== UNIFORM READ SLOT BINDINGS =====\n",
       output_c_uniform_read_slot_bindings)
@@ -1010,9 +1014,10 @@ if __name__ == "__main__":
     output_c_uniform_bind = {"integer" : "", "float" : ""}
     output_c_uniform_bind_is_texture = False
 
-    for mode in output_c_uniform_bind.keys ():
+    for mode in output_c_uniform_bind:
       uniform_bind_cases = []
-      uniform_bind_case_shader_indices = {} # keyed by uniform_bind_case
+      uniform_bind_case_shader_indices \
+          = EmptyListDict () # keyed by uniform_bind_case
 
       for uniform in uniforms[uniform_bind_signature]:
         uniform_bind_case = uniform.print_bind_case (mode)
@@ -1023,12 +1028,8 @@ if __name__ == "__main__":
         if uniform_bind_case not in uniform_bind_cases:
           uniform_bind_cases += [uniform_bind_case]
 
-        if uniform_bind_case not in uniform_bind_case_shader_indices.keys ():
-          uniform_bind_case_shader_indices[uniform_bind_case] \
-              = [uniform.shader_index]
-        else:
-          uniform_bind_case_shader_indices[uniform_bind_case] \
-              += [uniform.shader_index]
+        uniform_bind_case_shader_indices[uniform_bind_case] \
+            += [uniform.shader_index]
 
       if output_c_uniform_bind_is_texture:
         for uniform_bind_case in uniform_bind_cases:
