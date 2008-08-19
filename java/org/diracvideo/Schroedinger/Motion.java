@@ -1,5 +1,6 @@
 package org.diracvideo.Schroedinger;
 import java.awt.Dimension;
+import java.awt.Point;
 
 /** Motion
  *
@@ -14,7 +15,7 @@ class Motion {
     int xbsep, ybsep, xblen, yblen, width, height;
     int chroma_h_shift, chroma_v_shift;
     int xoffset, yoffset, max_fast_x, max_fast_y;
-    short obmc[], weight_x[], weight_y[];
+    short weight_x[], weight_y[];
     Block block, tmp_ref[];
 
     static int ARITH_SUPERBLOCK = 0;
@@ -96,16 +97,16 @@ class Motion {
 	    dcPrediction(x,y,pred);
 	    mv.dc[0] = pred[0] + 
 		ar[ARITH_DC_0].decodeSint(Context.LUMA_DC_CONT_BIN1,
-						  Context.LUMA_DC_VALUE,
-						  Context.LUMA_DC_SIGN);
+					  Context.LUMA_DC_VALUE,
+					  Context.LUMA_DC_SIGN);
 	    mv.dc[1] = pred[1] + 
 		ar[ARITH_DC_1].decodeSint(Context.CHROMA1_DC_CONT_BIN1,
-						  Context.CHROMA1_DC_VALUE,
-						  Context.CHROMA1_DC_SIGN);
+					  Context.CHROMA1_DC_VALUE,
+					  Context.CHROMA1_DC_SIGN);
 	    mv.dc[2] = pred[2] + 
 		ar[ARITH_DC_2].decodeSint(Context.CHROMA2_DC_CONT_BIN1,
-							   Context.CHROMA2_DC_VALUE,
-							   Context.CHROMA2_DC_SIGN);
+					  Context.CHROMA2_DC_VALUE,
+					  Context.CHROMA2_DC_SIGN);
 	} else {
 	    int pred_x, pred_y;
 	    if(par.have_global_motion) {
@@ -150,12 +151,12 @@ class Motion {
 		ybsep = par.ybsep_luma;
 		xblen = par.xblen_luma;
 		yblen = par.yblen_luma;
-	    } /* else {
+	    } else {
 		xbsep = par.xbsep_luma >> chroma_h_shift;
 		xblen = par.xblen_luma >> chroma_h_shift;
 		ybsep = par.ybsep_luma >> chroma_v_shift;
 		yblen = par.yblen_luma >> chroma_v_shift;
-		} */
+	    } 
 	    block = new Block(new Dimension(xblen, yblen));
 	    width = out[k].s.width;
 	    height = out[k].s.height;
@@ -181,10 +182,10 @@ class Motion {
     }
 
     private void predictBlock(Block out, int i, int j, int k) {
-	int xstart = i*xblen - xoffset;
-	int xstop = Math.min(width - 1, (i+1)*xblen + xoffset);
-	int ystart = j*yblen - yoffset;
-	int ystop = Math.min(height - 1, (j+1)*yblen + yoffset);
+	int xstart = i*xbsep - xoffset;
+	int xstop = Math.min(width - 1, (i+1)*xbsep + xoffset);
+	int ystart = j*ybsep - yoffset;
+	int ystop = Math.min(height - 1, (j+1)*ybsep + yoffset);
 	Vector mv = getVector(i,j);
 	if(k != 0  && !mv.using_global)
 	    mv = mv.scale(chroma_h_shift, chroma_v_shift);
@@ -208,8 +209,7 @@ class Motion {
 	if(mv.using_global) {
 	    for(int i = 0; i < par.num_refs; i++) {
 		par.global[i].getVector(mv, x, y, i);
-		if(k != 0) /* this is only needed for global motion compensation,
-			    * otherwise it is done before we get here */
+		if(k != 0) 
 		    mv = mv.scale(chroma_h_shift, chroma_v_shift);
 	    }
 	}
@@ -228,8 +228,8 @@ class Motion {
 	    val = (short)(weight*predictSubPixel(1, px, py));
 	    break;
 	case 3:
-	    px = (x << par.mv_precision) + mv.dx[0] ;
-	    py = (y << par.mv_precision) + mv.dy[0] ;
+	    px = (x << par.mv_precision) + mv.dx[0];
+	    py = (y << par.mv_precision) + mv.dy[0];
 	    val = (short)(par.picture_weight_1*predictSubPixel(0, px, py));
 	    px = (x << par.mv_precision) + mv.dx[1];
 	    py = (x << par.mv_precision) + mv.dy[1];
@@ -238,29 +238,6 @@ class Motion {
 	    break;
 	}
 	return (short)Util.roundShift(val, par.picture_weight_bits);
-    }
-
-    private short predictSubPixel(int ref, int px, int py) {
-	if(par.mv_precision < 2) { 
-	    return tmp_ref[ref].real(px, py); 
-	}
-	int prec = par.mv_precision;
-	int add = 1 << (prec - 1);
-	int hx = px >> (prec-1);
-	int hy = py >> (prec-1);
-	int rx = px - (hx << (prec-1));
-	int ry = py - (hy << (prec-1));
-	int w00,w01, w10, w11;
-	w00 = (add - rx)*(add - ry);
-	w01 = (add - rx)*ry;
-	w10 = rx*(add - ry);
-	w11 = rx*ry;
-	int val = w00*tmp_ref[ref].real(px, py) + 
-	    w01*tmp_ref[ref].real(px + 1, py) +
-	    w10*tmp_ref[ref].real(px, py + 1) + 
-	    w11*tmp_ref[ref].real(px + 1, py + 1);
-	return (short)((val + (1 << (2*prec-3))) >> (2*prec - 2));
-
     }
 
     private void accumalateBlock(int x, int y, Block frame) {
@@ -289,11 +266,33 @@ class Motion {
 	}
     }
 
+    private short predictSubPixel(int ref, int px, int py) {
+	if(par.mv_precision < 2) { 
+	    return tmp_ref[ref].real(px, py); 
+	}
+	int prec = par.mv_precision;
+	int add = 1 << (prec - 1);
+	int hx = px >> (prec-1);
+	int hy = py >> (prec-1);
+	int rx = px - (hx << (prec-1));
+	int ry = py - (hy << (prec-1));
+	int w00,w01, w10, w11;
+	w00 = (add - rx)*(add - ry);
+	w01 = (add - rx)*ry;
+	w10 = rx*(add - ry);
+	w11 = rx*ry;
+	int val = w00*tmp_ref[ref].real(px, py) + 
+	    w01*tmp_ref[ref].real(px + 1, py) +
+	    w10*tmp_ref[ref].real(px, py + 1) + 
+	    w11*tmp_ref[ref].real(px + 1, py + 1);
+	return (short)((val + (1 << (2*prec-3))) >> (2*prec - 2));
+
+    }
+
     private void initOBMCWeight() {
 	short wx, wy;
-	weight_y = new short[yblen];
-	weight_x = new short[xblen];
-	obmc = new short[yblen*xblen];
+	weight_y = new short[yblen*2];
+	weight_x = new short[xblen*2];
 	for(int i = 0; i < xblen; i++) {
 	    if(xoffset == 0) {
 		wx = 8;
@@ -317,11 +316,6 @@ class Motion {
 		wy = 8;
 	    }
 	    weight_y[j] = wy;
-	}
-	for(int j = 0; j < yblen; j++) {
-	    for(int i = 0; i < xblen; i++) {
-		obmc[i + j*xblen] = (short)(weight_x[i] * weight_y[j]);
-	    }
 	}
     }
 
