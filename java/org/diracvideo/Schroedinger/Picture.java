@@ -230,6 +230,7 @@ public class Picture {
      *
      * Decodes the picture. */
     public synchronized void decode() {
+	System.err.println("decode Enter");
 	if(status != Decoder.Status.OK)
 	    return;
 	status = Decoder.Status.WAIT;
@@ -241,7 +242,7 @@ public class Picture {
 	    decodeRefs();
 	    initializeMCFrames();
 	    decodeMotionCompensate();
-	    if(true) {
+	    if(zero_residual) {
 		iwt_frame = mc_frame;
 	    } else {
 		for(int i = 0; i < 3; i++)
@@ -250,6 +251,7 @@ public class Picture {
 	}
 	createImage();
 	status = Decoder.Status.DONE;
+	System.err.println("decode Leave");
     }
 
     
@@ -279,7 +281,7 @@ public class Picture {
 		break;
 	    case OK:
 	    case WAIT:
-		synchronized(refs[i]) {} /* wait for the decoding to end */
+		synchronized(refs[i]) {}
 		break;
 	    case ERROR:
 		error = refs[i].error;
@@ -319,13 +321,13 @@ public class Picture {
 	short y,u,v;
 	short Y[] = iwt_frame[0].d, U[] = iwt_frame[1].d,
 	    V[] = iwt_frame[2].d;
-	int xFac = (lum.width > chrom.width ? 2 : 1);
-	int yFac = (lum.height > chrom.height ? 2 : 1);
+	int xFac = format.chromaHShift(),
+	    yFac = format.chromaVShift();
         for(int i = 0; i < format.height; i++) {
             for(int j = 0; j < format.width; j++) {
 		y = (short)(Y[j + i*lum.width]+128);
-		u = (short)(U[j/xFac + (i/yFac)*chrom.width]);
-		v = (short)(V[j/xFac + (i/yFac)*chrom.width]);
+		u = (short)(U[(j >> xFac) + (i >> yFac)*chrom.width]);
+		v = (short)(V[(j >> xFac) + (i >> yFac)*chrom.width]);
                 pixels[j + i*format.width] = col.convert(y,u,v);
             }
 	} 
@@ -365,7 +367,7 @@ public class Picture {
 	    return;
 	}
 	try {
-	    File f = new File(String.format("%s_%d.png", num));
+	    File f = new File(String.format("%s_%d.png", streamname, num));
 	    ImageIO.write(img, "png", f);
 	} catch(IOException x) {
 	    System.err.format("Could not save pic %d for reason: %s\n",

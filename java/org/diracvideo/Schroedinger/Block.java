@@ -91,37 +91,6 @@ public final class Block {
     public void set(int x, int y, int v) {
 	set(x, y, (short)v);
     }
-    /** copies current block into another
-     *
-     * Since blocks can have offsets out of the 
-     * data, this method takes care to copy only the
-     * `real' part.
-     * The dimensions of b should be at least those
-     * off the block to be copied; if not this method
-     * does nothing. Block to be copied should be `real'.
-     *
-     * @param b  the block to be copied into */
-
-    public void copyTo(Block b) { 
-	int line, x, y, offset, length;
-	if(s.width > b.s.width ||
-	   s.height > b.s.height)
-	    return;
-	for(y = 0; y < s.height; y++) {
-	    line = (p.y + y)*o.width;
-	    if(line < 0 || line >= d.length) continue;
-	    if(p.x < 0) {
-		x = -p.x;
-		length = Math.min(s.width, b.s.width - x);
-		offset = 0;
-	    } else {
-		length = Math.min(s.width, o.width - p.x);
-		offset = p.x;
-		x = 0;
-	    }
-	    System.arraycopy(d, offset + line, b.d, b.index(x,y), length);
-	}
-    }
 
     public void addTo(Block b) {
 	int height = Math.min(b.s.height, s.height);
