@@ -26,7 +26,7 @@ public class Decoder {
 	out = new Queue(4);
 	fault = new Picture();
     }
-     
+    
     /** Push:
      * @param d byte array containing stream data
      * @param o offset in the byte array
@@ -34,12 +34,16 @@ public class Decoder {
      * The stated goal of this function is that
      * it should work even in the case of a so-called
      * DumbMuxingFormat which splits the dirac stream
-     * into x-byte segments, and that the driver program
+k     * into x-byte segments, and that the driver program
      * should only ever have to push such segments to 
      * the decoder. */
 
     public synchronized void push(byte d[], int o, int l) throws Exception {
-	push(new Buffer(d,o));
+	push(new Buffer(d,o,l));
+    }
+
+    private void debug(Buffer buf) {
+	System.err.println(new String(buf.d).substring(buf.b, buf.e));
     }
 
     private void push(Buffer buf) throws Exception {
@@ -74,7 +78,7 @@ public class Decoder {
 		return;
 	    } 
 	    if(next.getInt(0) != 0x42424344) 
-		throw new Exception("Incorret Magic Code (no Dirac stream)");
+		throw new Exception("Incorrect Magic Code (no Dirac stream)");
 	    int n = next.getInt(5);
 	    if(next.size() >= n) { /* complete packet in next buffer */
 		dispatchBuffer(next.sub(0,n));
