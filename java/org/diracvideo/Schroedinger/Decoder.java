@@ -22,7 +22,7 @@ public class Decoder {
 	next_frame_number = 0;
 	refs = new Queue(4);
 	in = new Queue(4);
-	out = new Queue(4);
+	out = new Queue(8);
     }
     
     /** Push:
@@ -138,7 +138,7 @@ public class Decoder {
     }
 
     /** A decoding loop */
-    public void run() {
+    public synchronized void run() {
 	while(!out.full() && !in.empty()) {
 	    try {
 		Picture pic = in.pop();
