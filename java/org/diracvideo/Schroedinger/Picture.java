@@ -52,12 +52,6 @@ public class Picture {
 	}
     }
 
-    public Picture() {
-	status = Decoder.Status.DONE;
-	num = -1;
-	img = new BufferedImage(200, 200, BufferedImage.TYPE_INT_RGB);
-    }
-
     public synchronized void parse() {
 	if(status != Decoder.Status.NULL)
 	    return;
@@ -230,7 +224,6 @@ public class Picture {
      *
      * Decodes the picture. */
     public synchronized void decode() {
-	System.err.println("decode Enter");
 	if(status != Decoder.Status.OK)
 	    return;
 	status = Decoder.Status.WAIT;
@@ -242,7 +235,7 @@ public class Picture {
 	    decodeRefs();
 	    initializeMCFrames();
 	    decodeMotionCompensate();
-	    if(zero_residual) {
+	    if(true) {
 		iwt_frame = mc_frame;
 	    } else {
 		for(int i = 0; i < 3; i++)
@@ -251,7 +244,6 @@ public class Picture {
 	}
 	createImage();
 	status = Decoder.Status.DONE;
-	System.err.println("decode Leave");
     }
 
     

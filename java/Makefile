@@ -1,5 +1,4 @@
 FILES = UnpackTest.class Wavelet2dTest.class DecoderTest.class\
-	ArithTest.class GeneralTest.class BlockTest.class
 
 test: lib ${FILES} 
 	@java DecoderTest 

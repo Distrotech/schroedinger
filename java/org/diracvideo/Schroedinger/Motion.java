@@ -54,7 +54,7 @@ class Motion {
     private void decodeMacroBlock(int x, int y) {
 	int split = splitPrediction(x,y);
 	Vector mv = getVector(x,y);
-	mv.split = (split + ar[0].decodeUint(Context.SB_F1, Context.SB_DATA))%3;
+	mv.split = (split + ar[ARITH_SUPERBLOCK].decodeUint(Context.SB_F1, Context.SB_DATA))%3;
 	switch(mv.split) {
 	case 0:
 	    decodePredictionUnit(mv, x, y);
@@ -88,9 +88,9 @@ class Motion {
 
     private void decodePredictionUnit(Vector mv, int x, int y) {
 	mv.pred_mode = modePrediction(x,y);
-	mv.pred_mode ^= ar[1].decodeBit(Context.BLOCK_MODE_REF1);
+	mv.pred_mode ^= ar[ARITH_PRED_MODE].decodeBit(Context.BLOCK_MODE_REF1);
 	if(par.num_refs > 1) {
-	    mv.pred_mode ^= (ar[1].decodeBit(Context.BLOCK_MODE_REF2) << 1);
+	    mv.pred_mode ^= (ar[ARITH_PRED_MODE].decodeBit(Context.BLOCK_MODE_REF2) << 1);
 	}
 	if(mv.pred_mode == 0) {
 	    int pred[] = new int[3];
@@ -140,6 +140,10 @@ class Motion {
 		}
 	    } 
 	}
+	mv.dx[0] = 0;
+	mv.dy[0] = 0;
+	mv.dx[1] = 0;
+	mv.dy[1] = 0;
     }
 
     public void render(Block out[], VideoFormat f) {
@@ -154,7 +158,7 @@ class Motion {
 	    for(int j = 0; j < par.y_num_blocks; j++)
 		for(int i = 0; i < par.x_num_blocks; i++) {
 		    predictBlock(out[k], i, j, k);
-		    accumalateBlock(out[k], i*xbsep - xoffset, 
+		    accumulateBlock(out[k], i*xbsep - xoffset, 
 				    j*ybsep - yoffset);
 		}
 	    out[k].shiftOut(6,32);
@@ -214,8 +218,13 @@ class Motion {
 	int xstart = (i*xbsep) - xoffset, 
 	    ystart = (j*ybsep) - yoffset;
 	Vector mv = getVector(i,j);
+	if(mv.pred_mode == 0) {
+	    for(int q = 0; j < yblen; j++) 
+		for(int p = 0; i < xblen; i++)
+		    block.set(p, q, (mv.dc[k]));
+	} 
 	if(k != 0 && !mv.using_global)
-	    mv = mv.scale(chroma_h_shift, chroma_v_shift);
+	    mv = mv.scale(chroma_h_shift, chroma_v_shift); 
 	for(int q = 0; q < yblen; q++) {
 	    int y = ystart + q;
 	    if(y < 0 || y > height - 1) continue;
@@ -287,14 +296,14 @@ class Motion {
     
     /* this method weighs the the work block with obmc and 
        adds it to the output block */
-    private void accumalateBlock(Block out, int x, int y) {
+    private void accumulateBlock(Block out, int x, int y) {
 	for(int j = 0; j < yblen; j++) {
 	    int inLine = block.line(j);
 	    int outLine = out.index(x, y + j);
 	    int w_y = weight_y[j];
-	    /*	    if(y + j < yoffset) {
+	    if(y + j < yoffset) {
 		w_y += weight_y[2*yoffset - j - 1];
-	    }
+	    } /*
 	    if(y + j >= par.y_num_blocks * ybsep - yoffset) {
 		w_y += weight_y[2*(yblen - yoffset) - j - 1];
 		} */
@@ -302,13 +311,13 @@ class Motion {
 	    for(int i = 0; i < xblen; i++) {
 		if(x + i < 0 || x + i >= out.s.width) continue;
 		int w_x = weight_x[i];
-		/*		if(x + i < xoffset) {
+	       	if(x + i < xoffset) {
 		    w_x += weight_x[2*xoffset - i - 1];
-		}
+		} /*
 		if(x + i >= par.x_num_blocks * xbsep - xoffset) {
 		    w_x += weight_x[2*(xblen - xoffset) - i - 1];
 		    } */
-		out.d[i + outLine] = (short)(block.d[i + inLine] * w_x * w_y);
+		out.d[i + outLine] += (short)(block.d[i + inLine] * w_x * w_y);
 	    }
 	}
     }

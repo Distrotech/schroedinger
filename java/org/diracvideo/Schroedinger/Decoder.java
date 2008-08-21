@@ -11,7 +11,6 @@ package org.diracvideo.Schroedinger;
 
 public class Decoder {
     private VideoFormat format;
-    private Picture fault;
     private int next_frame_number;
     public Status status = Status.OK;
     private Buffer next;
@@ -24,7 +23,6 @@ public class Decoder {
 	refs = new Queue(4);
 	in = new Queue(4);
 	out = new Queue(4);
-	fault = new Picture();
     }
     
     /** Push:
