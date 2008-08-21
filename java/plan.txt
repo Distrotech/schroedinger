@@ -23,7 +23,11 @@ x#16.4 Implement mv_precision=2	MC
 x#17   Make initial cortado plugin
 x#18   Add SchroDec into building cortado
 x#19   Fix cortado plugin
+<<<<<<< HEAD:java/plan.txt
 #20    Fix the blocky artefacts
+=======
+#20    Fix the blocky artefacts 
+>>>>>>> mc-alt:java/plan.txt
 #21    Add discontinuous blocks streaming to SchroDec, and
        skipping of images for better synchronisation.
 #30    Profile decoder and speed it up (NOTE: I don't know of a decent

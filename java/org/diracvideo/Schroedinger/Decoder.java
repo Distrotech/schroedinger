@@ -11,7 +11,6 @@ package org.diracvideo.Schroedinger;
 
 public class Decoder {
     private VideoFormat format;
-    private Picture fault;
     private int next_frame_number;
     public Status status = Status.OK;
     private Buffer next;
@@ -23,8 +22,7 @@ public class Decoder {
 	next_frame_number = 0;
 	refs = new Queue(4);
 	in = new Queue(4);
-	out = new Queue(4);
-	fault = new Picture();
+	out = new Queue(8);
     }
     
     /** Push:
@@ -147,7 +145,7 @@ k     * into x-byte segments, and that the driver program
     }
 
     /** A decoding loop */
-    public void run() {
+    public synchronized void run() {
 	while(!out.full() && !in.empty()) {
 	    try {
 		Picture pic = in.pop();

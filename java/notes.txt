@@ -67,7 +67,10 @@ This could trigger a bug in which reference pictures are not added
 to the reference queue before pictures are loaded. That's why I'm going to 
 rewrite the queue. (this has been done in the other branch queue).
 
+<<<<<<< HEAD:java/notes.txt
 
+=======
+>>>>>>> mc-alt:java/notes.txt
 The added dynamic range from the obmc is (hopefully) correctly shifted
 out now. Artefacts remain on the image. 
 The `strange 5 bits shiftout' is explained by the fact that getPixel()
@@ -96,7 +99,10 @@ advanced things, like skipping pictures if they are too late. I'm
 wondering if I can convince SchroDec to do this since I would hate
 having synchronisation logic in the Decoder class. (I probaly can by
 adding a skip() method to the decoder).
+<<<<<<< HEAD:java/notes.txt
 
 I started on lowdelay decoding in a branch called slice but I can't convince
 either dirac_encoder or schroenc to actually make a lowdelay syntax stream,
 so that work has stalled.
+=======
+>>>>>>> mc-alt:java/notes.txt

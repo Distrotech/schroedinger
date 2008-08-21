@@ -15,7 +15,7 @@ class Motion {
     int xbsep, ybsep, xblen, yblen, width, height;
     int chroma_h_shift, chroma_v_shift;
     int xoffset, yoffset, max_fast_x, max_fast_y;
-    short obmc[], weight_x[], weight_y[];
+    short weight_x[], weight_y[];
     Block block, tmp_ref[];
 
     static int ARITH_SUPERBLOCK = 0;
@@ -54,7 +54,7 @@ class Motion {
     private void decodeMacroBlock(int x, int y) {
 	int split = splitPrediction(x,y);
 	Vector mv = getVector(x,y);
-	mv.split = (split + ar[0].decodeUint(Context.SB_F1, Context.SB_DATA))%3;
+	mv.split = (split + ar[ARITH_SUPERBLOCK].decodeUint(Context.SB_F1, Context.SB_DATA))%3;
 	switch(mv.split) {
 	case 0:
 	    decodePredictionUnit(mv, x, y);
@@ -88,25 +88,25 @@ class Motion {
 
     private void decodePredictionUnit(Vector mv, int x, int y) {
 	mv.pred_mode = modePrediction(x,y);
-	mv.pred_mode ^= ar[1].decodeBit(Context.BLOCK_MODE_REF1);
+	mv.pred_mode ^= ar[ARITH_PRED_MODE].decodeBit(Context.BLOCK_MODE_REF1);
 	if(par.num_refs > 1) {
-	    mv.pred_mode ^= (ar[1].decodeBit(Context.BLOCK_MODE_REF2) << 1);
+	    mv.pred_mode ^= (ar[ARITH_PRED_MODE].decodeBit(Context.BLOCK_MODE_REF2) << 1);
 	}
 	if(mv.pred_mode == 0) {
 	    int pred[] = new int[3];
 	    dcPrediction(x,y,pred);
 	    mv.dc[0] = pred[0] + 
 		ar[ARITH_DC_0].decodeSint(Context.LUMA_DC_CONT_BIN1,
-						  Context.LUMA_DC_VALUE,
-						  Context.LUMA_DC_SIGN);
+					  Context.LUMA_DC_VALUE,
+					  Context.LUMA_DC_SIGN);
 	    mv.dc[1] = pred[1] + 
 		ar[ARITH_DC_1].decodeSint(Context.CHROMA1_DC_CONT_BIN1,
-						  Context.CHROMA1_DC_VALUE,
-						  Context.CHROMA1_DC_SIGN);
+					  Context.CHROMA1_DC_VALUE,
+					  Context.CHROMA1_DC_SIGN);
 	    mv.dc[2] = pred[2] + 
 		ar[ARITH_DC_2].decodeSint(Context.CHROMA2_DC_CONT_BIN1,
-							   Context.CHROMA2_DC_VALUE,
-							   Context.CHROMA2_DC_SIGN);
+					  Context.CHROMA2_DC_VALUE,
+					  Context.CHROMA2_DC_SIGN);
 	} else {
 	    int pred_x, pred_y;
 	    if(par.have_global_motion) {
@@ -131,8 +131,8 @@ class Motion {
 		if((mv.pred_mode & 2) != 0) {
 		    vectorPrediction(mv, x, y, 2);
 		    mv.dx[1] += ar[ARITH_REF2_X].decodeSint(Context.MV_REF2_H_CONT_BIN1,
-						 Context.MV_REF2_H_VALUE, 
-						 Context.MV_REF2_H_SIGN);
+							    Context.MV_REF2_H_VALUE, 
+							    Context.MV_REF2_H_SIGN);
 		    mv.dy[1] += ar[ARITH_REF2_Y].decodeSint(Context.MV_REF2_V_CONT_BIN1, 
 						 Context.MV_REF2_V_VALUE,
 						 Context.MV_REF2_V_SIGN);
@@ -140,79 +140,110 @@ class Motion {
 		}
 	    } 
 	}
+	mv.dx[0] = 0;
+	mv.dy[0] = 0;
+	mv.dx[1] = 0;
+	mv.dy[1] = 0;
     }
 
     public void render(Block out[], VideoFormat f) {
-
-	chroma_h_shift = f.chromaHShift();
-	chroma_v_shift = f.chromaVShift();
 	for(int k = 0; k < out.length; k++) {
-	    if(k == 0) {
-		xbsep = par.xbsep_luma;
-		ybsep = par.ybsep_luma;
-		xblen = par.xblen_luma;
-		yblen = par.yblen_luma;
-	    } /* else {
-		xbsep = par.xbsep_luma >> chroma_h_shift;
-		xblen = par.xblen_luma >> chroma_h_shift;
-		ybsep = par.ybsep_luma >> chroma_v_shift;
-		yblen = par.yblen_luma >> chroma_v_shift;
-		} */
+	    initializeRender(k,f);
 	    block = new Block(new Dimension(xblen, yblen));
-	    width = out[k].s.width;
-	    height = out[k].s.height;
-	    xoffset = (xblen - xbsep)/2;
-	    yoffset = (xblen - ybsep)/2;
-	    for(int i = 0; i < refs.length; i++) {
-		if(refs[i] == null)
-		    continue;
-		Block ref = refs[i].getComponent(k);
-		if(par.mv_precision > 0) {
-		    tmp_ref[i] = ref.upSample();
-		} else {
-		    tmp_ref[i] = ref;
-		}
+	    for(int i = 0; i < par.num_refs; i++) {
+		tmp_ref[i] = refs[i].getComponent(k);
+		if(par.mv_precision > 0)
+		    tmp_ref[i] = tmp_ref[i].upSample();
 	    }
-	    initOBMCWeight();
 	    for(int j = 0; j < par.y_num_blocks; j++)
-		for(int i = 0; i < par.x_num_blocks; i++)
+		for(int i = 0; i < par.x_num_blocks; i++) {
 		    predictBlock(out[k], i, j, k);
-	    out[k].shiftOut(6, 32);
+		    accumulateBlock(out[k], i*xbsep - xoffset, 
+				    j*ybsep - yoffset);
+		}
+	    out[k].shiftOut(6,32);
 	    out[k].clip(7);
 	}
     }
 
+    private void initializeRender(int k, VideoFormat f) {
+	chroma_h_shift = f.chromaHShift();
+	chroma_v_shift = f.chromaVShift();
+	yblen = par.yblen_luma;
+	xblen = par.xblen_luma;
+	ybsep = par.ybsep_luma;
+	xbsep = par.xbsep_luma;
+	width = f.width;
+	height = f.height;
+	if(k != 0) {
+	    yblen >>= chroma_v_shift;
+	    ybsep >>= chroma_v_shift;
+	    height >>= chroma_v_shift;
+	    xbsep >>= chroma_h_shift;
+	    xblen >>= chroma_h_shift;
+	    width >>= chroma_h_shift;
+	}
+	/* initialize obmc weight */
+	weight_y = new short[yblen];
+	weight_x = new short[xblen];
+	for(int i = 0; i < xblen; i++) {
+	    short wx;
+	    if(xoffset == 0) {
+		wx = 8;
+	    } else if( i < 2*xoffset) {
+		wx = Util.getRamp(i, xoffset);
+	    } else if(xblen - 1 - i < 2*xoffset) {
+		wx = Util.getRamp(xblen - 1 - i, xoffset);
+	    } else {
+		wx = 8;
+	    }
+	    weight_x[i] = wx;
+	}
+	for(int j = 0; j < yblen; j++) {
+	    short wy;
+	    if(yoffset == 0) {
+		wy = 8;
+	    } else if(j < 2*yoffset) {
+		wy = Util.getRamp(j, yoffset);
+	    } else if(yblen - 1 - j < 2*yoffset) {
+		wy = Util.getRamp(yblen - 1 - j, yoffset);
+	    } else {
+		wy = 8;
+	    }
+	    weight_y[j] = wy;
+	}
+    }
+
     private void predictBlock(Block out, int i, int j, int k) {
-	int xstart = i*xblen - xoffset;
-	int xstop = Math.min(width - 1, (i+1)*xblen + xoffset);
-	int ystart = j*yblen - yoffset;
-	int ystop = Math.min(height - 1, (j+1)*yblen + yoffset);
+	int xstart = (i*xbsep) - xoffset, 
+	    ystart = (j*ybsep) - yoffset;
 	Vector mv = getVector(i,j);
-	if(k != 0  && !mv.using_global)
-	    mv = mv.scale(chroma_h_shift, chroma_v_shift);
-	for(int y = Math.max(ystart, 0); y < ystop; y++) {
-	    int q = y - ystart;
-	    for(int x = Math.max(xstart, 0); x < xstop; x++) {
-		int p = x - xstart;
-		short val;
-		if(mv.pred_mode == 0) {
-		    val = (short)(mv.dc[k]);
-		} else {
-		    val = predictPixel(mv, x, y, k);
-		}
-		block.set(p, q,  val);
+	if(mv.pred_mode == 0) {
+	    for(int q = 0; j < yblen; j++) 
+		for(int p = 0; i < xblen; i++)
+		    block.set(p, q, (mv.dc[k]));
+	} 
+	if(k != 0 && !mv.using_global)
+	    mv = mv.scale(chroma_h_shift, chroma_v_shift); 
+	for(int q = 0; q < yblen; q++) {
+	    int y = ystart + q;
+	    if(y < 0 || y > height - 1) continue;
+	    for(int p = 0; p < xblen; p++) {
+		int x = xstart + p;
+		if(x < 0 || x > width - 1) continue;
+		block.set(p,q, predictPixel(mv, x, y, k));
 	    }
 	}
-	accumalateBlock(xstart, ystart, out);
     }
+
 
     private short predictPixel(Vector mv, int x,  int y, int k) {
 	if(mv.using_global) {
 	    for(int i = 0; i < par.num_refs; i++) {
 		par.global[i].getVector(mv, x, y, i);
-		if(k != 0) 
-		    mv = mv.scale(chroma_h_shift, chroma_v_shift);
 	    }
+	    if(k != 0) 
+		mv = mv.scale(chroma_h_shift, chroma_v_shift);
 	}
 	short weight = (short)(par.picture_weight_1 + par.picture_weight_2);
 	short val = 0;
@@ -241,32 +272,6 @@ class Motion {
 	return (short)Util.roundShift(val, par.picture_weight_bits);
     }
 
-    private void accumalateBlock(int x, int y, Block frame) {
-	for(int j = 0; j < yblen; j++) {
-	    int inLine = block.line(j);
-	    int outLine = frame.index(x, y + j);
-	    int w_y = weight_y[j];
-	    if(y + j < yoffset) {
-		w_y += weight_y[2*yoffset - j - 1];
-	    }
-	    if(y + j >= par.y_num_blocks * ybsep - yoffset) {
-		w_y += weight_y[2*(yblen - yoffset) - j - 1];
-	    }
-	    if(y + j < 0 || y + j >= frame.s.height) continue;
-	    for(int i = 0; i < xblen; i++) {
-		if(x + i < 0 || x + i >= frame.s.width) continue;
-		int w_x = weight_x[i];
-		if(x + i < xoffset) {
-		    w_x += weight_x[2*xoffset - i - 1];
-		}
-		if(x + i >= par.x_num_blocks * xbsep - xoffset) {
-		    w_x += weight_x[2*(xblen - xoffset) - i - 1];
-		}
-		frame.d[i + outLine] = (short)(block.d[i + inLine] * w_x * w_y);
-	    }
-	}
-    }
-
     private short predictSubPixel(int ref, int px, int py) {
 	if(par.mv_precision < 2) { 
 	    return tmp_ref[ref].real(px, py); 
@@ -287,41 +292,32 @@ class Motion {
 	    w10*tmp_ref[ref].real(px, py + 1) + 
 	    w11*tmp_ref[ref].real(px + 1, py + 1);
 	return (short)((val + (1 << (2*prec-3))) >> (2*prec - 2));
-
     }
-
-    private void initOBMCWeight() {
-	short wx, wy;
-	weight_y = new short[yblen];
-	weight_x = new short[xblen];
-	obmc = new short[yblen*xblen];
-	for(int i = 0; i < xblen; i++) {
-	    if(xoffset == 0) {
-		wx = 8;
-	    } else if( i < 2*xoffset) {
-		wx = Util.getRamp(i, xoffset);
-	    } else if(xblen - 1 - i < 2*xoffset) {
-		wx = Util.getRamp(xblen - 1 - i, xoffset);
-	    } else {
-		wx = 8;
-	    }
-	    weight_x[i] = wx;
-	}
+    
+    /* this method weighs the the work block with obmc and 
+       adds it to the output block */
+    private void accumulateBlock(Block out, int x, int y) {
 	for(int j = 0; j < yblen; j++) {
-	    if(yoffset == 0) {
-		wy = 8;
-	    } else if(j < 2*yoffset) {
-		wy = Util.getRamp(j, yoffset);
-	    } else if(yblen - 1 - j < 2*yoffset) {
-		wy = Util.getRamp(yblen - 1 - j, yoffset);
-	    } else {
-		wy = 8;
-	    }
-	    weight_y[j] = wy;
-	}
-	for(int j = 0; j < yblen; j++) {
+	    int inLine = block.line(j);
+	    int outLine = out.index(x, y + j);
+	    int w_y = weight_y[j];
+	    if(y + j < yoffset) {
+		w_y += weight_y[2*yoffset - j - 1];
+	    } /*
+	    if(y + j >= par.y_num_blocks * ybsep - yoffset) {
+		w_y += weight_y[2*(yblen - yoffset) - j - 1];
+		} */
+	    if(y + j < 0 || y + j >= out.s.height) continue;
 	    for(int i = 0; i < xblen; i++) {
-		obmc[i + j*xblen] = (short)(weight_x[i] * weight_y[j]);
+		if(x + i < 0 || x + i >= out.s.width) continue;
+		int w_x = weight_x[i];
+	       	if(x + i < xoffset) {
+		    w_x += weight_x[2*xoffset - i - 1];
+		} /*
+		if(x + i >= par.x_num_blocks * xbsep - xoffset) {
+		    w_x += weight_x[2*(xblen - xoffset) - i - 1];
+		    } */
+		out.d[i + outLine] += (short)(block.d[i + inLine] * w_x * w_y);
 	    }
 	}
     }
