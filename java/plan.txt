@@ -23,8 +23,10 @@ x#16.4 Implement mv_precision=2	MC
 x#17   Make initial cortado plugin
 x#18   Add SchroDec into building cortado
 x#19   Fix cortado plugin
-#20    Fix the blocky artefacts 
-#21    Add discontinuous blocks streaming to SchroDec, and
+#20    Fix OBMC weighting
+x#21    Really fix mv_precision=2
+#21    Fix whatever creates the blocks to be copied to the wrong places
+#22    Add discontinuous blocks streaming to SchroDec, and
        skipping of images for better synchronisation.
 #30    Profile decoder and speed it up (NOTE: I don't know of a decent
        profiler for java, would love some info).
