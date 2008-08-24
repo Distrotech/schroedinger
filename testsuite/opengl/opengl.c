@@ -7,6 +7,8 @@
 #include <schroedinger/opengl/schroopenglcanvas.h>
 #include <schroedinger/opengl/schroopenglframe.h>
 #include <schroedinger/opengl/schroopenglmotion.h>
+#include <schroedinger/opengl/schroopenglshader.h>
+#include <schroedinger/opengl/schroopenglshadercode.h>
 #include <schroedinger/opengl/schroopenglwavelet.h>
 #include <string.h>
 #include "../common.h"
@@ -101,7 +103,7 @@ opengl_test_wavelet_inverse (SchroFrameFormat format, int width, int height,
 
     schro_frame_convert (cpu_postref_frame, cpu_preref_frame);
 
-    schro_opengl_lock_context (_opengl); // FIXME: remove
+    SCHRO_OPENGL_LOCK_CONTEXT (_opengl); // FIXME: remove
 
     schro_opengl_frame_push (opengl_frame, cpu_postref_frame);
 
@@ -155,7 +157,7 @@ opengl_test_wavelet_inverse (SchroFrameFormat format, int width, int height,
 
     schro_opengl_frame_pull (cpu_test_frame, opengl_frame);
 
-    schro_opengl_unlock_context (_opengl); // FIXME: remove
+    SCHRO_OPENGL_UNLOCK_CONTEXT (_opengl); // FIXME: remove
 
     ++frames;
 
@@ -260,7 +262,7 @@ opengl_test_upsample (SchroFrameFormat format, int width, int height,
 
       if (!ok) {
         if (width <= 32 && height <= 32) {
-          printf ("test frame %i <-> ref frame %i\n", k ,k);
+          printf ("test frame %i <-> ref frame %i\n", k, k);
           frame_dump (cpu_test_frame, upsampled_cpu_ref_frame->frames[1]);
         }
 
@@ -564,6 +566,97 @@ opengl_test_motion_ref (int xblen, int yblen, int xbsep, int ybsep,
   printf ("==========================================================\n");
 }
 
+void
+opengl_test_testing (SchroFrameFormat format, int width, int height,
+    int custom_pattern)
+{
+  char format_name[64];
+  SchroFrame *cpu_ref_frame;
+  SchroFrame *cpu_test_frame;
+  SchroFrame *opengl_frame;
+  SchroOpenGLCanvas *canvas;
+  SchroOpenGLShader *shader;
+  char pattern_name[TEST_PATTERN_NAME_SIZE];
+  int i;
+  int ok;
+
+  printf ("==========================================================\n");
+
+  if (!opengl_format_name (format, format_name, 64)) {
+    printf ("opengl_test_testing: %ix%i\n", width, height);
+    printf ("  unhandled format 0x%x\n", format);
+    printf ("==========================================================\n");
+
+    opengl_test_failed ();
+    return;
+  }
+
+  printf ("opengl_test_testing: %ix%i (%s)\n", width, height, format_name);
+
+  cpu_ref_frame = schro_frame_new_and_alloc (_cpu_domain, format, width,
+      height);
+  cpu_test_frame = schro_frame_new_and_alloc (_cpu_domain, format, width,
+      height);
+  opengl_frame = schro_opengl_frame_new (_opengl, _opengl_domain, format, width,
+      height);
+
+  for (i = 0; i < 1; ++i) {
+    opengl_custom_pattern_generate (cpu_ref_frame, custom_pattern, i,
+        pattern_name);
+
+    schro_opengl_frame_push (opengl_frame, cpu_ref_frame);
+
+    SCHRO_OPENGL_LOCK_CONTEXT (_opengl);
+
+    canvas = SCHRO_OPNEGL_CANVAS_FROM_FRAMEDATA (opengl_frame->components + 0);
+    shader = schro_opengl_shader_get (_opengl, SCHRO_OPENGL_SHADER_TESTING);
+
+    SCHRO_ASSERT (canvas);
+    SCHRO_ASSERT (shader);
+
+    schro_opengl_setup_viewport (width, height);
+
+    glUseProgramObjectARB (shader->program);
+
+    glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, canvas->framebuffer);
+
+    schro_opengl_render_quad (0, 0, width, height);
+
+    SCHRO_OPENGL_CHECK_ERROR
+    SCHRO_OPENGL_FLUSH
+
+    glUseProgramObjectARB (0);
+
+    glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, 0);
+
+    SCHRO_OPENGL_UNLOCK_CONTEXT (_opengl);
+
+    schro_opengl_frame_pull (cpu_test_frame, opengl_frame);
+
+    ok = frame_compare (cpu_ref_frame, cpu_test_frame);
+
+    printf ("    %s: %s\n", pattern_name, ok ? "OK" : "broken");
+
+    if (!ok) {
+      if (width <= 32 && height <= 32) {
+        printf ("ref frame\n");
+        frame_dump (cpu_ref_frame, cpu_ref_frame);
+
+        printf ("test frame <-> ref frame\n");
+        frame_dump (cpu_test_frame, cpu_ref_frame);
+      }
+
+      opengl_test_failed ();
+    }
+  }
+
+  schro_frame_unref (cpu_ref_frame);
+  schro_frame_unref (cpu_test_frame);
+  schro_frame_unref (opengl_frame);
+
+  printf ("==========================================================\n");
+}
+
 struct MotionDCTest {
   int xblen;
   int yblen;
@@ -731,7 +824,9 @@ main (int argc, char *argv[])
     /*opengl_test_upsample (SCHRO_FRAME_FORMAT_U8_444, 16, 16,
         OPENGL_CUSTOM_PATTERN_RANDOM);*/
 
-    opengl_test_motion_dc (8, 8, 4, 4);
+    //opengl_test_motion_dc (8, 8, 4, 4);
+
+    opengl_test_testing (SCHRO_FRAME_FORMAT_U8_444, 16, 16, OPENGL_CUSTOM_PATTERN_RANDOM);
 
     /*for (i = 0; i < ARRAY_SIZE (opengl_test_motion_ref_list); ++i) {
       opengl_test_motion_ref (opengl_test_motion_ref_list[i].xblen,

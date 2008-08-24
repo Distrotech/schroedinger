@@ -181,7 +181,7 @@ schro_opengl_init_glew (SchroOpenGL *opengl)
   int major, minor, micro;
   GLenum error;
 
-  schro_opengl_lock_context (opengl);
+  SCHRO_OPENGL_LOCK_CONTEXT (opengl);
 
   error = glewInit ();
 
@@ -205,7 +205,7 @@ schro_opengl_init_glew (SchroOpenGL *opengl)
     ok = FALSE;
   }
 
-  schro_opengl_unlock_context (opengl);
+  SCHRO_OPENGL_UNLOCK_CONTEXT (opengl);
 
   return ok;
 }
@@ -216,7 +216,7 @@ schro_opengl_check_essential_extensions (SchroOpenGL *opengl)
   int ok = TRUE;
   GLint texture_units;
 
-  schro_opengl_lock_context (opengl);
+  SCHRO_OPENGL_LOCK_CONTEXT (opengl);
 
   #define CHECK_EXTENSION(_name) \
     if (!GLEW_##_name) { \
@@ -253,9 +253,7 @@ schro_opengl_check_essential_extensions (SchroOpenGL *opengl)
     }
   }
 
-  schro_opengl_canvas_check_flags ();
-
-  schro_opengl_unlock_context (opengl);
+  SCHRO_OPENGL_UNLOCK_CONTEXT (opengl);
 
   return ok;
 }
@@ -313,11 +311,13 @@ schro_opengl_new (void)
     return opengl;
   }
 
+  schro_opengl_canvas_setup_flags ();
+
   opengl->shader_library = schro_opengl_shader_library_new (opengl);
   opengl->canvas_pool = schro_opengl_canvas_pool_new (opengl);
   opengl->spatial_weight_pool = schro_opengl_spatial_weight_pool_new ();
 
-  schro_opengl_lock_context (opengl);
+  SCHRO_OPENGL_LOCK_CONTEXT (opengl);
 
   glMatrixMode (GL_MODELVIEW);
   glLoadIdentity ();
@@ -327,7 +327,7 @@ schro_opengl_new (void)
 
   glEnable (GL_TEXTURE_RECTANGLE_ARB);
 
-  schro_opengl_unlock_context (opengl);
+  SCHRO_OPENGL_UNLOCK_CONTEXT (opengl);
 
   opengl->is_initialized = TRUE;
 
@@ -380,7 +380,8 @@ schro_opengl_is_usable (SchroOpenGL *opengl) {
 }
 
 void
-schro_opengl_lock_context (SchroOpenGL *opengl)
+schro_opengl_lock_context (SchroOpenGL *opengl, const char *file, int line,
+    const char *function)
 {
   SCHRO_ASSERT (opengl->display != NULL);
   SCHRO_ASSERT (opengl->window != None);
@@ -405,11 +406,12 @@ schro_opengl_lock_context (SchroOpenGL *opengl)
 
   ++opengl->context_lock_count;
 
-  SCHRO_OPENGL_CHECK_ERROR
+  schro_opengl_check_error (file, line, function);
 }
 
 void
-schro_opengl_unlock_context (SchroOpenGL *opengl)
+schro_opengl_unlock_context (SchroOpenGL *opengl, const char *file, int line,
+    const char *function)
 {
 #if SCHRO_OPENGL_UNBIND_TEXTURES
   int i;
@@ -421,7 +423,7 @@ schro_opengl_unlock_context (SchroOpenGL *opengl)
   SCHRO_ASSERT (opengl->display != NULL);
   SCHRO_ASSERT (opengl->context_lock_count > 0);
 
-  SCHRO_OPENGL_CHECK_ERROR
+  schro_opengl_check_error (file, line, function);
 
   --opengl->context_lock_count;
 
@@ -498,12 +500,33 @@ schro_opengl_unlock_canvas_pool (SchroOpenGL *opengl)
 }
 
 void
-schro_opengl_check_error (const char* file, int line, const char* func)
+schro_opengl_check_error (const char* file, int line, const char* function)
 {
   GLenum error = glGetError ();
 
-  if (error) {
-    SCHRO_ERROR ("GL Error 0x%04x in %s(%d) %s", (int) error, file, line, func);
+  if (error != GL_NO_ERROR) {
+    char* error_string = NULL;
+
+    switch (error) {
+      case GL_INVALID_ENUM:
+        error_string = "invalid enum";
+        break;
+      case GL_INVALID_VALUE:
+        error_string = "invalid value";
+        break;
+      case GL_INVALID_OPERATION:
+        error_string = "invalid operation";
+        break;
+    }
+
+    if (error_string) {
+      SCHRO_ERROR ("GL error '%s' in %s(%d) %s", error_string, file, line,
+          function);
+    } else {
+      SCHRO_ERROR ("GL error 0x%04x in %s(%d) %s", (int) error, file, line,
+          function);
+    }
+
     SCHRO_ASSERT (0);
   }
 }

@@ -103,31 +103,41 @@ struct _SchroOpenGLCanvasPool {
 };
 
 // FIXME: reduce storage flags to fixed point, float and integer
-#define SCHRO_OPENGL_CANVAS_STORE_BGRA           (1 <<  0)
-#define SCHRO_OPENGL_CANVAS_STORE_U8_AS_UI8      (1 <<  1)
-#define SCHRO_OPENGL_CANVAS_STORE_U8_AS_F16      (1 <<  2)
-#define SCHRO_OPENGL_CANVAS_STORE_U8_AS_F32      (1 <<  3)
-#define SCHRO_OPENGL_CANVAS_STORE_S16_AS_UI16    (1 <<  4)
-#define SCHRO_OPENGL_CANVAS_STORE_S16_AS_I16     (1 <<  5)
-#define SCHRO_OPENGL_CANVAS_STORE_S16_AS_U16     (1 <<  6)
-#define SCHRO_OPENGL_CANVAS_STORE_S16_AS_F16     (1 <<  7)
-#define SCHRO_OPENGL_CANVAS_STORE_S16_AS_F32     (1 <<  8)
+#define SCHRO_OPENGL_CANVAS_STORE_PACKED_AS_RGBA (1 <<  0)
+#define SCHRO_OPENGL_CANVAS_STORE_PACKED_AS_BGRA (1 <<  1)
+#define SCHRO_OPENGL_CANVAS_STORE_U8_AS_U8       (1 <<  2)
+#define SCHRO_OPENGL_CANVAS_STORE_U8_AS_F16      (1 <<  3)
+#define SCHRO_OPENGL_CANVAS_STORE_U8_AS_F32      (1 <<  4)
+#define SCHRO_OPENGL_CANVAS_STORE_U8_AS_UI8      (1 <<  5)
+#define SCHRO_OPENGL_CANVAS_STORE_S16_AS_S16     (1 <<  6)
+#define SCHRO_OPENGL_CANVAS_STORE_S16_AS_U16     (1 <<  7)
+#define SCHRO_OPENGL_CANVAS_STORE_S16_AS_F16     (1 <<  8)
+#define SCHRO_OPENGL_CANVAS_STORE_S16_AS_F32     (1 <<  9)
+#define SCHRO_OPENGL_CANVAS_STORE_S16_AS_I16     (1 << 10)
+#define SCHRO_OPENGL_CANVAS_STORE_S16_AS_UI16    (1 << 11)
 
-#define SCHRO_OPENGL_CANVAS_PUSH_RENDER_QUAD     (1 <<  9)
-#define SCHRO_OPENGL_CANVAS_PUSH_SHADER          (1 << 10)
-#define SCHRO_OPENGL_CANVAS_PUSH_DRAWPIXELS      (1 << 11)
-#define SCHRO_OPENGL_CANVAS_PUSH_U8_PIXELBUFFER  (1 << 12)
-#define SCHRO_OPENGL_CANVAS_PUSH_U8_AS_F32       (1 << 13)
-#define SCHRO_OPENGL_CANVAS_PUSH_S16_PIXELBUFFER (1 << 14)
-#define SCHRO_OPENGL_CANVAS_PUSH_S16_AS_U16      (1 << 15)
-#define SCHRO_OPENGL_CANVAS_PUSH_S16_AS_F32      (1 << 16)
+#define SCHRO_OPENGL_CANVAS_PUSH_SUBIMAGE        (1 << 12)
+#define SCHRO_OPENGL_CANVAS_PUSH_RENDER_QUAD     (1 << 13)
+#define SCHRO_OPENGL_CANVAS_PUSH_DRAWPIXELS      (1 << 14)
+#define SCHRO_OPENGL_CANVAS_PUSH_U8_PIXELBUFFER  (1 << 15)
+#define SCHRO_OPENGL_CANVAS_PUSH_S16_PIXELBUFFER (1 << 16)
+#define SCHRO_OPENGL_CANVAS_PUSH_U8_AS_U8        (1 << 17)
+#define SCHRO_OPENGL_CANVAS_PUSH_U8_AS_F32       (1 << 18)
+#define SCHRO_OPENGL_CANVAS_PUSH_S16_AS_S16      (1 << 19)
+#define SCHRO_OPENGL_CANVAS_PUSH_S16_AS_U16      (1 << 20)
+#define SCHRO_OPENGL_CANVAS_PUSH_S16_AS_F32      (1 << 21)
 
-#define SCHRO_OPENGL_CANVAS_PULL_PIXELBUFFER     (1 << 17)
-#define SCHRO_OPENGL_CANVAS_PULL_U8_AS_F32       (1 << 18)
-#define SCHRO_OPENGL_CANVAS_PULL_S16_AS_U16      (1 << 19)
-#define SCHRO_OPENGL_CANVAS_PULL_S16_AS_F32      (1 << 20)
+#define SCHRO_OPENGL_CANVAS_PULL_U8_PIXELBUFFER  (1 << 22)
+#define SCHRO_OPENGL_CANVAS_PULL_S16_PIXELBUFFER (1 << 23)
+#define SCHRO_OPENGL_CANVAS_PULL_U8_AS_U8        (1 << 24)
+#define SCHRO_OPENGL_CANVAS_PULL_U8_AS_F32       (1 << 25)
+#define SCHRO_OPENGL_CANVAS_PULL_S16_AS_S16      (1 << 26)
+#define SCHRO_OPENGL_CANVAS_PULL_S16_AS_U16      (1 << 27)
+#define SCHRO_OPENGL_CANVAS_PULL_S16_AS_F32      (1 << 28)
 
-extern unsigned int _schro_opengl_canvas_flags;
+#define SCHRO_OPENGL_CANVAS_FLAG_COUNT                 29
+
+extern uint32_t _schro_opengl_canvas_flags;
 
 #define SCHRO_OPENGL_CANVAS_IS_FLAG_SET(_flag) \
     (_schro_opengl_canvas_flags & SCHRO_OPENGL_CANVAS_##_flag)
@@ -136,6 +146,7 @@ extern unsigned int _schro_opengl_canvas_flags;
 #define SCHRO_OPENGL_CANVAS_CLEAR_FLAG(_flag) \
     (_schro_opengl_canvas_flags &= ~SCHRO_OPENGL_CANVAS_##_flag)
 
+void schro_opengl_canvas_setup_flags (void);
 void schro_opengl_canvas_check_flags (void);
 void schro_opengl_canvas_print_flags (const char* indent);
 

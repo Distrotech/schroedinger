@@ -39,7 +39,7 @@ schro_opengl_wavelet_vertical_deinterleave (SchroFrameData *frame_data)
 
   SCHRO_ASSERT (canvas != NULL);
 
-  schro_opengl_lock_context (canvas->opengl);
+  SCHRO_OPENGL_LOCK_CONTEXT (canvas->opengl);
 
   shader_copy = schro_opengl_shader_get (canvas->opengl,
       SCHRO_OPENGL_SHADER_COPY_S16);
@@ -106,7 +106,7 @@ schro_opengl_wavelet_vertical_deinterleave (SchroFrameData *frame_data)
 #endif
   glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, 0);
 
-  schro_opengl_unlock_context (canvas->opengl);
+  SCHRO_OPENGL_UNLOCK_CONTEXT (canvas->opengl);
 }
 
 static void
@@ -184,7 +184,7 @@ schro_opengl_wavelet_inverse_transform (SchroFrameData *frame_data,
 
   SCHRO_ASSERT (canvas != NULL);
 
-  schro_opengl_lock_context (canvas->opengl);
+  SCHRO_OPENGL_LOCK_CONTEXT (canvas->opengl);
 
   shader_copy = schro_opengl_shader_get (canvas->opengl,
       SCHRO_OPENGL_SHADER_COPY_S16);
@@ -506,6 +506,6 @@ schro_opengl_wavelet_inverse_transform (SchroFrameData *frame_data,
 #endif
   glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, 0);
 
-  schro_opengl_unlock_context (canvas->opengl);
+  SCHRO_OPENGL_UNLOCK_CONTEXT (canvas->opengl);
 }
 

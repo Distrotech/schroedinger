@@ -40,19 +40,7 @@ schro_opengl_canvas_push_convert (SchroOpenGLCanvas *dest, SchroFrameData *src,
     case SCHRO_FRAME_FORMAT_DEPTH_U8:
       frame_data_u8 = SCHRO_FRAME_DATA_GET_LINE (src, y_offset);
 
-      if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PUSH_U8_AS_F32)) {
-        texture_data_f32 = (float *) texture_data;
-
-        for (y = 0; y < height; ++y) {
-          for (x = 0; x < width; ++x) {
-            texture_data_f32[x * texture_channels]
-                = (float) frame_data_u8[x] / 255.0;
-          }
-
-          texture_data_f32 = OFFSET (texture_data_f32, texture_stride);
-          frame_data_u8 = OFFSET (frame_data_u8, frame_stride);
-        }
-      } else {
+      if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PUSH_U8_AS_U8)) {
         texture_data_u8 = (uint8_t *) texture_data;
 
         if (texture_channels > 1) {
@@ -72,13 +60,50 @@ schro_opengl_canvas_push_convert (SchroOpenGLCanvas *dest, SchroFrameData *src,
             frame_data_u8 = OFFSET (frame_data_u8, frame_stride);
           }
         }
+      } else if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PUSH_U8_AS_F32)) {
+        texture_data_f32 = (float *) texture_data;
+
+        for (y = 0; y < height; ++y) {
+          for (x = 0; x < width; ++x) {
+            texture_data_f32[x * texture_channels]
+                = (float) frame_data_u8[x] / 255.0;
+          }
+
+          texture_data_f32 = OFFSET (texture_data_f32, texture_stride);
+          frame_data_u8 = OFFSET (frame_data_u8, frame_stride);
+        }
+      } else {
+        SCHRO_ERROR ("invalid canvas flags combination, one U8 push type "
+            "flag must be set");
+        SCHRO_ASSERT (0);
       }
 
       break;
     case SCHRO_FRAME_FORMAT_DEPTH_S16:
       frame_data_s16 = SCHRO_FRAME_DATA_GET_LINE (src, y_offset);
 
-      if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PUSH_S16_AS_U16)) {
+      if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PUSH_S16_AS_S16)) {
+        texture_data_s16 = (int16_t *) texture_data;
+
+        if (texture_channels > 1) {
+          for (y = 0; y < height; ++y) {
+            for (x = 0; x < width; ++x) {
+              texture_data_s16[x * texture_channels] = frame_data_s16[x];
+            }
+
+            texture_data_s16 = OFFSET (texture_data_s16, texture_stride);
+            frame_data_s16 = OFFSET (frame_data_s16, frame_stride);
+          }
+        } else {
+          for (y = 0; y < height; ++y) {
+            oil_memcpy (texture_data_s16, frame_data_s16,
+                width * sizeof (int16_t));
+
+            texture_data_s16 = OFFSET (texture_data_s16, texture_stride);
+            frame_data_s16 = OFFSET (frame_data_s16, frame_stride);
+          }
+        }
+      } else if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PUSH_S16_AS_U16)) {
         texture_data_u16 = (uint16_t *) texture_data;
 
         for (y = 0; y < height; ++y) {
@@ -103,26 +128,9 @@ schro_opengl_canvas_push_convert (SchroOpenGLCanvas *dest, SchroFrameData *src,
           frame_data_s16 = OFFSET (frame_data_s16, frame_stride);
         }
       } else {
-        texture_data_s16 = (int16_t *) texture_data;
-
-        if (texture_channels > 1) {
-          for (y = 0; y < height; ++y) {
-            for (x = 0; x < width; ++x) {
-              texture_data_s16[x * texture_channels] = frame_data_s16[x];
-            }
-
-            texture_data_s16 = OFFSET (texture_data_s16, texture_stride);
-            frame_data_s16 = OFFSET (frame_data_s16, frame_stride);
-          }
-        } else {
-          for (y = 0; y < height; ++y) {
-            oil_memcpy (texture_data_s16, frame_data_s16,
-                width * sizeof (int16_t));
-
-            texture_data_s16 = OFFSET (texture_data_s16, texture_stride);
-            frame_data_s16 = OFFSET (frame_data_s16, frame_stride);
-          }
-        }
+        SCHRO_ERROR ("invalid canvas flags combination, one S16 push type "
+            "flag must be set");
+        SCHRO_ASSERT (0);
       }
 
       break;
@@ -150,7 +158,7 @@ schro_opengl_frame_push (SchroFrame *dest, SchroFrame *src)
 
   SCHRO_ASSERT (dest_canvas != NULL);
 
-  schro_opengl_lock_context (dest_canvas->opengl);
+  SCHRO_OPENGL_LOCK_CONTEXT (dest_canvas->opengl);
 
   for (i = 0; i < components; ++i) {
     dest_canvas = SCHRO_OPNEGL_CANVAS_FROM_FRAMEDATA (dest->components + i);
@@ -158,7 +166,7 @@ schro_opengl_frame_push (SchroFrame *dest, SchroFrame *src)
     schro_opengl_canvas_push (dest_canvas, src->components + i);
   }
 
-  schro_opengl_unlock_context (dest_canvas->opengl);
+  SCHRO_OPENGL_UNLOCK_CONTEXT (dest_canvas->opengl);
 }
 
 void
@@ -167,7 +175,7 @@ schro_opengl_canvas_push (SchroOpenGLCanvas *dest, SchroFrameData *src)
   int i;
   int width, height, depth;
   int pixelbuffer_y_offset, pixelbuffer_height;
-  GLuint src_texture = 0; // FIXME: don't create a new locale texture here
+  GLuint src_texture = 0; // FIXME: don't create a new local texture here
                           // but use a single global texture for such temporary
                           // purpose
   GLint texture;
@@ -184,7 +192,7 @@ schro_opengl_canvas_push (SchroOpenGLCanvas *dest, SchroFrameData *src)
   height = src->height;
   depth = SCHRO_FRAME_FORMAT_DEPTH (src->format);
 
-  schro_opengl_lock_context (dest->opengl);
+  SCHRO_OPENGL_LOCK_CONTEXT (dest->opengl);
 
   if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PUSH_RENDER_QUAD)) {
     glGenTextures (1, &src_texture);
@@ -255,7 +263,12 @@ schro_opengl_canvas_push (SchroOpenGLCanvas *dest, SchroFrameData *src)
 
       SCHRO_OPENGL_CHECK_ERROR
 
-      if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PUSH_DRAWPIXELS)) {
+      if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PUSH_SUBIMAGE) ||
+          SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PUSH_RENDER_QUAD)) {
+        glTexSubImage2D (GL_TEXTURE_RECTANGLE_ARB, 0, 0, pixelbuffer_y_offset,
+            width, pixelbuffer_height, dest->pixel_format, dest->push_type,
+            NULL);
+      } else if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PUSH_DRAWPIXELS)) {
         glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, dest->framebuffer);
 
         glWindowPos2iARB (0, pixelbuffer_y_offset);
@@ -264,9 +277,9 @@ schro_opengl_canvas_push (SchroOpenGLCanvas *dest, SchroFrameData *src)
 
         glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, 0);
       } else {
-        glTexSubImage2D (GL_TEXTURE_RECTANGLE_ARB, 0, 0, pixelbuffer_y_offset,
-            width, pixelbuffer_height, dest->pixel_format, dest->push_type,
-            NULL);
+        SCHRO_ERROR ("invalid canvas flags combination, one push mode flag "
+            "must be set");
+        SCHRO_ASSERT (0);
       }
 
       SCHRO_OPENGL_CHECK_ERROR
@@ -301,7 +314,11 @@ schro_opengl_canvas_push (SchroOpenGLCanvas *dest, SchroFrameData *src)
       glPixelTransferf (GL_RED_BIAS, 0.5);
     }
 
-    if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PUSH_DRAWPIXELS)) {
+    if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PUSH_SUBIMAGE) ||
+        SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PUSH_RENDER_QUAD)) {
+      glTexSubImage2D (GL_TEXTURE_RECTANGLE_ARB, 0, 0, 0, width, height,
+          dest->pixel_format, dest->push_type, tmp_data);
+    } else if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PUSH_DRAWPIXELS)) {
       glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, dest->framebuffer);
 
       glWindowPos2iARB (0, 0);
@@ -310,8 +327,9 @@ schro_opengl_canvas_push (SchroOpenGLCanvas *dest, SchroFrameData *src)
 
       glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, 0);
     } else {
-      glTexSubImage2D (GL_TEXTURE_RECTANGLE_ARB, 0, 0, 0, width, height,
-          dest->pixel_format, dest->push_type, tmp_data);
+      SCHRO_ERROR ("invalid canvas flags combination, one push mode flag must "
+          "be set");
+      SCHRO_ASSERT (0);
     }
 
     SCHRO_OPENGL_CHECK_ERROR
@@ -331,33 +349,29 @@ schro_opengl_canvas_push (SchroOpenGLCanvas *dest, SchroFrameData *src)
 
     SCHRO_OPENGL_CHECK_ERROR
 
-    if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PUSH_SHADER)) {
-      switch (SCHRO_FRAME_FORMAT_DEPTH (src->format)) {
-        case SCHRO_FRAME_FORMAT_DEPTH_U8:
-          shader = schro_opengl_shader_get (dest->opengl,
-             SCHRO_OPENGL_SHADER_COPY_U8);
-            break;
-        case SCHRO_FRAME_FORMAT_DEPTH_S16:
-          shader = schro_opengl_shader_get (dest->opengl,
-             SCHRO_OPENGL_SHADER_COPY_S16);
-          break;
-        default:
-          SCHRO_ASSERT (0);
-          break;
-      }
-
-      glUseProgramObjectARB (shader->program);
-
-      glGetIntegerv (GL_TEXTURE_BINDING_RECTANGLE_ARB, &texture);
-
-      schro_opengl_shader_bind_source (texture);
+    switch (SCHRO_FRAME_FORMAT_DEPTH (src->format)) {
+      case SCHRO_FRAME_FORMAT_DEPTH_U8:
+        shader = schro_opengl_shader_get (dest->opengl,
+            SCHRO_OPENGL_SHADER_COPY_U8);
+        break;
+      case SCHRO_FRAME_FORMAT_DEPTH_S16:
+        shader = schro_opengl_shader_get (dest->opengl,
+            SCHRO_OPENGL_SHADER_COPY_S16);
+        break;
+      default:
+        SCHRO_ASSERT (0);
+        break;
     }
+
+    glUseProgramObjectARB (shader->program);
+
+    glGetIntegerv (GL_TEXTURE_BINDING_RECTANGLE_ARB, &texture);
+
+    schro_opengl_shader_bind_source (texture);
 
     schro_opengl_render_quad (0, 0, width, height);
 
-    if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PUSH_SHADER)) {
-      glUseProgramObjectARB (0);
-    }
+    glUseProgramObjectARB (0);
 
     SCHRO_OPENGL_FLUSH
 
@@ -374,6 +388,6 @@ schro_opengl_canvas_push (SchroOpenGLCanvas *dest, SchroFrameData *src)
     glDeleteTextures (1, &src_texture);
   }
 
-  schro_opengl_unlock_context (dest->opengl);
+  SCHRO_OPENGL_UNLOCK_CONTEXT (dest->opengl);
 }
 

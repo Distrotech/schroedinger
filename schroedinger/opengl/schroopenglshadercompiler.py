@@ -596,10 +596,10 @@ class Shader:
     string = "  { " + self.index + ",\n      \"" + self.bunch + "/" \
         + self.version + "\",\n"
     string += self.print_glsl_mode ("float")
-    string = string.rstrip("\n") + ",\n"
+    string = string.rstrip ("\n") + ",\n"
     string += self.print_glsl_mode ("integer")
 
-    return string.rstrip(" \n") + " },\n"
+    return string.rstrip (" \n") + " },\n"
 
   def print_glsl_mode (self, mode):
     postfix = ""
@@ -622,7 +622,7 @@ class Shader:
     # uniforms
     uniforms = self.uniforms.values ()[:]
 
-    uniforms.sort(compare_uniforms)
+    uniforms.sort (compare_uniforms)
 
     for uniform in uniforms:
       string += uniform.print_glsl (mode)
@@ -858,10 +858,10 @@ if __name__ == "__main__":
     if '#' in string:
       string = string[0:string.index ('#')]
 
-    string = string.rstrip ().replace("\t", " ")
+    string = string.rstrip ().replace ("\t", " ")
     string = re.sub ("[ ]+:", ":", string)
 
-    if len (raw_lines) > 0 and raw_lines[-1].endswith("\\"):
+    if len (raw_lines) > 0 and raw_lines[-1].endswith ("\\"):
       raw_lines[-1] = raw_lines[-1][:-1].rstrip () + " " + string.lstrip ()
       string = ""
 

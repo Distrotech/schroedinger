@@ -682,7 +682,7 @@ schro_opengl_motion_render (SchroMotion *motion, SchroFrame *dest)
 
   SCHRO_ASSERT (dest_canvas != NULL);
 
-  schro_opengl_lock_context (dest_canvas->opengl);
+  SCHRO_OPENGL_LOCK_CONTEXT (dest_canvas->opengl);
 
   shader_copy = schro_opengl_shader_get (dest_canvas->opengl,
       SCHRO_OPENGL_SHADER_COPY_S16);
@@ -930,7 +930,7 @@ schro_opengl_motion_render (SchroMotion *motion, SchroFrame *dest)
     glBindFramebufferEXT (GL_DRAW_FRAMEBUFFER_EXT, 0);
   }*/
 
-  schro_opengl_unlock_context (dest_canvas->opengl);
+  SCHRO_OPENGL_UNLOCK_CONTEXT (dest_canvas->opengl);
 }
 
 SchroOpenGLSpatialWeightBlock *
@@ -977,12 +977,12 @@ schro_opengl_spatial_weight_block_new (SchroOpenGL *opengl, int* edges, int xbse
   block->yblen = yblen;
   block->canvas = schro_opengl_canvas_new (opengl,
       SCHRO_OPENGL_CANVAS_TYPE_SPATIAL_WEIGHT, SCHRO_FRAME_FORMAT_S16_444,
-      MAX(xblen, 16), MAX(yblen, 16));
+      MAX (xblen, 16), MAX (yblen, 16));
 
   xoffset = (xblen - xbsep) / 2;
   yoffset = (yblen - ybsep) / 2;
 
-  schro_opengl_lock_context (opengl);
+  SCHRO_OPENGL_LOCK_CONTEXT (opengl);
 
   shader = schro_opengl_shader_get (opengl,
       SCHRO_OPENGL_SHADER_OBMC_SPATIAL_WEIGHT);
@@ -1007,7 +1007,7 @@ schro_opengl_spatial_weight_block_new (SchroOpenGL *opengl, int* edges, int xbse
   SCHRO_OPENGL_CHECK_ERROR
   SCHRO_OPENGL_FLUSH
 
-  schro_opengl_unlock_context (opengl);
+  SCHRO_OPENGL_UNLOCK_CONTEXT (opengl);
 
   /* add new block to pool */
   SCHRO_ASSERT (pool->block_count >= 0);

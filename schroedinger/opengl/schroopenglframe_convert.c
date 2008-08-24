@@ -115,7 +115,7 @@ schro_opengl_frame_convert_with_shader (SchroFrame *dest, SchroFrame *src,
   SCHRO_ASSERT (src_canvas != NULL);
   SCHRO_ASSERT (dest_canvas->opengl == src_canvas->opengl);
 
-  schro_opengl_lock_context (src_canvas->opengl);
+  SCHRO_OPENGL_LOCK_CONTEXT (src_canvas->opengl);
 
   shader = schro_opengl_shader_get (src_canvas->opengl, shader_index);
 
@@ -154,7 +154,7 @@ schro_opengl_frame_convert_with_shader (SchroFrame *dest, SchroFrame *src,
 
   glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, 0);
 
-  schro_opengl_unlock_context (src_canvas->opengl);
+  SCHRO_OPENGL_UNLOCK_CONTEXT (src_canvas->opengl);
 }
 
 static void
@@ -176,7 +176,7 @@ schro_opengl_frame_unpack_with_shader (SchroFrame *dest, SchroFrame *src,
   SCHRO_ASSERT (src_canvas != NULL);
   SCHRO_ASSERT (dest_canvas->opengl == src_canvas->opengl);
 
-  schro_opengl_lock_context (src_canvas->opengl);
+  SCHRO_OPENGL_LOCK_CONTEXT (src_canvas->opengl);
 
   for (i = 0; i < 3; ++i) {
     dest_canvas = SCHRO_OPNEGL_CANVAS_FROM_FRAMEDATA (dest->components + i);
@@ -215,7 +215,7 @@ schro_opengl_frame_unpack_with_shader (SchroFrame *dest, SchroFrame *src,
     glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, 0);
   }
 
-  schro_opengl_unlock_context (src_canvas->opengl);
+  SCHRO_OPENGL_UNLOCK_CONTEXT (src_canvas->opengl);
 }
 
 static void
@@ -246,7 +246,7 @@ schro_opengl_frame_pack_with_shader (SchroFrame *dest, SchroFrame *src,
   SCHRO_ASSERT (src_u_canvas->opengl == dest_canvas->opengl);
   SCHRO_ASSERT (src_v_canvas->opengl == dest_canvas->opengl);
 
-  schro_opengl_lock_context (dest_canvas->opengl);
+  SCHRO_OPENGL_LOCK_CONTEXT (dest_canvas->opengl);
 
   shader = schro_opengl_shader_get (dest_canvas->opengl, shader_index);
 
@@ -285,7 +285,7 @@ schro_opengl_frame_pack_with_shader (SchroFrame *dest, SchroFrame *src,
 #endif
   glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, 0);
 
-  schro_opengl_unlock_context (dest_canvas->opengl);
+  SCHRO_OPENGL_UNLOCK_CONTEXT (dest_canvas->opengl);
 }
 
 static void

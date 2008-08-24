@@ -80,7 +80,7 @@ opengl_test_convert (SchroFrameFormat dest_format, SchroFrameFormat src_format,
 
     elapsed_cpu_convert += schro_utils_get_time () - start_cpu_convert;
 
-    schro_opengl_lock_context (_opengl); // FIXME: remove
+    SCHRO_OPENGL_LOCK_CONTEXT (_opengl); // FIXME: remove
 
     schro_opengl_frame_push (opengl_src_frame, cpu_src_ref_frame);
 
@@ -94,7 +94,7 @@ opengl_test_convert (SchroFrameFormat dest_format, SchroFrameFormat src_format,
 
     schro_opengl_frame_pull (cpu_dest_test_frame, opengl_dest_frame);
 
-    schro_opengl_unlock_context (_opengl); // FIXME: remove
+    SCHRO_OPENGL_UNLOCK_CONTEXT (_opengl); // FIXME: remove
 
     ++frames;
 

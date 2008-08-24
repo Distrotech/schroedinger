@@ -1,3 +1,20 @@
+shader testing: ################################################################
+  versions:
+    testing SCHRO_OPENGL_SHADER_TESTING
+
+  func void main (void):
+    #if mod (floor (gl_TexCoord[0].x), 2.0) < 0.5:
+    #  write_s16 (-527)
+    #else:
+    #write_s16_raw (0) # == -32768
+    #write_s16 (0) # == -1
+    #write_s16 (-32768) # == -32768
+    write_u8 (var_u8 (214)) # == -1
+    #write_s16_raw (1) # == -1
+    #write_s16 (1354)
+
+
+
 shader copy: ###################################################################
   versions:
     u8  SCHRO_OPENGL_SHADER_COPY_U8

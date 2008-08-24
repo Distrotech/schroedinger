@@ -80,12 +80,12 @@ opengl_test_add (SchroFrameFormat dest_format, SchroFrameFormat src_format,
 
     schro_frame_convert (cpu_dest_postref_frame, cpu_dest_preref_frame);
 
-    schro_opengl_lock_context (_opengl); // FIXME: remove
+    SCHRO_OPENGL_LOCK_CONTEXT (_opengl); // FIXME: remove
 
     schro_opengl_frame_push (opengl_dest_frame, cpu_dest_preref_frame);
     schro_opengl_frame_push (opengl_src_frame, cpu_src_ref_frame);
 
-    schro_opengl_unlock_context (_opengl); // FIXME: remove
+    SCHRO_OPENGL_UNLOCK_CONTEXT (_opengl); // FIXME: remove
 
     start_cpu = schro_utils_get_time ();
 
@@ -94,7 +94,7 @@ opengl_test_add (SchroFrameFormat dest_format, SchroFrameFormat src_format,
 
     elapsed_cpu += schro_utils_get_time () - start_cpu;
 
-    schro_opengl_lock_context (_opengl); // FIXME: remove
+    SCHRO_OPENGL_LOCK_CONTEXT (_opengl); // FIXME: remove
 
     start_opengl = schro_utils_get_time ();
 
@@ -105,7 +105,7 @@ opengl_test_add (SchroFrameFormat dest_format, SchroFrameFormat src_format,
 
     schro_opengl_frame_pull (cpu_dest_test_frame, opengl_dest_frame);
 
-    schro_opengl_unlock_context (_opengl); // FIXME: remove
+    SCHRO_OPENGL_UNLOCK_CONTEXT (_opengl); // FIXME: remove
 
     ++frames;
 
@@ -233,12 +233,12 @@ opengl_test_subtract (SchroFrameFormat dest_format,
 
     schro_frame_convert (cpu_dest_postref_frame, cpu_dest_preref_frame);
 
-    schro_opengl_lock_context (_opengl); // FIXME: remove
+    SCHRO_OPENGL_LOCK_CONTEXT (_opengl); // FIXME: remove
 
     schro_opengl_frame_push (opengl_dest_frame, cpu_dest_preref_frame);
     schro_opengl_frame_push (opengl_src_frame, cpu_src_ref_frame);
 
-    schro_opengl_unlock_context (_opengl); // FIXME: remove
+    SCHRO_OPENGL_UNLOCK_CONTEXT (_opengl); // FIXME: remove
 
     start_cpu = schro_utils_get_time ();
 
@@ -247,7 +247,7 @@ opengl_test_subtract (SchroFrameFormat dest_format,
 
     elapsed_cpu += schro_utils_get_time () - start_cpu;
 
-    schro_opengl_lock_context (_opengl); // FIXME: remove
+    SCHRO_OPENGL_LOCK_CONTEXT (_opengl); // FIXME: remove
 
     start_opengl = schro_utils_get_time ();
 
@@ -258,7 +258,7 @@ opengl_test_subtract (SchroFrameFormat dest_format,
 
     schro_opengl_frame_pull (cpu_dest_test_frame, opengl_dest_frame);
 
-    schro_opengl_unlock_context (_opengl); // FIXME: remove
+    SCHRO_OPENGL_UNLOCK_CONTEXT (_opengl); // FIXME: remove
 
     ++frames;
 

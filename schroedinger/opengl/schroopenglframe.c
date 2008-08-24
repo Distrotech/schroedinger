@@ -130,7 +130,7 @@ schro_opengl_frame_new (SchroOpenGL *opengl,
       bytes_pp = 4;
       break;
     default:
-      SCHRO_ASSERT(0);
+      SCHRO_ASSERT (0);
       bytes_pp = 0;
       break;
   }
@@ -221,7 +221,7 @@ schro_opengl_frame_inverse_iwt_transform (SchroFrame *frame,
 
   SCHRO_ASSERT (canvas != NULL);
 
-  schro_opengl_lock_context (canvas->opengl);
+  SCHRO_OPENGL_LOCK_CONTEXT (canvas->opengl);
 
   for (i = 0; i < 3; ++i) {
     canvas = SCHRO_OPNEGL_CANVAS_FROM_FRAMEDATA (frame->components + i);
@@ -250,7 +250,7 @@ schro_opengl_frame_inverse_iwt_transform (SchroFrame *frame,
     }
   }
 
-  schro_opengl_unlock_context (canvas->opengl);
+  SCHRO_OPENGL_UNLOCK_CONTEXT (canvas->opengl);
 }
 
 static void
@@ -326,7 +326,7 @@ schro_opengl_upsampled_frame_upsample (SchroUpsampledFrame *upsampled_frame)
 
   opengl = canvases[0]->opengl;
 
-  schro_opengl_lock_context (opengl);
+  SCHRO_OPENGL_LOCK_CONTEXT (opengl);
 
   upsampled_frame->frames[1]
       = schro_opengl_frame_clone (upsampled_frame->frames[0]);
@@ -496,7 +496,7 @@ schro_opengl_upsampled_frame_upsample (SchroUpsampledFrame *upsampled_frame)
 #endif
   glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, 0);
 
-  schro_opengl_unlock_context (opengl);
+  SCHRO_OPENGL_UNLOCK_CONTEXT (opengl);
 }
 
 void

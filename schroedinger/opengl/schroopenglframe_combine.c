@@ -138,7 +138,7 @@ schro_opengl_frame_combine_with_shader (SchroFrame *dest, SchroFrame *src,
   SCHRO_ASSERT (src_canvas != NULL);
   SCHRO_ASSERT (dest_canvas->opengl == src_canvas->opengl);
 
-  schro_opengl_lock_context (src_canvas->opengl);
+  SCHRO_OPENGL_LOCK_CONTEXT (src_canvas->opengl);
 
   shader_copy_u8 = schro_opengl_shader_get (src_canvas->opengl,
       SCHRO_OPENGL_SHADER_COPY_U8);
@@ -207,7 +207,7 @@ schro_opengl_frame_combine_with_shader (SchroFrame *dest, SchroFrame *src,
 #endif
   glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, 0);
 
-  schro_opengl_unlock_context (src_canvas->opengl);
+  SCHRO_OPENGL_UNLOCK_CONTEXT (src_canvas->opengl);
 }
 
 static void

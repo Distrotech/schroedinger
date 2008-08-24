@@ -225,7 +225,7 @@ schro_opengl_shader_library_new (SchroOpenGL *opengl)
 
   shader_library->opengl = opengl;
 
-  schro_opengl_lock_context (opengl);
+  SCHRO_OPENGL_LOCK_CONTEXT (opengl);
 
   schro_opengl_canvas_check_flags ();
 
@@ -251,7 +251,7 @@ schro_opengl_shader_library_new (SchroOpenGL *opengl)
     }
   }
 
-  schro_opengl_unlock_context (opengl);
+  SCHRO_OPENGL_UNLOCK_CONTEXT (opengl);
 
   return shader_library;
 }
@@ -263,7 +263,7 @@ schro_opengl_shader_library_free (SchroOpenGLShaderLibrary *shader_library)
 
   SCHRO_ASSERT (shader_library != NULL);
 
-  schro_opengl_lock_context (shader_library->opengl);
+  SCHRO_OPENGL_LOCK_CONTEXT (shader_library->opengl);
 
   for (i = 0; i < SCHRO_OPENGL_SHADER_COUNT; ++i) {
     if (shader_library->shaders[i]) {
@@ -271,7 +271,7 @@ schro_opengl_shader_library_free (SchroOpenGLShaderLibrary *shader_library)
     }
   }
 
-  schro_opengl_unlock_context (shader_library->opengl);
+  SCHRO_OPENGL_UNLOCK_CONTEXT (shader_library->opengl);
 
   schro_free (shader_library);
 }

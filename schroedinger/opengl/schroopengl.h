@@ -8,6 +8,12 @@
 
 SCHRO_BEGIN_DECLS
 
+#define SCHRO_OPENGL_LOCK_CONTEXT(_opengl) \
+    schro_opengl_lock_context (_opengl, __FILE__, __LINE__, __FUNCTION__)
+
+#define SCHRO_OPENGL_UNLOCK_CONTEXT(_opengl) \
+    schro_opengl_unlock_context (_opengl, __FILE__, __LINE__, __FUNCTION__)
+
 #define SCHRO_OPENGL_CHECK_ERROR \
     schro_opengl_check_error (__FILE__, __LINE__, __FUNCTION__);
 
@@ -33,13 +39,16 @@ SchroOpenGL *schro_opengl_new (void);
 void schro_opengl_free (SchroOpenGL *opengl);
 int schro_opengl_is_usable (SchroOpenGL *opengl);
 
-void schro_opengl_lock_context (SchroOpenGL *opengl);
-void schro_opengl_unlock_context (SchroOpenGL *opengl);
+void schro_opengl_lock_context (SchroOpenGL *opengl, const char *file, int line,
+    const char *function);
+void schro_opengl_unlock_context (SchroOpenGL *opengl, const char *file,
+    int line, const char *function);
 void schro_opengl_lock_canvas_pool (SchroOpenGL *opengl);
 void schro_opengl_unlock_canvas_pool (SchroOpenGL *opengl);
-void schro_opengl_check_error (const char *file, int line, const char *func);
+void schro_opengl_check_error (const char *file, int line,
+    const char *function);
 void schro_opengl_check_framebuffer (const char *file, int line,
-    const char *func);
+    const char *function);
 void schro_opengl_set_visible (SchroOpenGL *opengl, int visible);
 void schro_opengl_setup_viewport (int width, int height);
 void schro_opengl_render_quad (int x, int y, int width, int height);

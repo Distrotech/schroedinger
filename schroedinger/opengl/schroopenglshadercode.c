@@ -366,6 +366,18 @@
     "}\n"
 
 SchroOpenGLShaderCode _schro_opengl_shader_code_list[] = {
+  { SCHRO_OPENGL_SHADER_TESTING,
+      "testing/testing",
+      SHADER_HEADER
+      SHADER_WRITE_U8
+      "void main (void) {\n"
+      "  write_u8 (float (214.0));\n"
+      "}\n",
+      SHADER_HEADER_INTEGER
+      SHADER_WRITE_U8_INTEGER
+      "void main (void) {\n"
+      "  write_u8 (uint (214));\n"
+      "}\n" },
   { SCHRO_OPENGL_SHADER_COPY_U8,
       "copy/u8",
       SHADER_HEADER

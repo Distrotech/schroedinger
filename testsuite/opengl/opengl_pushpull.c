@@ -56,7 +56,7 @@ opengl_test_push_pull (SchroFrameFormat format, int width, int height,
     opengl_custom_pattern_generate (cpu_ref_frame, custom_pattern, i,
         pattern_name);
 
-    schro_opengl_lock_context (_opengl); // FIXME: remove
+    SCHRO_OPENGL_LOCK_CONTEXT (_opengl); // FIXME: remove
 
     start_push = schro_utils_get_time ();
 
@@ -69,7 +69,7 @@ opengl_test_push_pull (SchroFrameFormat format, int width, int height,
 
     elapsed_pull += schro_utils_get_time () - start_pull;
 
-    schro_opengl_unlock_context (_opengl); // FIXME: remove
+    SCHRO_OPENGL_UNLOCK_CONTEXT (_opengl); // FIXME: remove
 
     ++frames;
 

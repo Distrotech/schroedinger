@@ -7,29 +7,49 @@
 #include <schroedinger/opengl/schroopenglcanvas.h>
 #include <stdio.h>
 
-unsigned int _schro_opengl_canvas_flags
+uint32_t _schro_opengl_canvas_flags
     = 0
-    //| SCHRO_OPENGL_CANVAS_STORE_BGRA /* FIXME: currently broken with packed formats in convert */
-    | SCHRO_OPENGL_CANVAS_STORE_U8_AS_UI8
-    //| SCHRO_OPENGL_CANVAS_STORE_U8_AS_F16 /* FIXME: currently broken in shader */
-    //| SCHRO_OPENGL_CANVAS_STORE_U8_AS_F32
-    | SCHRO_OPENGL_CANVAS_STORE_S16_AS_UI16
-    //| SCHRO_OPENGL_CANVAS_STORE_S16_AS_I16 /* FIXME: doesn't yield a useable mapping in shader */
-    //| SCHRO_OPENGL_CANVAS_STORE_S16_AS_U16
-    //| SCHRO_OPENGL_CANVAS_STORE_S16_AS_F16 /* FIXME: currently broken in shader */
-    //| SCHRO_OPENGL_CANVAS_STORE_S16_AS_F32
+    | SCHRO_OPENGL_CANVAS_STORE_PACKED_AS_RGBA
+    //| SCHRO_OPENGL_CANVAS_STORE_PACKED_AS_BGRA /* FIXME: currently broken in convert */
 
+    //| SCHRO_OPENGL_CANVAS_STORE_U8_AS_U8
+    //| SCHRO_OPENGL_CANVAS_STORE_U8_AS_F16
+    //| SCHRO_OPENGL_CANVAS_STORE_U8_AS_F32
+    | SCHRO_OPENGL_CANVAS_STORE_U8_AS_UI8
+
+    //| SCHRO_OPENGL_CANVAS_STORE_S16_AS_S16
+    //| SCHRO_OPENGL_CANVAS_STORE_S16_AS_U16
+    /* FIXME: STORE_S16_AS_F16 is currently broken, simply pushing/pulling
+       random S16 values breaks and doesn't give the values back that have be
+       pushed, there are small errors */
+    //| SCHRO_OPENGL_CANVAS_STORE_S16_AS_F16
+    //| SCHRO_OPENGL_CANVAS_STORE_S16_AS_F32
+    //| SCHRO_OPENGL_CANVAS_STORE_S16_AS_I16 /* FIXME: doesn't yield a useable mapping in shader */
+    | SCHRO_OPENGL_CANVAS_STORE_S16_AS_UI16
+
+
+    | SCHRO_OPENGL_CANVAS_PUSH_SUBIMAGE
     //| SCHRO_OPENGL_CANVAS_PUSH_RENDER_QUAD
-    //| SCHRO_OPENGL_CANVAS_PUSH_SHADER
     //| SCHRO_OPENGL_CANVAS_PUSH_DRAWPIXELS /* FIXME: currently broken */
-    | SCHRO_OPENGL_CANVAS_PUSH_U8_PIXELBUFFER
-    //| SCHRO_OPENGL_CANVAS_PUSH_U8_AS_F32
+
+    //| SCHRO_OPENGL_CANVAS_PUSH_U8_PIXELBUFFER
     //| SCHRO_OPENGL_CANVAS_PUSH_S16_PIXELBUFFER
+
+    | SCHRO_OPENGL_CANVAS_PUSH_U8_AS_U8
+    //| SCHRO_OPENGL_CANVAS_PUSH_U8_AS_F32
+
+    //| SCHRO_OPENGL_CANVAS_PUSH_S16_AS_S16
     | SCHRO_OPENGL_CANVAS_PUSH_S16_AS_U16
     //| SCHRO_OPENGL_CANVAS_PUSH_S16_AS_F32
 
-    //| SCHRO_OPENGL_CANVAS_PULL_PIXELBUFFER
+
+    //| SCHRO_OPENGL_CANVAS_PULL_U8_PIXELBUFFER
+    //| SCHRO_OPENGL_CANVAS_PULL_S16_PIXELBUFFER
+
+    | SCHRO_OPENGL_CANVAS_PULL_U8_AS_U8
     //| SCHRO_OPENGL_CANVAS_PULL_U8_AS_F32
+
+    //| SCHRO_OPENGL_CANVAS_PULL_S16_AS_S16
     | SCHRO_OPENGL_CANVAS_PULL_S16_AS_U16
     //| SCHRO_OPENGL_CANVAS_PULL_S16_AS_F32
     ;
@@ -79,211 +99,333 @@ unsigned int _schro_opengl_canvas_flags
     | SCHRO_OPENGL_CANVAS_PUSH_S16_AS_U16
     | SCHRO_OPENGL_CANVAS_PULL_S16_AS_U16;*/
 
+/**
+ * schro_opengl_canvas_setup_flags:
+ *
+ * Set canvas flags depending on available OpenGL extensions.  GLEW must be
+ * initialized before calling this function.
+ */
+void
+schro_opengl_canvas_setup_flags (void)
+{
+  _schro_opengl_canvas_flags = 0;
+
+  SCHRO_OPENGL_CANVAS_SET_FLAG (STORE_PACKED_AS_RGBA);
+
+  SCHRO_OPENGL_CANVAS_SET_FLAG (PUSH_SUBIMAGE);
+
+  if (GLEW_ARB_vertex_buffer_object && GLEW_ARB_pixel_buffer_object) {
+    SCHRO_OPENGL_CANVAS_SET_FLAG (PUSH_U8_PIXELBUFFER);
+  }
+
+  if (GLEW_EXT_texture_integer && GLEW_EXT_gpu_shader4) {
+    SCHRO_OPENGL_CANVAS_SET_FLAG (STORE_U8_AS_UI8);
+    SCHRO_OPENGL_CANVAS_SET_FLAG (PUSH_U8_AS_U8);
+    SCHRO_OPENGL_CANVAS_SET_FLAG (PULL_U8_AS_U8);
+
+    SCHRO_OPENGL_CANVAS_SET_FLAG (STORE_S16_AS_UI16);
+    SCHRO_OPENGL_CANVAS_SET_FLAG (PUSH_S16_AS_U16);
+    SCHRO_OPENGL_CANVAS_SET_FLAG (PULL_S16_AS_U16);
+  } else if (GLEW_ARB_texture_float || GLEW_ATI_texture_float) {
+    SCHRO_OPENGL_CANVAS_SET_FLAG (STORE_U8_AS_F16);
+    SCHRO_OPENGL_CANVAS_SET_FLAG (PUSH_U8_AS_U8);
+    SCHRO_OPENGL_CANVAS_SET_FLAG (PULL_U8_AS_U8);
+
+    SCHRO_OPENGL_CANVAS_SET_FLAG (STORE_S16_AS_F32);
+    SCHRO_OPENGL_CANVAS_SET_FLAG (PUSH_S16_AS_U16);
+    SCHRO_OPENGL_CANVAS_SET_FLAG (PULL_S16_AS_U16);
+  } else {
+    SCHRO_OPENGL_CANVAS_SET_FLAG (STORE_U8_AS_U8);
+    SCHRO_OPENGL_CANVAS_SET_FLAG (PUSH_U8_AS_U8);
+    SCHRO_OPENGL_CANVAS_SET_FLAG (PULL_U8_AS_U8);
+
+    SCHRO_OPENGL_CANVAS_SET_FLAG (STORE_S16_AS_U16);
+    SCHRO_OPENGL_CANVAS_SET_FLAG (PUSH_S16_AS_U16);
+    SCHRO_OPENGL_CANVAS_SET_FLAG (PULL_S16_AS_U16);
+  }
+
+  schro_opengl_canvas_check_flags ();
+}
+
+/* canvas flag combinations, key:
+       1 = must be set
+       0 = must not be set
+       - = indifferent
+       # = the flag itself, may be set or not set idenpendent of other flags
+   [a-z] = the flag itself, flags with the same letter form an exclusive group,
+           exactly one flag in such a group must be set */
+static const char *schro_opengl_canvas_flag_combinations[] = {
+  "a-""----""------"   "---""--""--""---"   "--""--""---", // STORE_PACKED_AS_RGBA
+  "-a""----""------"   "---""--""--""---"   "--""--""---", // STORE_PACKED_AS_BGRA
+
+  "--""b---""----00"   "---""--""--""---"   "--""--""---", // STORE_U8_AS_U8
+  "--""-b--""----00"   "---""--""--""---"   "--""--""---", // STORE_U8_AS_F16
+  "--""--b-""----00"   "---""--""--""---"   "--""--""---", // STORE_U8_AS_F32
+  "--""---b""0000--"   "---""--""1-""---"   "--""1-""---", // STORE_U8_AS_UI8
+
+  "--""---0""c-----"   "---""--""--""---"   "--""--""0--", // STORE_S16_AS_S16
+  "--""---0""-c----"   "---""--""--""---"   "--""--""0--", // STORE_S16_AS_U16
+  "--""---0""--c---"   "---""--""--""---"   "--""--""0--", // STORE_S16_AS_F16
+  "--""---0""---c--"   "---""--""--""---"   "--""--""0--", // STORE_S16_AS_F32
+  "--""---1""----c-"   "---""--""--""1--"   "--""--""1--", // STORE_S16_AS_I16
+  "--""---1""-----c"   "---""--""--""-1-"   "--""--""-1-", // STORE_S16_AS_UI16
+
+
+  "--""----""------"   "d--""--""--""---"   "--""--""---", // PUSH_SUBIMAGE
+  "--""----""------"   "-d-""--""--""---"   "--""--""---", // PUSH_RENDER_QUAD
+  "--""----""------"   "--d""--""--""---"   "--""--""---", // PUSH_DRAWPIXELS
+
+  "--""----""------"   "---""#-""--""---"   "--""--""---", // PUSH_U8_PIXELBUFFER
+  "--""----""------"   "---""-#""--""---"   "--""--""---", // PUSH_S16_PIXELBUFFER
+
+  "--""----""------"   "---""--""e-""---"   "--""--""---", // PUSH_U8_AS_U8
+  "--""---0""------"   "---""--""-e""---"   "--""--""---", // PUSH_U8_AS_F32
+
+  "--""----""----1-"   "---""--""--""f--"   "--""--""---", // PUSH_S16_AS_S16
+  "--""----""------"   "---""--""--""-f-"   "--""--""---", // PUSH_S16_AS_U16
+  "--""----""-----0"   "---""--""--""--f"   "--""--""---", // PUSH_S16_AS_F32
+
+
+  "--""----""------"   "---""--""--""---"   "#-""--""---", // PULL_U8_PIXELBUFFER
+  "--""----""------"   "---""--""--""---"   "-#""--""---", // PULL_S16_PIXELBUFFER
+
+  "--""----""------"   "---""--""--""---"   "--""g-""---", // PULL_U8_AS_U8
+  "--""---0""------"   "---""--""--""---"   "--""-g""---", // PULL_U8_AS_F32
+
+  "--""----""----1-"   "---""--""--""---"   "--""--""h--", // PULL_S16_AS_S16
+  "--""----""------"   "---""--""--""---"   "--""--""-h-", // PULL_S16_AS_U16
+  "--""----""-----0"   "---""--""--""---"   "--""--""--h"  // PULL_S16_AS_F32
+};
+
+#define SCHRO_OPENGL_CANVAS_FLAG_GROUP_COUNT 8
+
+static const char *schro_opengl_canvas_flag_names[] = {
+  "store packed as RGBA",      // STORE_PACKED_AS_RGBA
+  "store packed as BGRA",      // STORE_PACKED_AS_BGRA
+  "store U8 as U8",            // STORE_U8_AS_U8
+  "store U8 as F16",           // STORE_U8_AS_F16
+  "store U8 as F32",           // STORE_U8_AS_F32
+  "store U8 as UI8",           // STORE_U8_AS_UI8
+  "store S16 as S16",          // STORE_S16_AS_S16
+  "store S16 as U16",          // STORE_S16_AS_U16
+  "store S16 as F16",          // STORE_S16_AS_F16
+  "store S16 as F32",          // STORE_S16_AS_F32
+  "store S16 as I16",          // STORE_S16_AS_I16
+  "store S16 as UI16",         // STORE_S16_AS_UI16
+
+  "push by subimage",          // PUSH_SUBIMAGE
+  "push by render quad",       // PUSH_RENDER_QUAD
+  "push by drawpixels",        // PUSH_DRAWPIXELS
+  "push U8 with pixelbuffer",  // PUSH_U8_PIXELBUFFER
+  "push S16 with pixelbuffer", // PUSH_S16_PIXELBUFFER
+  "push U8 as U8",             // PUSH_U8_AS_U8
+  "push U8 as F32",            // PUSH_U8_AS_F32
+  "push S16 as S16",           // PUSH_S16_AS_S16
+  "push S16 as U16",           // PUSH_S16_AS_U16
+  "push S16 as F32",           // PUSH_S16_AS_F32
+
+  "pull U8 with pixelbuffer",  // PULL_U8_PIXELBUFFER
+  "pull S16 with pixelbuffer", // PULL_S16_PIXELBUFFER
+  "pull U8 as U8",             // PULL_U8_AS_U8
+  "pull U8 as F32",            // PULL_U8_AS_F32
+  "pull S16 as S16",           // PULL_S16_AS_S16
+  "pull S16 as U16",           // PULL_S16_AS_U16
+  "pull S16 as F32"            // PULL_S16_AS_F32
+};
+
+typedef int (* SchroOpenGLExtensionFunc) (const char **name);
+
+static int
+schro_opengl_has_extension_bgra (const char **name)
+{
+  static const char *static_name = "EXT_bgra";
+
+  *name = static_name;
+
+  return GLEW_EXT_bgra;
+}
+
+static int
+schro_opengl_has_extension_window_pos (const char **name)
+{
+  static const char *static_name = "ARB_window_pos";
+
+  *name = static_name;
+
+  return GLEW_ARB_window_pos;
+}
+
+static int
+schro_opengl_has_extension_texture_float (const char **name)
+{
+  static const char *static_name = "ARB_texture_float or ATI_texture_float";
+
+  *name = static_name;
+
+  return GLEW_ARB_texture_float || GLEW_ATI_texture_float;
+}
+
+static int
+schro_opengl_has_extension_texture_integer (const char **name)
+{
+  static const char *static_name = "EXT_texture_integer and EXT_gpu_shader4";
+
+  *name = static_name;
+
+  return GLEW_EXT_texture_integer && GLEW_EXT_gpu_shader4;
+}
+
+static int
+schro_opengl_has_extension_pixelbuffer (const char **name)
+{
+  static const char *static_name
+      = "ARB_vertex_buffer_object and ARB_pixel_buffer_object";
+
+  *name = static_name;
+
+  return GLEW_ARB_vertex_buffer_object && GLEW_ARB_pixel_buffer_object;
+}
+
+SchroOpenGLExtensionFunc schro_opengl_canvas_flag_extensions[] = {
+  NULL,                                       // STORE_PACKED_AS_RGBA
+  schro_opengl_has_extension_bgra,            // STORE_PACKED_AS_BGRA
+  NULL,                                       // STORE_U8_AS_U8
+  schro_opengl_has_extension_texture_float,   // STORE_U8_AS_F16
+  schro_opengl_has_extension_texture_float,   // STORE_U8_AS_F32
+  schro_opengl_has_extension_texture_integer, // STORE_U8_AS_UI8
+  NULL,                                       // STORE_S16_AS_S16
+  NULL,                                       // STORE_S16_AS_U16
+  schro_opengl_has_extension_texture_float,   // STORE_S16_AS_F16
+  schro_opengl_has_extension_texture_float,   // STORE_S16_AS_F32
+  schro_opengl_has_extension_texture_integer, // STORE_S16_AS_I16
+  schro_opengl_has_extension_texture_integer, // STORE_S16_AS_UI16
+
+  NULL,                                       // PUSH_SUBIMAGE
+  NULL,                                       // PUSH_RENDER_QUAD
+  schro_opengl_has_extension_window_pos,      // PUSH_DRAWPIXELS
+  schro_opengl_has_extension_pixelbuffer,     // PUSH_U8_PIXELBUFFER
+  schro_opengl_has_extension_pixelbuffer,     // PUSH_S16_PIXELBUFFER
+  NULL,                                       // PUSH_U8_AS_U8
+  NULL,                                       // PUSH_U8_AS_F32
+  NULL,                                       // PUSH_S16_AS_S16
+  NULL,                                       // PUSH_S16_AS_U16
+  NULL,                                       // PUSH_S16_AS_F32
+
+  schro_opengl_has_extension_pixelbuffer,     // PULL_U8_PIXELBUFFER
+  schro_opengl_has_extension_pixelbuffer,     // PULL_S16_PIXELBUFFER
+  NULL,                                       // PULL_U8_AS_U8
+  NULL,                                       // PULL_U8_AS_F32
+  NULL,                                       // PULL_S16_AS_S16
+  NULL,                                       // PULL_S16_AS_U16
+  NULL                                        // PULL_S16_AS_F32
+};
+
 void
 schro_opengl_canvas_check_flags (void)
 {
-  int count;
+  int i, k;
+  int value;
+  int flags_per_group[SCHRO_OPENGL_CANVAS_FLAG_GROUP_COUNT];
+  const char* extention = NULL;
 
-  /* store */
-  if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_BGRA)
-      && !GLEW_EXT_bgra) {
-    SCHRO_ERROR ("missing extension GL_EXT_bgra, disabling BGRA storing");
-    SCHRO_OPENGL_CANVAS_CLEAR_FLAG (STORE_BGRA);
+  for (i = 0; i < SCHRO_OPENGL_CANVAS_FLAG_GROUP_COUNT; i++) {
+    flags_per_group[i] = 0;
   }
 
-  count = 0;
+  for (i = 0; i < SCHRO_OPENGL_CANVAS_FLAG_COUNT; ++i) {
+    if (_schro_opengl_canvas_flags & (1 << i)) {
+      for (k = 0; k < SCHRO_OPENGL_CANVAS_FLAG_COUNT; ++k) {
+        value = schro_opengl_canvas_flag_combinations[i][k];
 
-  count += SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_U8_AS_UI8)   ? 1 : 0;
-  count += SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_S16_AS_UI16) ? 1 : 0;
-  count += SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_S16_AS_I16)  ? 1 : 0;
+        if (value >= 'a' && value <= 'z') {
+          if (i != k) {
+            SCHRO_ERROR ("'%c' at wrong index %i %i", value, i, k);
+            SCHRO_ASSERT (0);
+          }
 
-  if (count > 0 && (!GLEW_EXT_texture_integer || !GLEW_EXT_gpu_shader4)) {
-    SCHRO_ERROR ("missing extension GL_EXT_texture_integer or "
-        "GLEW_EXT_gpu_shader4, can't store U8/S16 as UI8/UI16/I16, disabling "
-        "U8/S16 as UI8/UI16/I16 storing");
-    SCHRO_OPENGL_CANVAS_CLEAR_FLAG (STORE_U8_AS_UI8);
-    SCHRO_OPENGL_CANVAS_CLEAR_FLAG (STORE_S16_AS_UI16);
-    SCHRO_OPENGL_CANVAS_CLEAR_FLAG (STORE_S16_AS_I16);
+          if (_schro_opengl_canvas_flags & (1 << k)) {
+            ++flags_per_group[value - 'a'];
+          }
+        } else {
+          switch (value) {
+            case '1':
+              if (!(_schro_opengl_canvas_flags & (1 << k))) {
+                SCHRO_ERROR ("flag '%s' is cleared but should be set if "
+                    "flag '%s' is set", schro_opengl_canvas_flag_names[k],
+                    schro_opengl_canvas_flag_names[i]);
+                SCHRO_ASSERT (0);
+              }
+
+              break;
+            case '0':
+              if (_schro_opengl_canvas_flags & (1 << k)) {
+                SCHRO_ERROR ("flag '%s' is set but should be cleared if "
+                    "flag '%s' is set", schro_opengl_canvas_flag_names[k],
+                    schro_opengl_canvas_flag_names[i]);
+                SCHRO_ASSERT (0);
+              }
+
+              break;
+            case '-':
+              break;
+            case '#':
+              if (i != k) {
+                SCHRO_ERROR ("'#' at wrong index %i %i", i, k);
+                SCHRO_ASSERT (0);
+              }
+
+              break;
+            case '\0':
+              SCHRO_ERROR ("out of bounds at index %i %i", i, k);
+              SCHRO_ASSERT (0);
+              break;
+            default:
+              SCHRO_ERROR ("invalid value '%c' at index %i %i", value, i, k);
+              SCHRO_ASSERT (0);
+              break;
+          }
+        }
+      }
+    }
   }
 
-  count = 0;
+  for (i = 0; i < SCHRO_OPENGL_CANVAS_FLAG_GROUP_COUNT; i++) {
+    if (flags_per_group[i] != 1) {
+      SCHRO_ERROR ("%i flags in group '%c' set, exactly one must be set",
+          flags_per_group[i], 'a' + i);
+      SCHRO_ASSERT (0);
+    }
+  }
 
-  count += SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_U8_AS_F16)  ? 1 : 0;
-  count += SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_U8_AS_F32)  ? 1 : 0;
-  count += SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_S16_AS_F16) ? 1 : 0;
-  count += SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_S16_AS_F32) ? 1 : 0;
+  for (i = 0; i < SCHRO_OPENGL_CANVAS_FLAG_COUNT; ++i) {
+    if (_schro_opengl_canvas_flags & (1 << i) &&
+        schro_opengl_canvas_flag_extensions[i]) {
+      if (!schro_opengl_canvas_flag_extensions[i](&extention)) {
+        SCHRO_ERROR ("flag '%s' depends on unsupported OpenGL extention '%s'",
+            schro_opengl_canvas_flag_names[i], extention);
+        SCHRO_ASSERT (0);
+      }
+    }
+  }
 
-  if (count > 0 && !GLEW_ARB_texture_float && !GLEW_ATI_texture_float) {
-    SCHRO_ERROR ("missing extension GL_{ARB|ATI}_texture_float, can't store "
-        "U8/S16 as F16/F32, disabling U8/S16 as F16/F32 storing");
-    SCHRO_OPENGL_CANVAS_CLEAR_FLAG (STORE_U8_AS_F16);
-    SCHRO_OPENGL_CANVAS_CLEAR_FLAG (STORE_U8_AS_F32);
-    SCHRO_OPENGL_CANVAS_CLEAR_FLAG (STORE_S16_AS_F16);
-    SCHRO_OPENGL_CANVAS_CLEAR_FLAG (STORE_S16_AS_F32);
+  if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_PACKED_AS_BGRA)) {
+    SCHRO_ERROR ("store packed as BGRA is currently broken");
+    SCHRO_ASSERT (0);
+  }
+
+  if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_S16_AS_F16)) {
+    SCHRO_ERROR ("store S16 as F16 is currently broken");
+    SCHRO_ASSERT (0);
   }
 
   if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_S16_AS_I16)) {
-    SCHRO_ERROR ("storing S16 as I16 is currently broken, disabling S16 as "
-        "I16 storing");
-    SCHRO_OPENGL_CANVAS_CLEAR_FLAG (STORE_S16_AS_I16);
+    SCHRO_ERROR ("store S16 as I16 is currently broken");
+    SCHRO_ASSERT (0);
   }
 
-  /* store U8 */
-  count = 0;
-
-  count += SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_U8_AS_UI8) ? 1 : 0;
-  count += SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_U8_AS_F16) ? 1 : 0;
-  count += SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_U8_AS_F32) ? 1 : 0;
-
-  if (count > 1) {
-    SCHRO_ERROR ("multiple flags for U8 storage type are set, disabling all");
-    SCHRO_OPENGL_CANVAS_CLEAR_FLAG (STORE_U8_AS_UI8);
-    SCHRO_OPENGL_CANVAS_CLEAR_FLAG (STORE_U8_AS_F16);
-    SCHRO_OPENGL_CANVAS_CLEAR_FLAG (STORE_U8_AS_F32);
-  }
-
-  /* store S16 */
-  count = 0;
-
-  count += SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_S16_AS_UI16) ? 1 : 0;
-  count += SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_S16_AS_I16)  ? 1 : 0;
-  count += SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_S16_AS_U16)  ? 1 : 0;
-  count += SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_S16_AS_F16)  ? 1 : 0;
-  count += SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_S16_AS_F32)  ? 1 : 0;
-
-  if (count > 1) {
-    SCHRO_ERROR ("multiple flags for S16 storage type are set, disabling all");
-    SCHRO_OPENGL_CANVAS_CLEAR_FLAG (STORE_S16_AS_UI16);
-    SCHRO_OPENGL_CANVAS_CLEAR_FLAG (STORE_S16_AS_I16);
-    SCHRO_OPENGL_CANVAS_CLEAR_FLAG (STORE_S16_AS_U16);
-    SCHRO_OPENGL_CANVAS_CLEAR_FLAG (STORE_S16_AS_F16);
-    SCHRO_OPENGL_CANVAS_CLEAR_FLAG (STORE_S16_AS_F32);
-  }
-
-  /* store integer */
-  if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_U8_AS_UI8) &&
-      !SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_S16_AS_UI16) &&
-      !SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_S16_AS_I16)) {
-    SCHRO_ERROR ("can't store U8 in integer format and S16 in non-integer "
-        "format at the same time, disabling U8 as UI8 storing");
-    SCHRO_OPENGL_CANVAS_CLEAR_FLAG (STORE_U8_AS_UI8);
-  }
-
-  if ((SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_S16_AS_UI16) ||
-      SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_S16_AS_I16)) &&
-      !SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_U8_AS_UI8)) {
-    SCHRO_ERROR ("can't store S16 in integer format and U8 in non-integer "
-        "format at the same time, disabling S16 as UI16/I16 storing");
-    SCHRO_OPENGL_CANVAS_CLEAR_FLAG (STORE_S16_AS_UI16);
-    SCHRO_OPENGL_CANVAS_CLEAR_FLAG (STORE_S16_AS_I16);
-  }
-
-  /* push */
-  if (!SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PUSH_RENDER_QUAD) &&
-      SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PUSH_SHADER)) {
-    SCHRO_ERROR ("can't use shader to push without render quad, disabling "
-        "shader");
-    SCHRO_OPENGL_CANVAS_CLEAR_FLAG (PUSH_SHADER);
-  }
-
-  count = 0;
-
-  count += SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_U8_AS_UI8) ? 1 : 0;
-  count += SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_S16_AS_UI16) ? 1 : 0;
-  count += SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_S16_AS_I16)  ? 1 : 0;
-
-  if (count > 0 &&
-      SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PUSH_RENDER_QUAD) &&
-      !SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PUSH_SHADER)) {
-    SCHRO_ERROR ("can't push U8/S16 as UI8/UI16/I16 shader, disabling "
-        "pushing U8/S16 as UI8/UI16/I16");
-    SCHRO_OPENGL_CANVAS_CLEAR_FLAG (STORE_U8_AS_UI8);
-    SCHRO_OPENGL_CANVAS_CLEAR_FLAG (STORE_S16_AS_UI16);
-    SCHRO_OPENGL_CANVAS_CLEAR_FLAG (STORE_S16_AS_I16);
-  }
-
-  if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PUSH_RENDER_QUAD) &&
-      SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PUSH_DRAWPIXELS)) {
-    SCHRO_ERROR ("can't render quad and drawpixels to push, disabling "
-        "drawpixels push");
-    SCHRO_OPENGL_CANVAS_CLEAR_FLAG (PUSH_DRAWPIXELS);
-  }
-
-  if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PUSH_DRAWPIXELS) &&
-      !GLEW_ARB_window_pos) {
-    SCHRO_ERROR ("missing extension GL_ARB_window_pos, disabling drawpixels "
-        "push");
-    SCHRO_OPENGL_CANVAS_CLEAR_FLAG (PUSH_DRAWPIXELS);
-  }
-
-  if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PUSH_U8_PIXELBUFFER) &&
-      (!GLEW_ARB_vertex_buffer_object || !GLEW_ARB_pixel_buffer_object)) {
-    SCHRO_ERROR ("missing extensions GL_ARB_vertex_buffer_object and/or "
-        "GL_ARB_pixel_buffer_object, disabling U8 pixelbuffer push");
-    SCHRO_OPENGL_CANVAS_CLEAR_FLAG (PUSH_U8_PIXELBUFFER);
-  }
-
-  if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PUSH_S16_PIXELBUFFER) &&
-      (!GLEW_ARB_vertex_buffer_object || !GLEW_ARB_pixel_buffer_object)) {
-    SCHRO_ERROR ("missing extensions GL_ARB_vertex_buffer_object and/or "
-        "GL_ARB_pixel_buffer_object, disabling S16 pixelbuffer push");
-    SCHRO_OPENGL_CANVAS_CLEAR_FLAG (PUSH_S16_PIXELBUFFER);
-  }
-
-  if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PUSH_S16_AS_U16) &&
-      SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PUSH_S16_AS_F32)) {
-    SCHRO_ERROR ("can't push S16 as U16 and F32, disabling U16 push");
-    SCHRO_OPENGL_CANVAS_CLEAR_FLAG (PUSH_S16_AS_U16);
-  }
-
-  if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_U8_AS_UI8) &&
-      SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PUSH_U8_AS_F32)) {
-    SCHRO_ERROR ("can't push U8 and F32 and store U8 as UI8, disabling F32 "
-        "push");
-    SCHRO_OPENGL_CANVAS_CLEAR_FLAG (PUSH_U8_AS_F32);
-  }
-
-  if ((SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_S16_AS_UI16) ||
-      SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_S16_AS_I16)) &&
-      SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PUSH_S16_AS_F32)) {
-    SCHRO_ERROR ("can't push S16 and F32 and store S16 as UI16/I16, "
-        "disabling F32 push");
-    SCHRO_OPENGL_CANVAS_CLEAR_FLAG (PUSH_S16_AS_F32);
-  }
-
-  /* pull */
-  if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PULL_PIXELBUFFER) &&
-      (!GLEW_ARB_vertex_buffer_object || !GLEW_ARB_pixel_buffer_object)) {
-    SCHRO_ERROR ("missing extensions GL_ARB_vertex_buffer_object and/or "
-        "GL_ARB_pixel_buffer_object, disabling S16 pixelbuffer pull");
-    SCHRO_OPENGL_CANVAS_CLEAR_FLAG (PULL_PIXELBUFFER);
-  }
-
-  if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PULL_S16_AS_U16) &&
-      SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PULL_S16_AS_F32)) {
-    SCHRO_ERROR ("can't pull S16 as U16 and F32, disabling U16 pull");
-    SCHRO_OPENGL_CANVAS_CLEAR_FLAG (PULL_S16_AS_U16);
-  }
-
-  if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_U8_AS_UI8) &&
-      SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PULL_U8_AS_F32)) {
-    SCHRO_ERROR ("can't pull U8 and F32 and store U8 as UI8, disabling F32 "
-        "pull");
-    SCHRO_OPENGL_CANVAS_CLEAR_FLAG (PULL_U8_AS_F32);
-  }
-
-  if ((SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_S16_AS_UI16) ||
-      SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_S16_AS_I16)) &&
-      SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PULL_S16_AS_F32)) {
-    SCHRO_ERROR ("can't pull S16 and F32 and store S16 as UI16/I16, "
-        "disabling F32 pull");
-    SCHRO_OPENGL_CANVAS_CLEAR_FLAG (PULL_S16_AS_F32);
-  }
-
-  if (!SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PULL_S16_AS_U16) &&
-      !SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PULL_S16_AS_F32)) {
-    SCHRO_ERROR ("can't pull S16 and S16, enabling U16 pull");
-    SCHRO_OPENGL_CANVAS_SET_FLAG (PULL_S16_AS_U16);
+  if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PUSH_DRAWPIXELS)) {
+    SCHRO_ERROR ("push by drawpixels is currently broken");
+    SCHRO_ASSERT (0);
   }
 }
 
@@ -298,31 +440,39 @@ schro_opengl_canvas_print_flags (const char* indent)
 
   printf ("%sstore flags\n", indent);
 
-  PRINT_FLAG ("BGRA:            ", STORE_BGRA);
-  PRINT_FLAG ("U8 as UI8:       ", STORE_U8_AS_UI8);
+  PRINT_FLAG ("packed as RGBA:  ", STORE_PACKED_AS_RGBA);
+  PRINT_FLAG ("packed as BGRA:  ", STORE_PACKED_AS_BGRA);
+  PRINT_FLAG ("U8 as U8:        ", STORE_U8_AS_U8);
   PRINT_FLAG ("U8 as F16:       ", STORE_U8_AS_F16);
   PRINT_FLAG ("U8 as F32:       ", STORE_U8_AS_F32);
-  PRINT_FLAG ("S16 as UI16:     ", STORE_S16_AS_UI16);
-  PRINT_FLAG ("S16 as I16:      ", STORE_S16_AS_I16);
+  PRINT_FLAG ("U8 as UI8:       ", STORE_U8_AS_UI8);
+  PRINT_FLAG ("S16 as S16:      ", STORE_S16_AS_S16);
   PRINT_FLAG ("S16 as U16:      ", STORE_S16_AS_U16);
   PRINT_FLAG ("S16 as F16:      ", STORE_S16_AS_F16);
   PRINT_FLAG ("S16 as F32:      ", STORE_S16_AS_F32);
+  PRINT_FLAG ("S16 as I16:      ", STORE_S16_AS_I16);
+  PRINT_FLAG ("S16 as UI16:     ", STORE_S16_AS_UI16);
 
   printf ("%spush flags\n", indent);
 
+  PRINT_FLAG ("subimage:        ", PUSH_SUBIMAGE);
   PRINT_FLAG ("render quad:     ", PUSH_RENDER_QUAD);
-  PRINT_FLAG ("shader:          ", PUSH_SHADER);
   PRINT_FLAG ("drawpixels:      ", PUSH_DRAWPIXELS);
   PRINT_FLAG ("U8 pixelbuffer:  ", PUSH_U8_PIXELBUFFER);
-  PRINT_FLAG ("U8 as F32:       ", PUSH_U8_AS_F32);
   PRINT_FLAG ("S16 pixelbuffer: ", PUSH_S16_PIXELBUFFER);
+  PRINT_FLAG ("U8 as U8:        ", PUSH_U8_AS_U8);
+  PRINT_FLAG ("U8 as F32:       ", PUSH_U8_AS_F32);
+  PRINT_FLAG ("S16 as S16:      ", PUSH_S16_AS_S16);
   PRINT_FLAG ("S16 as U16:      ", PUSH_S16_AS_U16);
   PRINT_FLAG ("S16 as F32:      ", PUSH_S16_AS_F32);
 
   printf ("%spull flags\n", indent);
 
-  PRINT_FLAG ("pixelbuffer:     ", PULL_PIXELBUFFER);
+  PRINT_FLAG ("U8 pixelbuffer:  ", PULL_U8_PIXELBUFFER);
+  PRINT_FLAG ("S16 pixelbuffer: ", PULL_S16_PIXELBUFFER);
+  PRINT_FLAG ("U8 as U8:        ", PULL_U8_AS_U8);
   PRINT_FLAG ("U8 as F32:       ", PULL_U8_AS_F32);
+  PRINT_FLAG ("S16 as S16:      ", PULL_S16_AS_S16);
   PRINT_FLAG ("S16 as U16:      ", PULL_S16_AS_U16);
   PRINT_FLAG ("S16 as F32:      ", PULL_S16_AS_F32);
 
@@ -388,7 +538,12 @@ schro_opengl_canvas_new (SchroOpenGL *opengl, SchroOpenGLCanvasType type,
 
   switch (SCHRO_FRAME_FORMAT_DEPTH (format)) {
     case SCHRO_FRAME_FORMAT_DEPTH_U8:
-      if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_U8_AS_F16)) {
+      if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_U8_AS_U8)) {
+        /* must use RGBA format here, because other formats are in general
+           not supported by framebuffers */
+        canvas->internal_format = GL_RGBA8;
+        canvas->storage_type = GL_UNSIGNED_BYTE;
+      } else if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_U8_AS_F16)) {
         if (!SCHRO_FRAME_IS_PACKED (format) && GLEW_NV_float_buffer) {
           canvas->internal_format = GL_FLOAT_R16_NV;
         } else {
@@ -413,14 +568,21 @@ schro_opengl_canvas_new (SchroOpenGL *opengl, SchroOpenGLCanvasType type,
 
         canvas->storage_type = GL_UNSIGNED_BYTE;
       } else {
-        /* must use RGBA format here, because other formats are in general
-           not supported by framebuffers */
-        canvas->internal_format = GL_RGBA8;
-        canvas->storage_type = GL_UNSIGNED_BYTE;
+        SCHRO_ERROR ("invalid canvas flags combination, one U8 storage type "
+            "flag must be set");
+        SCHRO_ASSERT (0);
       }
 
       if (SCHRO_FRAME_IS_PACKED (format)) {
-        if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_BGRA)) {
+        if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_PACKED_AS_RGBA)) {
+          if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_U8_AS_UI8)) {
+            canvas->pixel_format = GL_RGBA_INTEGER_EXT;
+          } else {
+            canvas->pixel_format = GL_RGBA;
+          }
+
+          canvas->channels = 4;
+        } else if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_PACKED_AS_BGRA)) {
           if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_U8_AS_UI8)) {
             canvas->pixel_format = GL_BGRA_INTEGER_EXT;
           } else {
@@ -429,13 +591,9 @@ schro_opengl_canvas_new (SchroOpenGL *opengl, SchroOpenGLCanvasType type,
 
           canvas->channels = 4;
         } else {
-          if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_U8_AS_UI8)) {
-            canvas->pixel_format = GL_RGBA_INTEGER_EXT;
-          } else {
-            canvas->pixel_format = GL_RGBA;
-          }
-
-          canvas->channels = 4;
+          SCHRO_ERROR ("invalid canvas flags combination, one channel order "
+              "flag must be set");
+          SCHRO_ASSERT (0);
         }
       } else {
         if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_U8_AS_UI8)) {
@@ -453,14 +611,18 @@ schro_opengl_canvas_new (SchroOpenGL *opengl, SchroOpenGLCanvasType type,
             SCHRO_OPENGL_CANVAS_TYPE_SECONDARY, format, width, height);
 
         /* push */
-        if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PUSH_U8_AS_F32)) {
+        if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PUSH_U8_AS_U8)) {
+          canvas->push_type = GL_UNSIGNED_BYTE;
+          canvas->push_stride = ROUND_UP_4 (width * canvas->channels
+              * sizeof (uint8_t));
+        } else if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PUSH_U8_AS_F32)) {
           canvas->push_type = GL_FLOAT;
           canvas->push_stride = ROUND_UP_4 (width * canvas->channels
               * sizeof (float));
         } else {
-          canvas->push_type = GL_UNSIGNED_BYTE;
-          canvas->push_stride = ROUND_UP_4 (width * canvas->channels
-              * sizeof (uint8_t));
+          SCHRO_ERROR ("invalid canvas flags combination, one U8 push type "
+              "flag must be set");
+          SCHRO_ASSERT (0);
         }
 
         if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PUSH_U8_PIXELBUFFER)) {
@@ -472,17 +634,21 @@ schro_opengl_canvas_new (SchroOpenGL *opengl, SchroOpenGLCanvasType type,
         }
 
         /* pull */
-        if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PULL_U8_AS_F32)) {
+        if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PULL_U8_AS_U8)) {
+          canvas->pull_type = GL_UNSIGNED_BYTE;
+          canvas->pull_stride = ROUND_UP_4 (width * canvas->channels
+              * sizeof (uint8_t));
+        } else if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PULL_U8_AS_F32)) {
           canvas->pull_type = GL_FLOAT;
           canvas->pull_stride = ROUND_UP_4 (width * canvas->channels
               * sizeof (float));
         } else {
-          canvas->pull_type = GL_UNSIGNED_BYTE;
-          canvas->pull_stride = ROUND_UP_4 (width * canvas->channels
-              * sizeof (uint8_t));
+          SCHRO_ERROR ("invalid canvas flags combination, one U8 pull type "
+              "flag must be set");
+          SCHRO_ASSERT (0);
         }
 
-        if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PULL_PIXELBUFFER)) {
+        if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PULL_U8_PIXELBUFFER)) {
           canvas->pull_pixelbuffer = schro_opengl_pixelbuffer_new (opengl,
               SCHRO_OPENGL_PIXELBUFFER_TYPE_PULL, width, height,
               canvas->pull_stride);
@@ -497,7 +663,17 @@ schro_opengl_canvas_new (SchroOpenGL *opengl, SchroOpenGLCanvasType type,
 
       break;
     case SCHRO_FRAME_FORMAT_DEPTH_S16:
-      if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_S16_AS_F16)) {
+      if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_S16_AS_S16)) {
+        /* must use RGBA format here, because other formats are in general
+           not supported by framebuffers */
+        canvas->internal_format = GL_RGBA16;
+        canvas->storage_type = GL_SHORT;
+      } else if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_S16_AS_U16)) {
+        /* must use RGBA format here, because other formats are in general
+           not supported by framebuffers */
+        canvas->internal_format = GL_RGBA16;
+        canvas->storage_type = GL_UNSIGNED_SHORT;
+      } else if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_S16_AS_F16)) {
         if (!SCHRO_FRAME_IS_PACKED (format) && GLEW_NV_float_buffer) {
           canvas->internal_format = GL_FLOAT_R16_NV;
         } else {
@@ -513,6 +689,14 @@ schro_opengl_canvas_new (SchroOpenGL *opengl, SchroOpenGLCanvasType type,
         }
 
         canvas->storage_type = GL_FLOAT;
+      } else if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_S16_AS_I16)) {
+        if (SCHRO_FRAME_IS_PACKED (format)) {
+          canvas->internal_format = GL_RGBA16I_EXT;
+        } else {
+          canvas->internal_format = GL_ALPHA16I_EXT;
+        }
+
+        canvas->storage_type = GL_SHORT;
       } else if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_S16_AS_UI16)) {
         if (SCHRO_FRAME_IS_PACKED (format)) {
           canvas->internal_format = GL_RGBA16UI_EXT;
@@ -521,30 +705,25 @@ schro_opengl_canvas_new (SchroOpenGL *opengl, SchroOpenGLCanvasType type,
         }
 
         canvas->storage_type = GL_UNSIGNED_SHORT;
-      } else if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_S16_AS_I16)) {
-        if (SCHRO_FRAME_IS_PACKED (format)) {
-          canvas->internal_format = GL_RGBA16I_EXT;
-        } else {
-          canvas->internal_format = GL_ALPHA16I_EXT;
-        }
-
-        canvas->type = GL_SHORT;
-      } else if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_S16_AS_U16)) {
-        /* must use RGBA format here, because other formats are in general
-           not supported by framebuffers */
-        canvas->internal_format = GL_RGBA16;
-        canvas->storage_type = GL_UNSIGNED_SHORT;
       } else {
-        /* must use RGBA format here, because other formats are in general
-           not supported by framebuffers */
-        canvas->internal_format = GL_RGBA16;
-        canvas->storage_type = GL_SHORT;
+        SCHRO_ERROR ("invalid canvas flags combination, one S16 storage type "
+            "flag must be set");
+        SCHRO_ASSERT (0);
       }
 
       if (SCHRO_FRAME_IS_PACKED (format)) {
-        if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_BGRA)) {
-          if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_S16_AS_UI16) ||
-              SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_S16_AS_I16)) {
+        if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_PACKED_AS_RGBA)) {
+          if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_S16_AS_I16) ||
+              SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_S16_AS_UI16)) {
+            canvas->pixel_format = GL_RGBA_INTEGER_EXT;
+          } else {
+            canvas->pixel_format = GL_RGBA;
+          }
+
+          canvas->channels = 4;
+        } else if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_PACKED_AS_BGRA)) {
+          if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_S16_AS_I16) ||
+              SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_S16_AS_UI16)) {
             canvas->pixel_format = GL_BGRA_INTEGER_EXT;
           } else {
             canvas->pixel_format = GL_BGRA;
@@ -552,18 +731,13 @@ schro_opengl_canvas_new (SchroOpenGL *opengl, SchroOpenGLCanvasType type,
 
           canvas->channels = 4;
         } else {
-          if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_S16_AS_UI16) ||
-              SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_S16_AS_I16)) {
-            canvas->pixel_format = GL_RGBA_INTEGER_EXT;
-          } else {
-            canvas->pixel_format = GL_RGBA;
-          }
-
-          canvas->channels = 4;
+          SCHRO_ERROR ("invalid canvas flags combination, one channel order "
+              "flag must be set");
+          SCHRO_ASSERT (0);
         }
       } else {
-        if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_S16_AS_UI16) ||
-            SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_S16_AS_I16)) {
+        if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_S16_AS_I16) ||
+            SCHRO_OPENGL_CANVAS_IS_FLAG_SET (STORE_S16_AS_UI16)) {
           canvas->pixel_format = GL_ALPHA_INTEGER_EXT;
         } else {
           canvas->pixel_format = GL_RED;
@@ -578,7 +752,11 @@ schro_opengl_canvas_new (SchroOpenGL *opengl, SchroOpenGLCanvasType type,
             SCHRO_OPENGL_CANVAS_TYPE_SECONDARY, format, width, height);
 
         /* push */
-        if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PUSH_S16_AS_U16)) {
+        if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PUSH_S16_AS_S16)) {
+          canvas->push_type = GL_SHORT;
+          canvas->push_stride = ROUND_UP_4 (width * canvas->channels
+              * sizeof (int16_t));
+        } else if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PUSH_S16_AS_U16)) {
           canvas->push_type = GL_UNSIGNED_SHORT;
           canvas->push_stride = ROUND_UP_4 (width * canvas->channels
               * sizeof (uint16_t));
@@ -587,9 +765,9 @@ schro_opengl_canvas_new (SchroOpenGL *opengl, SchroOpenGLCanvasType type,
           canvas->push_stride = ROUND_UP_4 (width * canvas->channels
               * sizeof (float));
         } else {
-          canvas->push_type = GL_SHORT;
-          canvas->push_stride = ROUND_UP_4 (width * canvas->channels
-              * sizeof (int16_t));
+          SCHRO_ERROR ("invalid canvas flags combination, one S16 push type "
+              "flag must be set");
+          SCHRO_ASSERT (0);
         }
 
         if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PUSH_S16_PIXELBUFFER)) {
@@ -601,7 +779,15 @@ schro_opengl_canvas_new (SchroOpenGL *opengl, SchroOpenGLCanvasType type,
         }
 
         /* pull */
-        if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PULL_S16_AS_U16)) {
+        if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PULL_S16_AS_S16)) {
+          /* FIXME: pulling S16 as GL_SHORT doesn't work in general, maybe
+             it's the right mode if the internal format is an integer format
+             but for some reason storing as I16 doesn't work either and only
+             gives garbage pull results */
+          canvas->pull_type = GL_SHORT;
+          canvas->pull_stride = ROUND_UP_4 (width * canvas->channels
+              * sizeof (int16_t));
+        } else if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PULL_S16_AS_U16)) {
           /* must pull S16 as GL_UNSIGNED_SHORT instead of GL_SHORT because
              the OpenGL mapping form internal float represenation into S16
              values with GL_SHORT maps 0.0 to 0 and 1.0 to 32767 clamping all
@@ -616,16 +802,12 @@ schro_opengl_canvas_new (SchroOpenGL *opengl, SchroOpenGLCanvasType type,
           canvas->pull_stride = ROUND_UP_4 (width * canvas->channels
               * sizeof (float));
         } else {
-          /* FIXME: pulling S16 as GL_SHORT doesn't work in general, maybe
-             it's the right mode if the internal format is an integer format
-             but for some reason storing as I16 doesn't work either and only
-             gives garbage pull results */
-          canvas->pull_type = GL_SHORT;
-          canvas->pull_stride = ROUND_UP_4 (width * canvas->channels
-              * sizeof (int16_t));
+          SCHRO_ERROR ("invalid canvas flags combination, one S16 pull type "
+              "flag must be set");
+          SCHRO_ASSERT (0);
         }
 
-        if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PULL_PIXELBUFFER)) {
+        if (SCHRO_OPENGL_CANVAS_IS_FLAG_SET (PULL_S16_PIXELBUFFER)) {
           canvas->pull_pixelbuffer = schro_opengl_pixelbuffer_new (opengl,
               SCHRO_OPENGL_PIXELBUFFER_TYPE_PULL, width, height,
               canvas->pull_stride);
@@ -644,7 +826,7 @@ schro_opengl_canvas_new (SchroOpenGL *opengl, SchroOpenGLCanvasType type,
       break;
   }
 
-  schro_opengl_lock_context (opengl);
+  SCHRO_OPENGL_LOCK_CONTEXT (opengl);
 
   /* texture */
   glGenTextures (1, &canvas->texture);
@@ -676,7 +858,7 @@ schro_opengl_canvas_new (SchroOpenGL *opengl, SchroOpenGLCanvasType type,
 
   glBindFramebufferEXT (GL_FRAMEBUFFER_EXT, 0);
 
-  schro_opengl_unlock_context (opengl);
+  SCHRO_OPENGL_UNLOCK_CONTEXT (opengl);
 
   /* add new canvas to pool */
   schro_opengl_lock_canvas_pool (opengl);
@@ -734,7 +916,7 @@ schro_opengl_canvas_unref (SchroOpenGLCanvas *canvas)
   schro_opengl_unlock_canvas_pool (canvas->opengl);
 
   /* free OpenGL handles */
-  schro_opengl_lock_context (canvas->opengl);
+  SCHRO_OPENGL_LOCK_CONTEXT (canvas->opengl);
 
   SCHRO_ASSERT (glIsTexture (canvas->texture));
   SCHRO_ASSERT (glIsFramebufferEXT (canvas->framebuffer));
@@ -742,7 +924,7 @@ schro_opengl_canvas_unref (SchroOpenGLCanvas *canvas)
   glDeleteTextures (1, &canvas->texture);
   glDeleteFramebuffersEXT (1, &canvas->framebuffer);
 
-  schro_opengl_unlock_context (canvas->opengl);
+  SCHRO_OPENGL_UNLOCK_CONTEXT (canvas->opengl);
 
   switch (canvas->type) {
     case SCHRO_OPENGL_CANVAS_TYPE_PRIMARAY:
@@ -819,7 +1001,7 @@ schro_opengl_pixelbuffer_new (SchroOpenGL *opengl,
   pixelbuffer->height = height;
   pixelbuffer->stride = stride;
 
-  schro_opengl_lock_context (opengl);
+  SCHRO_OPENGL_LOCK_CONTEXT (opengl);
 
   for (i = 0; i < SCHRO_OPENGL_PIXELBUFFER_BLOCKS; ++i) {
     if (i == SCHRO_OPENGL_PIXELBUFFER_BLOCKS - 1) {
@@ -852,7 +1034,7 @@ schro_opengl_pixelbuffer_new (SchroOpenGL *opengl,
     SCHRO_OPENGL_CHECK_ERROR
   }
 
-  schro_opengl_unlock_context (opengl);
+  SCHRO_OPENGL_UNLOCK_CONTEXT (opengl);
 
   /* add new pixelbuffer to pool */
   schro_opengl_lock_canvas_pool (opengl);
@@ -911,7 +1093,7 @@ schro_opengl_pixelbuffer_unref (SchroOpenGLPixelbuffer *pixelbuffer)
   schro_opengl_unlock_canvas_pool (pixelbuffer->opengl);
 
   /* free OpenGL handles */
-  schro_opengl_lock_context (pixelbuffer->opengl);
+  SCHRO_OPENGL_LOCK_CONTEXT (pixelbuffer->opengl);
 
   for (i = 0; i < SCHRO_OPENGL_PIXELBUFFER_BLOCKS; ++i) {
     SCHRO_ASSERT (glIsBufferARB (pixelbuffer->handles[i]));
@@ -919,7 +1101,7 @@ schro_opengl_pixelbuffer_unref (SchroOpenGLPixelbuffer *pixelbuffer)
     glDeleteBuffersARB (1, &pixelbuffer->handles[i]);
   }
 
-  schro_opengl_unlock_context (pixelbuffer->opengl);
+  SCHRO_OPENGL_UNLOCK_CONTEXT (pixelbuffer->opengl);
 
   schro_free (pixelbuffer);
 }
