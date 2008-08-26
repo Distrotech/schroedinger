@@ -108,6 +108,8 @@ class Parameters {
 	    sb.append(String.format("\nHorizBlocks: %d\tVertBlocks: %d",
 				    horiz_codeblocks[i], vert_codeblocks[i]));
 	}
+	sb.append(String.format("\nxblen: %d\t yblen: %d", xblen_luma, yblen_luma));
+	sb.append(String.format("\nxbsep: %d\t ybsep: %d", xbsep_luma, ybsep_luma));
 	return sb.toString();
     }
 }    

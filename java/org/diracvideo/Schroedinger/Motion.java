@@ -178,8 +178,8 @@ class Motion {
 	    xbsep >>= chroma_h_shift;
 	    xblen >>= chroma_h_shift;
 	}
-	yoffset = (ybsep - yblen)/2;
-	xoffset = (xbsep - xblen)/2;
+	yoffset = (yblen - ybsep) >> 1;
+	xoffset = (xblen - xbsep) >> 1;
 	/* initialize obmc weight */
 	weight_y = new short[yblen*2];
 	weight_x = new short[xblen*2];
@@ -208,8 +208,6 @@ class Motion {
 		wy = 8;
 	    }
 	    weight_y[j] = wy;
-//	    System.err.format("xbsep: %d\tybsep: %d\nxblen: %d\tyblen: %d\n",
-//	      xbsep, ybsep, xblen, yblen);
 	}
     }
 
