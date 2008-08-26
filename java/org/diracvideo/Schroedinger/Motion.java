@@ -12,9 +12,8 @@ class Motion {
     Vector vecs[];
     Picture refs[];
     Arithmetic ar[];
-    int xbsep, ybsep, xblen, yblen, width, height;
+    int xbsep, ybsep, xblen, yblen, xoffset, yoffset;
     int chroma_h_shift, chroma_v_shift;
-    int xoffset, yoffset, max_fast_x, max_fast_y;
     short weight_x[], weight_y[];
     Block block, tmp_ref[];
 
@@ -173,19 +172,17 @@ class Motion {
 	xblen = par.xblen_luma;
 	ybsep = par.ybsep_luma;
 	xbsep = par.xbsep_luma;
-	width = f.width;
-	height = f.height;
 	if(k != 0) {
 	    yblen >>= chroma_v_shift;
 	    ybsep >>= chroma_v_shift;
-	    height >>= chroma_v_shift;
 	    xbsep >>= chroma_h_shift;
 	    xblen >>= chroma_h_shift;
-	    width >>= chroma_h_shift;
 	}
+	yoffset = (ybsep - yblen)/2;
+	xoffset = (xbsep - xblen)/2;
 	/* initialize obmc weight */
-	weight_y = new short[yblen];
-	weight_x = new short[xblen];
+	weight_y = new short[yblen*2];
+	weight_x = new short[xblen*2];
 	for(int i = 0; i < xblen; i++) {
 	    short wx;
 	    if(xoffset == 0) {
@@ -211,6 +208,8 @@ class Motion {
 		wy = 8;
 	    }
 	    weight_y[j] = wy;
+//	    System.err.format("xbsep: %d\tybsep: %d\nxblen: %d\tyblen: %d\n",
+//	      xbsep, ybsep, xblen, yblen);
 	}
     }
 
@@ -227,10 +226,10 @@ class Motion {
 	    mv = mv.scale(chroma_h_shift, chroma_v_shift); 
 	for(int q = 0; q < yblen; q++) {
 	    int y = ystart + q;
-	    if(y < 0 || y > height - 1) continue;
+	    if(y < 0 || y > out.s.height - 1) continue;
 	    for(int p = 0; p < xblen; p++) {
 		int x = xstart + p;
-		if(x < 0 || x > width - 1) continue;
+		if(x < 0 || x > out.s.width - 1) continue;
 		block.set(p,q, predictPixel(mv, x, y, k));
 	    }
 	}
@@ -287,37 +286,22 @@ class Motion {
 	w01 = (add - rx)*ry;
 	w10 = rx*(add - ry);
 	w11 = rx*ry;
-	int val = w00*tmp_ref[ref].real(px, py) + 
-	    w01*tmp_ref[ref].real(px + 1, py) +
-	    w10*tmp_ref[ref].real(px, py + 1) + 
-	    w11*tmp_ref[ref].real(px + 1, py + 1);
+	int val = w00*tmp_ref[ref].real(hx, hy) + 
+	    w01*tmp_ref[ref].real(hx + 1, hy) +
+	    w10*tmp_ref[ref].real(hx, hy + 1) + 
+	    w11*tmp_ref[ref].real(hx + 1, hy + 1);
 	return (short)((val + (1 << (2*prec-3))) >> (2*prec - 2));
     }
     
-    /* this method weighs the the work block with obmc and 
-       adds it to the output block */
+
     private void accumulateBlock(Block out, int x, int y) {
-	for(int j = 0; j < yblen; j++) {
-	    int inLine = block.line(j);
-	    int outLine = out.index(x, y + j);
-	    int w_y = weight_y[j];
-	    if(y + j < yoffset) {
-		w_y += weight_y[2*yoffset - j - 1];
-	    } /*
-	    if(y + j >= par.y_num_blocks * ybsep - yoffset) {
-		w_y += weight_y[2*(yblen - yoffset) - j - 1];
-		} */
-	    if(y + j < 0 || y + j >= out.s.height) continue;
-	    for(int i = 0; i < xblen; i++) {
-		if(x + i < 0 || x + i >= out.s.width) continue;
-		int w_x = weight_x[i];
-	       	if(x + i < xoffset) {
-		    w_x += weight_x[2*xoffset - i - 1];
-		} /*
-		if(x + i >= par.x_num_blocks * xbsep - xoffset) {
-		    w_x += weight_x[2*(xblen - xoffset) - i - 1];
-		    } */
-		out.d[i + outLine] += (short)(block.d[i + inLine] * w_x * w_y);
+	for(int q = 0; q < yblen; q++) {
+	    if(q + y < 0 || q + y >= out.s.height) continue;
+	    for(int p = 0; p < xblen; p++) {
+		if(p + x < 0 || p + x >= out.s.width) continue;
+		int weight = weight_x[p]*weight_y[q];
+		int val = out.pixel(p + x, q + y) + block.pixel(p,q);
+		out.set(p + x, q + y, val * weight);
 	    }
 	}
     }
