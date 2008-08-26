@@ -178,7 +178,7 @@ class Motion {
 	    xbsep >>= chroma_h_shift;
 	    xblen >>= chroma_h_shift;
 	}
-	yoffset = (ybsep - xblen)/2;
+	yoffset = (ybsep - yblen)/2;
 	xoffset = (xbsep - xblen)/2;
 	/* initialize obmc weight */
 	weight_y = new short[yblen*2];
@@ -208,6 +208,8 @@ class Motion {
 		wy = 8;
 	    }
 	    weight_y[j] = wy;
+//	    System.err.format("xbsep: %d\tybsep: %d\nxblen: %d\tyblen: %d\n",
+//	      xbsep, ybsep, xblen, yblen);
 	}
     }
 
@@ -291,30 +293,15 @@ class Motion {
 	return (short)((val + (1 << (2*prec-3))) >> (2*prec - 2));
     }
     
-    /* this method weighs the the work block with obmc and 
-       adds it to the output block */
+
     private void accumulateBlock(Block out, int x, int y) {
-	for(int j = 0; j < yblen; j++) {
-	    int inLine = block.line(j);
-	    int outLine = out.index(x, y + j);
-	    int w_y = weight_y[j];
-	    if(y + j < yoffset) {
-		w_y += weight_y[2*yoffset - j - 1];
-	    } 
-	    if(y + j >= par.y_num_blocks * ybsep - yoffset) {
-		w_y += weight_y[2*(yblen - yoffset) - j - 1];
-	    } 
-	    if(y + j < 0 || y + j >= out.s.height) continue;
-	    for(int i = 0; i < xblen; i++) {
-		if(x + i < 0 || x + i >= out.s.width) continue;
-		int w_x = weight_x[i];
-	       	if(x + i < xoffset) {
-		    w_x += weight_x[2*xoffset - i - 1];
-		} 
-		if(x + i >= par.x_num_blocks * xbsep - xoffset) {
-		    w_x += weight_x[2*(xblen - xoffset) - i - 1];
-		} 
-		out.d[i + outLine] += (short)(block.d[i + inLine] * w_x * w_y);
+	for(int q = 0; q < yblen; q++) {
+	    if(q + y < 0 || q + y >= out.s.height) continue;
+	    for(int p = 0; p < xblen; p++) {
+		if(p + x < 0 || p + x >= out.s.width) continue;
+		int weight = weight_x[p]*weight_y[q];
+		int val = out.pixel(p + x, q + y) + block.pixel(p,q);
+		out.set(p + x, q + y, val * weight);
 	    }
 	}
     }
