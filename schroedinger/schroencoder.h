@@ -90,6 +90,8 @@ struct _SchroEncoderFrame {
 
   void *priv;
 
+  unsigned int expired_reference;
+
   /* Bits telling the engine stages which stuff needs to happen */
   unsigned int need_downsampling;
   unsigned int need_upsampling;
@@ -162,14 +164,16 @@ struct _SchroEncoderFrame {
 
   int16_t *quant_data;
 
-  int quant_index[3][1+SCHRO_LIMIT_TRANSFORM_DEPTH*3];
-  double est_entropy[3][1+SCHRO_LIMIT_TRANSFORM_DEPTH*3][60];
-  double est_error[3][1+SCHRO_LIMIT_TRANSFORM_DEPTH*3][60];
-  double subband_info[3][1+SCHRO_LIMIT_TRANSFORM_DEPTH*3];
+  int *quant_indices[3][SCHRO_LIMIT_SUBBANDS];
+
+  int quant_index[3][SCHRO_LIMIT_SUBBANDS];
+  double est_entropy[3][SCHRO_LIMIT_SUBBANDS][60];
+  double est_error[3][SCHRO_LIMIT_SUBBANDS][60];
   SchroPack *pack;
   SchroParams params;
   SchroEncoder *encoder;
   SchroFrame *iwt_frame;
+  SchroFrame *quant_frame;
   SchroFrame *prediction_frame;
 
   SchroEncoderFrame *ref_frame[2];
@@ -217,6 +221,7 @@ struct _SchroEncoder {
 
   SchroEncoderFrame *reference_pictures[SCHRO_LIMIT_REFERENCE_FRAMES];
 
+  int assemble_packets;
   int need_rap;
 
   SchroVideoFormat video_format;
@@ -259,6 +264,8 @@ struct _SchroEncoder {
   schro_bool enable_zero_estimation;
   schro_bool enable_phasecorr_estimation;
   schro_bool enable_bigblock_estimation;
+  schro_bool enable_multiquant;
+  schro_bool enable_dc_multiquant;
   int horiz_slices;
   int vert_slices;
 
@@ -336,12 +343,7 @@ struct _SchroEncoder {
   int gop_picture;
   int quant_slot;
 
-  int intra_ref;
   int last_ref;
-  int last_ref2;
-  //int next_ref;
-  //int mid1_ref;
-  //int mid2_ref;
 };
 #endif
 
@@ -420,6 +422,7 @@ void schro_encoder_insert_buffer (SchroEncoder *encoder, SchroBuffer *buffer);
 void schro_encoder_frame_insert_buffer (SchroEncoderFrame *frame, SchroBuffer *buffer);
 void schro_encoder_start (SchroEncoder *encoder);
 
+void schro_encoder_set_packet_assembly (SchroEncoder *encoder, int value);
 SchroStateEnum schro_encoder_wait (SchroEncoder *encoder);
 SchroBuffer * schro_encoder_pull (SchroEncoder *encoder,
     int *n_decodable_frames);
@@ -483,6 +486,9 @@ void schro_encoder_recalculate_allocations (SchroEncoder *encoder);
 void schro_encoder_calculate_test_info (SchroEncoderFrame *frame);
 
 void schro_encoder_init_error_tables (SchroEncoder *encoder);
+
+void schro_encoder_frame_set_quant_index (SchroEncoderFrame *frame, int component,
+    int index, int x, int y, int quant_index);
 
 #endif
 

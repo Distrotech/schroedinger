@@ -260,6 +260,7 @@ schro_params_verify_block_params (SchroParams *params)
   return TRUE;
 }
 
+#ifdef unused
 /**
  * schro_params_set_default_codeblock:
  * @params: pointer to SchroParams structure
@@ -276,8 +277,10 @@ schro_params_set_default_codeblock (SchroParams *params)
     params->horiz_codeblocks[i] = 1;
     params->vert_codeblocks[i] = 1;
   }
+  /* FIXME default in Dirac is 0 */
   params->codeblock_mode_index = 1;
 }
+#endif
 
 /**
  * schro_params_is_default_codeblock:
@@ -328,34 +331,6 @@ schro_subband_get_frame_data (SchroFrameData *fd,
   }
   if (position & 1) {
     fd->data = OFFSET(fd->data, fd->width*sizeof(int16_t));
-  }
-}
-
-void
-schro_subband_get (SchroFrame *frame, int component, int position,
-    SchroParams *params,
-    int16_t **data, int *stride, int *width, int *height)
-{
-  int shift;
-  SchroFrameData *comp = &frame->components[component];
-
-  shift = params->transform_depth - SCHRO_SUBBAND_SHIFT(position);
-
-  *stride = comp->stride << shift;
-  if (component == 0) {
-    *width = params->iwt_luma_width >> shift;
-    *height = params->iwt_luma_height >> shift;
-  } else {
-    *width = params->iwt_chroma_width >> shift;
-    *height = params->iwt_chroma_height >> shift;
-  }
-
-  *data = comp->data;
-  if (position & 2) {
-    *data = OFFSET(*data, (*stride)>>1);
-  }
-  if (position & 1) {
-    *data = OFFSET(*data, (*width)*sizeof(int16_t));
   }
 }
 
@@ -454,7 +429,7 @@ schro_params_set_default_quant_matrix (SchroParams *params)
   const int *table;
 
   table = schro_tables_lowdelay_quants[params->wavelet_filter_index]
-      [params->transform_depth-1];
+      [MAX(0,params->transform_depth-1)];
 
   params->quant_matrix[0] = table[0];
   for(i=0;i<params->transform_depth; i++) {
@@ -470,7 +445,7 @@ schro_params_is_default_quant_matrix (SchroParams *params)
   int i;
   const int *table;
 
-  if (params->transform_depth > 4) return FALSE;
+  if (params->transform_depth < 1 || params->transform_depth > 4) return FALSE;
 
   table = schro_tables_lowdelay_quants[params->wavelet_filter_index]
       [params->transform_depth-1];

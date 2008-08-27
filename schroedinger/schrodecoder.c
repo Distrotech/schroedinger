@@ -1090,6 +1090,7 @@ schro_decoder_async_schedule (SchroDecoder *decoder,
   return FALSE;
 }
 
+#if 0
 void
 schro_decoder_decode_picture (SchroPicture *picture)
 {
@@ -1101,6 +1102,7 @@ schro_decoder_decode_picture (SchroPicture *picture)
   schro_decoder_x_combine (picture);
   schro_decoder_x_upsample (picture);
 }
+#endif
 
 void
 schro_decoder_x_check_references (SchroPicture *picture)
@@ -2074,8 +2076,7 @@ schro_decoder_parse_transform_parameters (SchroPicture *picture)
   /* transform depth */
   params->transform_depth = schro_unpack_decode_uint (unpack);
   SCHRO_DEBUG ("transform depth %d", params->transform_depth);
-  if (params->transform_depth < 1 ||
-      params->transform_depth > SCHRO_LIMIT_TRANSFORM_DEPTH) {
+  if (params->transform_depth > SCHRO_LIMIT_TRANSFORM_DEPTH) {
     picture->error = TRUE;
     return;
   }
@@ -2127,7 +2128,6 @@ schro_decoder_init_subband_frame_data_interleaved (SchroPicture *picture)
   SchroFrameData *comp;
   SchroFrameData *fd;
   SchroParams *params = &picture->params;
-  int shift;
   int position;
 
   if (picture->error) return;
@@ -2139,27 +2139,8 @@ schro_decoder_init_subband_frame_data_interleaved (SchroPicture *picture)
 
       fd = &picture->subband_data[component][i];
 
-      shift = params->transform_depth - SCHRO_SUBBAND_SHIFT(position);
-
-      fd->format = picture->transform_frame->format;
-      fd->h_shift = comp->h_shift + shift;
-      fd->v_shift = comp->v_shift + shift;
-      fd->stride = comp->stride << shift;
-      if (component == 0) {
-        fd->width = params->iwt_luma_width >> shift;
-        fd->height = params->iwt_luma_height >> shift;
-      } else {
-        fd->width = params->iwt_chroma_width >> shift;
-        fd->height = params->iwt_chroma_height >> shift;
-      }
-
-      fd->data = comp->data;
-      if (position & 2) {
-        fd->data = OFFSET(fd->data, fd->stride>>1);
-      }
-      if (position & 1) {
-        fd->data = OFFSET(fd->data, fd->width*sizeof(int16_t));
-      }
+      schro_subband_get_frame_data (fd, picture->transform_frame,
+          component, position, params);
     }
   }
 }
@@ -2169,45 +2150,20 @@ schro_decoder_init_subband_frame_data (SchroPicture *picture)
 {
   int i;
   int component;
-  SchroFrameData *comp;
   SchroFrameData *fd;
   SchroParams *params = &picture->params;
-  int shift;
   int position;
 
   if (picture->error)
      return;
 
   for (component = 0; component < 3; ++component) {
-    comp = &picture->transform_frame->components[component];
-
     for (i = 0; i < 1 + 3 * params->transform_depth; ++i) {
       position = schro_subband_get_position (i);
       fd = &picture->subband_data[component][i];
-      shift = params->transform_depth - SCHRO_SUBBAND_SHIFT(position);
 
-      fd->format = picture->transform_frame->format;
-      fd->h_shift = comp->h_shift + shift;
-      fd->v_shift = comp->v_shift + shift;
-      fd->stride = comp->stride;
-
-      if (component == 0) {
-        fd->width = params->iwt_luma_width >> shift;
-        fd->height = params->iwt_luma_height >> shift;
-      } else {
-        fd->width = params->iwt_chroma_width >> shift;
-        fd->height = params->iwt_chroma_height >> shift;
-      }
-
-      fd->data = comp->data;
-
-      if (position & 2) {
-        fd->data = OFFSET(fd->data, fd->stride * fd->height);
-      }
-
-      if (position & 1) {
-        fd->data = OFFSET(fd->data, fd->width * sizeof(int16_t));
-      }
+      schro_subband_get_frame_data (fd, picture->transform_frame,
+          component, position, params);
     }
   }
 }
@@ -2590,7 +2546,7 @@ schro_decoder_setup_codeblocks (SchroPicture *picture,
     ctx->vert_codeblocks = params->vert_codeblocks[SCHRO_SUBBAND_SHIFT(ctx->position)+1];
     ctx->horiz_codeblocks = params->horiz_codeblocks[SCHRO_SUBBAND_SHIFT(ctx->position)+1];
   }
-  if ((ctx->horiz_codeblocks > 1 || ctx->vert_codeblocks > 1) && ctx->position > 0) {
+  if (ctx->horiz_codeblocks > 1 || ctx->vert_codeblocks > 1) {
     ctx->have_zero_flags = TRUE;
   } else {
     ctx->have_zero_flags = FALSE;

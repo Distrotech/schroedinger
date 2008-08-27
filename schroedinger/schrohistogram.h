@@ -3,6 +3,7 @@
 #define __SCHRO_SCHRO_HISTOGRAM_H__
 
 #include <schroedinger/schroutils.h>
+#include <schroedinger/schroframe.h>
 
 SCHRO_BEGIN_DECLS
 
@@ -42,6 +43,10 @@ double schro_histogram_estimate_slope (SchroHistogram *hist);
 
 double schro_histogram_estimate_entropy (SchroHistogram *hist, int quant_index,
     int noarith);
+void schro_frame_data_generate_histogram (SchroFrameData *fd,
+    SchroHistogram *hist, int skip);
+void schro_frame_data_generate_histogram_dc_predict (SchroFrameData *fd,
+    SchroHistogram *hist, int skip, int x, int y);
 
 #endif
 
