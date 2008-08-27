@@ -14,7 +14,7 @@ class Motion {
     Arithmetic ar[];
     int xbsep, ybsep, xblen, yblen, xoffset, yoffset;
     int chroma_h_shift, chroma_v_shift;
-    short weight_x[], weight_y[];
+    short weight_x[], weight_y[], obmc[];
     Block block, tmp_ref[];
 
     static int ARITH_SUPERBLOCK = 0;
@@ -139,6 +139,7 @@ class Motion {
 		}
 	    } 
 	}
+	mv.using_global = false;
 	mv.dx[0] = 0;
 	mv.dy[0] = 0;
 	mv.dx[1] = 0;
@@ -160,7 +161,7 @@ class Motion {
 		    accumulateBlock(out[k], i*xbsep - xoffset, 
 				    j*ybsep - yoffset);
 		}
-	    out[k].shiftOut(6,32);
+	    out[k].shiftOut(6,0);
 	    out[k].clip(7);
 	}
     }
@@ -181,8 +182,9 @@ class Motion {
 	yoffset = (yblen - ybsep) >> 1;
 	xoffset = (xblen - xbsep) >> 1;
 	/* initialize obmc weight */
-	weight_y = new short[yblen*2];
-	weight_x = new short[xblen*2];
+	weight_y = new short[yblen];
+	weight_x = new short[xblen];
+	obmc = new short[xblen*yblen];
 	for(int i = 0; i < xblen; i++) {
 	    short wx;
 	    if(xoffset == 0) {
@@ -208,7 +210,18 @@ class Motion {
 		wy = 8;
 	    }
 	    weight_y[j] = wy;
+	    
 	}
+    }
+
+    private void dumpWeights() {
+	System.err.println("weight_x");
+	for(int i = 0; i < xblen; i++)
+	    System.err.format("%d ", weight_x[i]);
+	System.err.println("\nweight_y");
+	for(int i = 0; i < yblen; i++)
+	    System.err.format("%d ", weight_y[i]);
+	System.err.println("");
     }
 
     private void predictBlock(Block out, int i, int j, int k) {
@@ -232,7 +245,6 @@ class Motion {
 	    }
 	}
     }
-
 
     private short predictPixel(Vector mv, int x,  int y, int k) {
 	if(mv.using_global) {
@@ -293,17 +305,52 @@ class Motion {
     
 
     private void accumulateBlock(Block out, int x, int y) {
-	for(int q = 0; q < yblen; q++) {
-	    if(q + y < 0 || q + y >= out.s.height) continue;
-	    for(int p = 0; p < xblen; p++) {
-		if(p + x < 0 || p + x >= out.s.width) continue;
-		int weight = weight_x[p]*weight_y[q];
-		int val = out.pixel(p + x, q + y) + block.pixel(p,q);
-		out.set(p + x, q + y, val * weight);
+	if(!edge(x,y)) {
+	    for(int q = 0; q < yblen; q++) {
+		if(q + y < 0 || q + y >= out.s.height) continue;
+		int outLine = out.index(x, y + q);
+		int inLine = block.line(q);	
+		for(int p = 0; p < xblen; p++) {
+		    if(p + x < 0 || p + x >= out.s.width) continue;
+		    out.d[outLine + p] += 
+			(short)(weight_x[p]*weight_y[q]*block.d[inLine+p]);
+		}
 	    }
+	} else {
+	    int w_x, w_y;
+	    for(int q = 0; q < yblen; q++) {
+		if(q + y < 0 || q + y >= out.s.height) continue;
+		if((y < 0 && q < 2*yoffset) || 
+		       (y >= par.y_num_blocks*ybsep - yoffset &&
+			yblen - 1 - q < 2*yoffset)) 
+			w_y = 8;
+		    else
+			w_y = weight_y[q];
+		int outLine = out.index(x, y + q);
+		int inLine = block.line(q);
+		for(int p = 0; p < xblen; p++) {
+		    if(p + x < 0 || p + x >= out.s.width) continue;
+		    if((x < 0 && p < 2*xoffset) || 
+		       (x >= par.x_num_blocks*xbsep - xoffset &&
+			xblen - 1 - p < 2*xoffset)) 
+			w_x = 8;
+		    else
+			w_x = weight_x[p];
+		    out.d[outLine + p] += 
+			(short)(w_x*w_y*block.d[inLine+p]);
+		}
+	    }
+		
 	}
+	
     }
 
+    private boolean edge(int x, int y) {
+	return (x < 0 || x >= par.x_num_blocks*xbsep - xoffset) 
+	    || (y < 0 || y >= par.y_num_blocks*ybsep - yoffset);
+	
+    }
+    
     private int splitPrediction(int x, int y) {
 	if(y == 0) {
 	    if(x == 0) {

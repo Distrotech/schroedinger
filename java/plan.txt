@@ -23,9 +23,9 @@ x#16.4 Implement mv_precision=2	MC
 x#17   Make initial cortado plugin
 x#18   Add SchroDec into building cortado
 x#19   Fix cortado plugin
-#20    Fix the blocky artefacts 
-x#21   Really fix mv_precision=2
-x#22   Fix obmc (somewhat)
+x#20   Really fix mv_precision=2
+x#21   Fix obmc
+#22    Fix the line things in BigBuckBunny
 #23    Fix whatever creates the blocks to be copied to the wrong places
 #24    Add discontinuous blocks streaming to SchroDec, and
        skipping of images for better synchronisation.

@@ -81,7 +81,11 @@ class Queue {
     }
 
     public synchronized void flush() {
-	
+	if(head != null) {
+	    tail.next = free;
+	    free = head;
+	    head = tail = null;
+	}
     }
 }
 

@@ -92,15 +92,18 @@ public final class Block {
 	set(x, y, (short)v);
     }
 
-    public void addTo(Block b) {
-	int height = Math.min(b.s.height, s.height);
-	int width = Math.min(b.s.width, s.width);
+    public void addTo(Block o) {
+	int height = Math.min(s.height, o.s.height);
+	int width = Math.min(s.width, o.s.width);
 	for(int y = 0; y < height; y++) {
-	    for(int x = 0; x < width; x++) 
-		b.set(x, y, (short) (pixel(x, y) + b.pixel(x, y)));
+	    int in = line(y),
+		out = o.line(y);
+	    for(int x = 0; x < width; x++) {
+		o.d[out+x] += d[in+x];
+	    }
 	}
     }
-    
+
     /** upsample a block
      * block should be `real'
      * @return the upsampled block
@@ -143,9 +146,13 @@ public final class Block {
     }
 
     public void shiftOut(int b, int a) {
-	for(int y = 0; y < s.height; y++)
-	    for(int x = 0; x < s.width; x++)
-		set(x, y, (short)((pixel(x, y) + a) >> b));
+	for(int y = 0; y < s.height; y++) {
+	    int line = line(y);
+	    for(int x = 0; x < s.width; x++) {
+		d[line + x] += (short)a;
+		d[line + x] >>= b;
+	    }
+	}
     }
 
     public void clip(int b) {
