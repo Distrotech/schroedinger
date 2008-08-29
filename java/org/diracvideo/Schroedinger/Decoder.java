@@ -20,7 +20,7 @@ public class Decoder {
 
     public Decoder() {
 	next_frame_number = 0;
-	refs = new Queue(4);
+	refs = new Queue(8);
 	in = new Queue(4);
 	out = new Queue(8);
     }
@@ -61,6 +61,7 @@ k     * into x-byte segments, and that the driver program
 	    if(buf.getInt(0) != 0x42424344)
 		throw new Exception("Incorrect Magic Code (no Dirac stream)");
 	    int n = buf.getInt(5);
+	    if(n == 0) n = 13;
 	    if(buf.size() < n) {
 		next = buf;
 		return;
@@ -78,6 +79,7 @@ k     * into x-byte segments, and that the driver program
 	    if(next.getInt(0) != 0x42424344) 
 		throw new Exception("Incorrect Magic Code (no Dirac stream)");
 	    int n = next.getInt(5);
+	    if(n == 0) n = 13;
 	    if(next.size() >= n) { /* complete packet in next buffer */
 		dispatchBuffer(next.sub(0,n));
 		if(next.size() > n)
@@ -156,6 +158,7 @@ k     * into x-byte segments, and that the driver program
 	    } catch(Throwable t) {
 		t.printStackTrace();
 	    }
+	    
 	}
     }
 

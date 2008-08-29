@@ -97,6 +97,9 @@ public class Picture {
 		assert (refs[i] != null) : "Reference picture not found";
 	    }
 	}
+	if(dec.refs.cyclic()) {
+	    System.err.println("cyclic reference queue");
+	}
 	if(par.is_ref) {
 	    int r = u.decodeSint();
 	    if(r != 0) {
@@ -233,6 +236,8 @@ public class Picture {
 	}
 	if(!par.is_intra) {
 	    decodeRefs();
+	    if(error != null) 
+		return;
 	    initializeMCFrames();
 	    decodeMotionCompensate();
 	    if(true) {
@@ -263,6 +268,11 @@ public class Picture {
 
     private void decodeRefs() {
 	for(int i = 0; i < par.num_refs; i++) {
+	    if(refs[i] == null) {
+		error = new Exception("Could not find Reference");
+		status = Decoder.Status.ERROR;
+		return;
+	    }		
 	    switch(refs[i].status) {
 	    case DONE:
 		break;

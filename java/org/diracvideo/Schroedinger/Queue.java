@@ -13,6 +13,24 @@ class Queue {
 	}
     }
 
+    public synchronized boolean cyclic() {
+	if(head == null)
+	    return false;
+	Node bunny = head.next, turtle = head;
+	while(bunny != null &&
+	      turtle != null) {
+	    if(bunny == turtle) 
+		return true;
+	    turtle = turtle.next;
+	    bunny = bunny.next;
+	    if(turtle == bunny) 
+		return true;
+	    if(bunny != null)
+		bunny = bunny.next;
+	}
+	return false; 
+    }
+
     public synchronized void remove(int n) {
 	Node pr = null;
 	for(Node nd = head; nd != null; nd = nd.next) {
@@ -30,17 +48,15 @@ class Queue {
     }
 
     public synchronized void add(Picture p) {
+	Node nd;
 	if(full()) {
-	    Node nd = head;
-	    nd.load = p;
+	    nd = head;
 	    head = head.next;
 	    tail.next = nd;
 	    tail = nd;
 	} else {
-	    Node nd = free;
+	    nd = free;
 	    free = free.next;
-	    nd.load = p;
-	    nd.next = null;
 	    if(empty()) {
 		head = tail = nd;
 	    } else {
@@ -48,6 +64,8 @@ class Queue {
 		tail = nd;
 	    }
 	}
+	nd.load = p;
+	nd.next = null;
     }
 
     public synchronized Picture get(int n)  {
