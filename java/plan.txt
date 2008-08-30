@@ -25,9 +25,10 @@ x#18   Add SchroDec into building cortado
 x#19   Fix cortado plugin
 x#20   Really fix mv_precision=2
 x#21   Fix obmc
-#22    Fix the line things in BigBuckBunny
-#23    Fix whatever creates the blocks to be copied to the wrong places
-#24    Add discontinuous blocks streaming to SchroDec, and
+#22    Fix the reference queue not working
+#23    Fix the line things in BigBuckBunny
+#24    Fix whatever creates the blocks to be copied to the wrong places
+#25    Add discontinuous blocks streaming to SchroDec, and
        skipping of images for better synchronisation.
 #30    Profile decoder and speed it up (NOTE: I don't know of a decent
        profiler for java, would love some info).

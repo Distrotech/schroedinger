@@ -32,14 +32,15 @@ class Queue {
     }
 
     public synchronized void remove(int n) {
-	Node pr = null;
-	for(Node nd = head; nd != null; nd = nd.next) {
+	Node nd, pr = null;
+	for(nd = head; nd != null; nd = nd.next)  {
 	    if(nd.load.num == n) {
-		if(pr == null) 
+		if(pr == null)
 		    head = head.next;
 		else 
 		    pr.next = nd.next;
 		nd.next = free;
+		nd.load = null;
 		free = nd;
 		break;
 	    }
@@ -49,23 +50,41 @@ class Queue {
 
     public synchronized void add(Picture p) {
 	Node nd;
-	if(full()) {
+	if(full())  {
 	    nd = head;
 	    head = head.next;
-	    tail.next = nd;
-	    tail = nd;
 	} else {
 	    nd = free;
 	    free = free.next;
-	    if(empty()) {
-		head = tail = nd;
-	    } else {
-		tail.next = nd;
-		tail = nd;
-	    }
 	}
-	nd.load = p;
+	if(empty()) {
+	    head = tail = nd;
+	} else {
+	    tail.next = nd;
+	    tail = nd;
+	}
 	nd.next = null;
+	nd.load = p;
+    }
+
+    public synchronized Picture pop() {
+	if(empty())
+	    return null;
+	Node nd = head;
+	head = head.next;
+	Picture pic = nd.load;
+	nd.load = null;
+	nd.next = free;
+	free = nd;
+	return pic;
+    }
+
+    public synchronized void flush() {
+	if(head != null) {
+	    tail.next = free;
+	    free = head;
+	    head = tail = null;
+	}
     }
 
     public synchronized Picture get(int n)  {
@@ -76,19 +95,7 @@ class Queue {
 	return null;
     }
     
-    public synchronized Picture pop() {
-	Node nd = head;
-	Picture pic = nd.load;
-	if(pic == null) {
-	    System.err.println("Load = null");
-	    System.exit(1);
-	}
-	head = head.next;
-	nd.next = free;
-	free = nd;
-	nd.load = null;
-	return pic;
-    }
+
 
     public boolean full() {
 	return free == null;
@@ -98,12 +105,17 @@ class Queue {
 	return head == null;
     }
 
-    public synchronized void flush() {
-	if(head != null) {
-	    tail.next = free;
-	    free = head;
-	    head = tail = null;
+    public String toString() {
+	StringBuilder sb = new StringBuilder();
+	sb.append("org.diracvideo.Schroedinger.Queue");
+	int i = 0;
+	for(Node nd = head; nd != null; nd = nd.next) {
+	    if((i++ % 8) == 0)
+		sb.append("\n");
+	    sb.append(String.format("%d -> ", nd.load.num));
 	}
+	sb.append("null");
+	return sb.toString();
     }
 }
 

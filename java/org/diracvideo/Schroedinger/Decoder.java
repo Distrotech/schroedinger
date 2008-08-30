@@ -102,7 +102,6 @@ k     * into x-byte segments, and that the driver program
 	    /* incomplete packet in both buffers */
 	    next = next.cat(buf);
 	}
-	
     }
 
 
@@ -139,6 +138,8 @@ k     * into x-byte segments, and that the driver program
 	Picture p = out.get(next_frame_number);
 	if(p != null) 
 	    out.remove(next_frame_number++);
+	else if(out.full())
+	    p = out.pop();
 	return p;
     }
 

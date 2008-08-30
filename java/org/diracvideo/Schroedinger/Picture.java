@@ -94,19 +94,14 @@ public class Picture {
 	if(!par.is_intra) {
 	    for(int i = 0; i < refs.length; i++) {
 		refs[i] = dec.refs.get(num + u.decodeSint());
-		assert (refs[i] != null) : "Reference picture not found";
 	    }
-	}
-	if(dec.refs.cyclic()) {
-	    System.err.println("cyclic reference queue");
 	}
 	if(par.is_ref) {
 	    int r = u.decodeSint();
-	    if(r != 0) {
+	    if(r != 0) 
 		dec.refs.remove(r + num);
-	    }
 	    dec.refs.add(this);
-	}
+	}  
     }
     
     private void parsePredictionParameters(Unpack u) throws Exception {
@@ -268,11 +263,6 @@ public class Picture {
 
     private void decodeRefs() {
 	for(int i = 0; i < par.num_refs; i++) {
-	    if(refs[i] == null) {
-		error = new Exception("Could not find Reference");
-		status = Decoder.Status.ERROR;
-		return;
-	    }		
 	    switch(refs[i].status) {
 	    case DONE:
 		break;
