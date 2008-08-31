@@ -2,8 +2,8 @@ package org.diracvideo.Schroedinger;
 
 /** Synchronized Picture Queue. */
 
-class Queue {
-    Node free, head, tail;
+public class Queue {
+    private Node free, head, tail;
     public Queue(int n) {
 	free = head = tail = null;
 	for(int i = 0; i < n; i++) {

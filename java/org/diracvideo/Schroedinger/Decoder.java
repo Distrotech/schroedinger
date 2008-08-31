@@ -20,9 +20,9 @@ public class Decoder {
 
     public Decoder() {
 	next_frame_number = 0;
-	refs = new Queue(8);
+	refs = new Queue(4);
 	in = new Queue(4);
-	out = new Queue(8);
+	out = new Queue(4);
     }
     
     /** Push:

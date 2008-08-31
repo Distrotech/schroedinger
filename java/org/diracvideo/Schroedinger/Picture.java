@@ -52,6 +52,10 @@ public class Picture {
 	}
     }
 
+    public Picture(int n) {
+	num = n;
+    }
+
     public synchronized void parse() {
 	if(status != Decoder.Status.NULL)
 	    return;
