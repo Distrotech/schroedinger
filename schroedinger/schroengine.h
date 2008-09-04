@@ -35,6 +35,10 @@ int schro_encoder_setup_frame_intra_only (SchroEncoderFrame *frame);
 
 void schro_encoder_handle_gop_tworef (SchroEncoder *encoder, int i);
 int schro_encoder_setup_frame_tworef (SchroEncoderFrame *frame);
+void schro_encoder_handle_opengop (SchroEncoder* encoder
+    , SchroEncoderFrameStateEnum gop_state
+    , SchroEncoderFrameStateEnum prev_state );
+
 
 void schro_encoder_handle_gop_lowdelay (SchroEncoder *encoder, int i);
 int schro_encoder_setup_frame_lowdelay (SchroEncoderFrame *frame);

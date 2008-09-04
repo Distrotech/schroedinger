@@ -3,6 +3,7 @@
 #define __SCHRO_QUEUE_H__
 
 #include <schroedinger/schroutils.h>
+#include <stdlib.h>
 
 SCHRO_BEGIN_DECLS
 
@@ -41,6 +42,9 @@ void *schro_queue_peek (SchroQueue *queue);
 int schro_queue_is_full (SchroQueue *queue);
 int schro_queue_is_empty (SchroQueue *queue);
 int schro_queue_slots_available (SchroQueue *queue);
+/* Andrea additions */
+int schro_queue_length (SchroQueue* queue);
+void* schro_queue_get_data (SchroQueue* queue, size_t index);
 
 #endif
 

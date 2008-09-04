@@ -168,3 +168,16 @@ schro_queue_is_empty (SchroQueue *queue)
   return (queue->n == 0);
 }
 
+int
+schro_queue_length (SchroQueue* queue)
+{
+  SCHRO_ASSERT(queue);
+  return queue->n;
+}
+
+void*
+schro_queue_get_data (SchroQueue* queue, size_t index)
+{
+  SCHRO_ASSERT(queue && queue->n > index);
+  return queue->elements[index].data;
+}

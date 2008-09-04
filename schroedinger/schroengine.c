@@ -136,6 +136,7 @@ schro_encoder_pick_refs (SchroEncoderFrame *frame,
       ref1 = encoder->reference_pictures[i]->frame_number;
     }
   }
+#if 0
   if (ref1 == SCHRO_PICTURE_NUMBER_INVALID) {
     /* if there's no fwd ref, pick an older back ref */
     for(i=0;i<SCHRO_LIMIT_REFERENCE_FRAMES;i++){
@@ -148,7 +149,7 @@ schro_encoder_pick_refs (SchroEncoderFrame *frame,
       }
     }
   }
-
+#endif
   *ptr_ref0 = ref0;
   *ptr_ref1 = ref1;
 }
@@ -263,69 +264,6 @@ schro_engine_code_BBBP (SchroEncoder *encoder, int i, int gop_length)
   f = encoder->frame_queue->elements[i+gop_length-1].data;
   if (f->start_sequence_header) {
     schro_encoder_expire_refs_before (encoder, f->frame_number);
-  }
-}
-
-/* note that we encode from i backwards */
-static void
-schro_engine_code_BBBI (SchroEncoder* encoder, int i, int gop_length)
-{
-  SCHRO_ASSERT(encoder && encoder->frame_queue
-      && !(0 > i - gop_length));
-
-  SchroEncoderFrame *frame, *f;
-  int j;
-
-  f = encoder->frame_queue->elements[i-gop_length+1].data;
-  f->gop_length = gop_length;
-
-  frame = encoder->frame_queue->elements[i].data;
-  schro_engine_code_picture (frame, TRUE, encoder->last_ref, 0, -1, -1);
-  frame->presentation_frame = frame->frame_number;
-  frame->picture_weight = encoder->magic_keyframe_weight;
-  encoder->last_ref = encoder->last_ref2;
-  encoder->last_ref2 = frame->frame_number;
-  for (j=0; gop_length - 1 > j; ++j) {
-    f = encoder->frame_queue->elements[i-j-1].data;
-    schro_engine_code_picture (f, FALSE, -1, 2
-        , encoder->last_ref, encoder->last_ref2);
-    f->presentation_frame = f->frame_number;
-    if (gop_length - 2 == j) {
-      ++f->presentation_frame;
-    }
-    f->picture_weight = encoder->magic_inter_b_weight;
-  }
-}
-
-/* note that we encode from i backwards */
-static void
-schro_engine_code_BBBP2 (SchroEncoder* encoder, int i, int gop_length)
-{
-  SCHRO_ASSERT(encoder && encoder->frame_queue
-      && !(0 > i - gop_length));
-
-  SchroEncoderFrame *frame, *f;
-  int j;
-
-  f = encoder->frame_queue->elements[i-gop_length+1].data;
-  f->gop_length = gop_length;
-
-  frame = encoder->frame_queue->elements[i].data;
-  schro_engine_code_picture (frame, TRUE, encoder->last_ref, 1
-      , encoder->last_ref2 , -1);
-  frame->presentation_frame = encoder->last_ref2;
-  frame->picture_weight = encoder->magic_inter_p_weight;
-  encoder->last_ref = encoder->last_ref2;
-  encoder->last_ref2 = frame->frame_number;
-  for (j=0; gop_length - 1 > j; ++j) {
-    f = encoder->frame_queue->elements[i-j-1].data;
-    schro_engine_code_picture (f, FALSE, -1, 2
-        , encoder->last_ref, encoder->last_ref2);
-    f->presentation_frame = f->frame_number;
-    if (gop_length - 2 == j) {
-      ++f->presentation_frame;
-    }
-    f->picture_weight = encoder->magic_inter_b_weight;
   }
 }
 
@@ -622,110 +560,181 @@ schro_encoder_init_frame (SchroEncoderFrame *frame)
   }
 }
 
-/***** tworef *****/
+static int
+get_frame_opengop (SchroQueue* queue, SchroEncoderFrameStateEnum gop_state
+    , SchroEncoderFrameStateEnum prev_state)
+{
+  SCHRO_ASSERT(queue);
+
+  int i;
+  SchroEncoderFrame* f;
+  for (i=0; schro_queue_length (queue) > i; ++i) {
+    f = schro_queue_get_data (queue, i);
+    if (schro_encoder_has_state (f, prev_state)
+        && !(schro_encoder_has_state (f, gop_state))) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+static int
+subgroup_ready (SchroQueue* queue, int index, int gop_length
+    , SchroEncoderSettingTypeEnum gop_state
+    , SchroEncoderSettingTypeEnum prev_state)
+{
+  SCHRO_ASSERT(queue && schro_queue_length (queue));
+  size_t i = index;
+  SchroEncoderFrame* f;
+  for (;index+gop_length>i; ++i) {
+    f = schro_queue_get_data (queue, i);
+    SCHRO_ASSERT(!schro_encoder_has_state (f, gop_state));
+    if (!schro_encoder_has_state (f, prev_state)) {
+      return 0;
+    }
+  }
+  return 1;
+}
+
+static void
+code_BBBP (SchroEncoder* encoder, size_t index, int gop_length
+    , int scene_change, SchroEncoderFrameStateEnum state)
+{
+  SCHRO_ASSERT(encoder);
+  SchroQueue* queue = encoder->frame_queue;
+  SCHRO_ASSERT(queue && schro_queue_length (queue) > index+gop_length-1);
+  SCHRO_ASSERT(scene_change < (int)index+gop_length);
+
+  SchroEncoderFrame* f;
+  int j, num_refs;
+  SchroPictureNumber ref0 = SCHRO_PICTURE_NUMBER_INVALID
+    , ref1 = SCHRO_PICTURE_NUMBER_INVALID, retire;
+
+  f = schro_queue_get_data (queue, index+gop_length-1);
+  schro_encoder_pick_retire (f, &retire);
+  if (f->start_sequence_header) {
+    f->picture_weight = encoder->magic_keyframe_weight;
+    num_refs = 0;
+  } else {
+    schro_encoder_pick_refs (f, &ref0, &ref1);
+    f->picture_weight = encoder->magic_inter_p_weight;
+    schro_encoder_expire_reference (encoder, encoder->last_ref);
+    encoder->last_ref = schro_encoder_pic_num (f);
+    num_refs = (SCHRO_PICTURE_NUMBER_INVALID == ref1) ? 1 : 2;
+  }
+  schro_engine_code_picture (f, TRUE, retire, num_refs, ref0, ref1);
+
+  for (j=0; gop_length-1 > j; ++j) {
+    num_refs = 2;
+    f = schro_queue_get_data (queue, index+j);
+    schro_encoder_pick_refs (f, &ref0, &ref1);
+    if (0 < scene_change) {
+      --num_refs;
+      if (!(scene_change>index+j)) {
+        ref0 = ref1;
+      }
+      ref1 = SCHRO_PICTURE_NUMBER_INVALID;
+    }
+    schro_engine_code_picture (f, FALSE, -1, num_refs, ref0, ref1);
+    f->presentation_frame = schro_encoder_pic_num (f);
+    if (gop_length-2 == j) {
+      ++f->presentation_frame;
+    }
+    f->picture_weight = encoder->magic_inter_b_weight;
+  }
+
+  f = schro_queue_get_data (queue, index+gop_length-1);
+  if (f->start_sequence_header) {
+    schro_encoder_expire_refs_before (encoder, schro_encoder_pic_num (f));
+  }
+}
+
+/***** opengop *****/
 /**
- * handle_gop_tworef: Andrea's version
+ * handle_opengop:
  * @encoder: structure containing all global parameters for encoding process
- * @i: index of the current 'anchor' frame in the frame queue in encoder
+ * @i: index in the encoder's frame queue of first frame of sub group
  *
- * Sets up a mini group of pictures (such as BBBP) for the tworef engine.
+ * Sets up a sub group of pictures (such as BBBP) for the tworef engine.
  * It uses an open GOP.
  * */
 void
-schro_encoder_handle_gop_tworef (SchroEncoder* encoder, int i)
+schro_encoder_handle_opengop (SchroEncoder* encoder
+    , SchroEncoderFrameStateEnum gop_state
+    , SchroEncoderFrameStateEnum prev_state )
 {
-  SCHRO_ASSERT(encoder && encoder->frame_queue
-      && i<encoder->frame_queue->n);
+  SchroEncoderFrame* f;
+  int i, j, k = -1, gop_length, gop_picture;
+  SchroPictureNumber next_seqhdr;
 
-  SchroEncoderFrame *frame, *f;
-  int j, gop_length;
-  schro_bool intra_end;
-
-  frame = encoder->frame_queue->elements[i].data;
-  SCHRO_ASSERT(!(frame->state & SCHRO_ENCODER_FRAME_STATE_HAVE_GOP));
-  if (frame->busy || !(frame->state & SCHRO_ENCODER_FRAME_STATE_SC_DETECT_2))
+  SCHRO_ASSERT(encoder);
+  /* determine first frame in queue to process */
+  i = get_frame_opengop (encoder->frame_queue, gop_state, prev_state);
+  if (-1 == i) {
     return;
-
-  schro_engine_check_new_sequence_header (encoder, frame);
-  if (encoder->last_ref2 == -1) {
-    gop_length = encoder->magic_subgroup_length > (i + 1) ? i + 1 
-      : encoder->magic_subgroup_length;
-  } else {
-    gop_length = frame->frame_number - encoder->last_ref2;
   }
-  SCHRO_DEBUG("handling gop from %d to %d (index %d)"
-      , encoder->gop_picture - gop_length + 1
-      , encoder->gop_picture, i);
 
-  intra_end = frame->start_sequence_header;
-  /* check whether there was any shot change
-   * in the previous gop_length frames */
-  if (!intra_end) {
-    for (j=0; gop_length > j; ++j) {
-      f = encoder->frame_queue->elements[i-j].data;
-      SCHRO_ASSERT(!(f->state & SCHRO_ENCODER_FRAME_STATE_HAVE_GOP));
-      if (f->busy || !(f->state & SCHRO_ENCODER_FRAME_STATE_SC_DETECT_2)) {
-        SCHRO_DEBUG("picture %d not ready", i-j);
-        return;
-      }
-      if (!f->sc_mad_available) {
-        SCHRO_DEBUG("scene change score %g", f->scene_change_score);
-        if (f->scene_change_score > encoder->magic_scene_change_threshold) {
-          intra_end = TRUE;
-        }
-      }  else {
-        SCHRO_DEBUG("new scene change score %g", f->sc_mad_score);
-        if (f->sc_mad_score > 3.5) {
-          intra_end = TRUE;
-        }
-      }
+  f = schro_queue_get_data (encoder->frame_queue, i);
+  if (schro_encoder_need_first_intra (encoder)) {
+    f->start_sequence_header = TRUE;
+    code_BBBP (encoder, i, 1, k, gop_state);
+    encoder->au_frame = schro_encoder_pic_num (f);
+    schro_encoder_reset_first_intra (encoder);
+    return;
+  }
+
+  gop_length  = schro_encoder_get_subgroup_length (encoder);
+  next_seqhdr = schro_encoder_get_next_seqhdr     (encoder);
+  gop_picture = schro_encoder_pic_num (f);
+  if (encoder->end_of_stream) {
+    gop_length = MIN(gop_length, schro_queue_length (encoder->frame_queue) - i);
+  }
+  SCHRO_DEBUG("handling gop from %d to %d (index %d)", gop_picture,
+      gop_picture + gop_length - 1, i);
+  /* check whether all frames in sub group are ready to be processed */
+  if (!subgroup_ready (encoder->frame_queue, i, gop_length
+        , gop_state, prev_state)) {
+    return;
+  }
+  if (!(schro_queue_length (encoder->frame_queue) > i + gop_length - 1)) {
+    SCHRO_DEBUG("not enough pictures in queue");
+  }
+  /* ready to check presence of scene change over the sub group */
+  for (j=0; gop_length>j; ++j) {
+    f = schro_queue_get_data (encoder->frame_queue, i+j);
+    if (schro_encoder_pic_num (f) == next_seqhdr) {
+      f->start_sequence_header = TRUE;
+      SCHRO_ASSERT(gop_length == j+1);
+    }
+    SCHRO_DEBUG("scene change score %g for picture %d"
+        , schro_encoder_sc_score (f), i+j);
+    /* we only take the first scene change in a sub group in
+     * the (unlikely) event that 2 or more are present */
+    if (0>k && schro_encoder_sc_score (f) > 3.25) {
+      k = i+j;
     }
   }
-
-  if (1 == gop_length && intra_end) {
-    schro_engine_code_picture (frame, TRUE, encoder->last_ref, 0, -1, -1);
-    frame->presentation_frame = frame->frame_number;
-    frame->picture_weight = encoder->magic_bailout_weight;
-    frame->gop_length = 1;
-    frame->state |= SCHRO_ENCODER_FRAME_STATE_HAVE_GOP;
-    encoder->last_ref = encoder->last_ref2;
-    encoder->last_ref2 = frame->frame_number;
-  } else if (1 == gop_length) {
-    schro_engine_code_picture (frame, TRUE, encoder->last_ref,
-        1, encoder->last_ref2, -1);
-    frame->presentation_frame = frame->frame_number;
-    frame->picture_weight = encoder->magic_inter_p_weight;
-    frame->gop_length = 1;
-    encoder->last_ref = encoder->last_ref2;
-    encoder->last_ref2 = frame->frame_number;
-    frame->state |= SCHRO_ENCODER_FRAME_STATE_HAVE_GOP;
-  } else {
-    if (intra_end) {
-      schro_engine_code_BBBI (encoder, i, gop_length);
-    } else {
-      schro_engine_code_BBBP2 (encoder, i, gop_length);
-    }
+  f = schro_queue_get_data (encoder->frame_queue, i+gop_length-1);
+  /* deal with scene change, if present */
+  if (k>0) {
+    f->start_sequence_header = TRUE;
   }
-
-  if (encoder->frame_queue->n - i -1 > encoder->magic_subgroup_length) {
-    encoder->gop_picture += encoder->magic_subgroup_length;
-  } else if (encoder->end_of_stream) {
-    j = encoder->frame_queue->n - i - 1;
-    encoder->gop_picture += 0 < j ? j : 1;
-  } else {
-      SCHRO_DEBUG("not enough pictures in queue");
+  code_BBBP (encoder, i, gop_length, k, gop_state);
+  if (f->start_sequence_header == TRUE) {
+    encoder->au_frame = schro_encoder_pic_num (f);
   }
 }
 
 
+/***** tworef *****/
 /**
- * handle_gop_tworef: Dave's version
- * @encoder:
- * @i:
+ * handle_gop_tworef:
+ * @encoder: structure containing all global parameters for encoding process
+ * @i: index in the encoder's frame queue of first frame of sub group
  *
- * Sets up a minor group of pictures for the tworef engine.
- */
-#if 0
+ * Sets up a sub group of pictures (such as BBBP) for the tworef engine.
+ * It uses an open GOP.
+ * */
 void
 schro_encoder_handle_gop_tworef (SchroEncoder *encoder, int i)
 {
@@ -739,12 +748,12 @@ schro_encoder_handle_gop_tworef (SchroEncoder *encoder, int i)
 
   SCHRO_ASSERT(!(frame->state & SCHRO_ENCODER_FRAME_STATE_HAVE_GOP));
 
-  if (frame->busy || !(frame->state & SCHRO_ENCODER_FRAME_STATE_SC_DETECT_2))
+  if (frame->busy || !(frame->state & SCHRO_ENCODER_FRAME_STATE_ANALYSE))
     return;
 
   //schro_engine_check_new_sequence_header (encoder, frame);
 
-  gop_length = encoder->magic_subgroup_length;
+   gop_length = encoder->magic_subgroup_length;
   SCHRO_DEBUG("handling gop from %d to %d (index %d)", encoder->gop_picture,
       encoder->gop_picture + gop_length - 1, i);
 
@@ -764,7 +773,7 @@ schro_encoder_handle_gop_tworef (SchroEncoder *encoder, int i)
 
     SCHRO_ASSERT(!(f->state & SCHRO_ENCODER_FRAME_STATE_HAVE_GOP));
 
-    if (f->busy || !(f->state & SCHRO_ENCODER_FRAME_STATE_SC_DETECT_2)) {
+    if (f->busy || !(f->state & SCHRO_ENCODER_FRAME_STATE_ANALYSE)) {
       SCHRO_DEBUG("picture %d not ready", i + j);
       return;
     }
@@ -829,7 +838,6 @@ schro_encoder_handle_gop_tworef (SchroEncoder *encoder, int i)
 
   encoder->gop_picture += gop_length;
 }
-#endif
 
 int
 schro_encoder_setup_frame_tworef (SchroEncoderFrame *frame)

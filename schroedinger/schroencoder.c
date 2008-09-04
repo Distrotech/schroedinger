@@ -76,6 +76,7 @@ schro_encoder_new (void)
   encoder->profile = 0;
   encoder->level = 0;
   encoder->au_distance = 120;
+  encoder->sub_groups_num = 4;
   encoder->enable_psnr = TRUE;
   encoder->enable_ssim = FALSE;
   encoder->enable_md5 = FALSE;
@@ -132,6 +133,8 @@ schro_encoder_new (void)
 
   encoder->average_arith_context_ratio_intra = 1.0;
   encoder->average_arith_context_ratio_inter = 1.0;
+
+  encoder->need_first_intra = 1;
 
   return encoder;
 }
@@ -437,6 +440,65 @@ schro_encoder_force_sequence_header (SchroEncoder *encoder)
 {
   encoder->force_sequence_header = TRUE;
 }
+
+/**
+ * schro_encoder_need_first_intra:
+ * @encoder: an encoder object
+ *
+ * Returns non-zero if the first frame has not been processed
+ * It is used to determine the GOP structure of the encoded
+ * stream
+ */
+int
+schro_encoder_need_first_intra (SchroEncoder* encoder)
+{
+  SCHRO_ASSERT (encoder);
+  return encoder->need_first_intra;
+}
+
+/**
+ * schro_encoder_reset_first_intra:
+ * @encoder: an encoder object
+ *
+ * Resets the flag in the encoder used to signal the start
+ * of the sequence (we need an intra at the beginning, the
+ * flag helps determine the appropriate GOP structure for
+ * the encoded stream).
+ */
+void
+schro_encoder_reset_first_intra (SchroEncoder* encoder)
+{
+  SCHRO_ASSERT(encoder);
+  encoder->need_first_intra = 0;
+}
+
+/**
+ * schro_encoder_get_subgroup_length:
+ * @encoder: an encoder object
+ *
+ * Returns the length of the sub group
+ */
+int
+schro_encoder_get_subgroup_length (SchroEncoder* encoder)
+{
+  SCHRO_ASSERT(encoder);
+  return encoder->magic_subgroup_length;
+}
+
+/**
+ * schro_encoder_get_next_seqhdr:
+ * @encoder: an encoder object
+ *
+ * returns the frame number of the next expected sequence hdr
+ */
+SchroPictureNumber
+schro_encoder_get_next_seqhdr (SchroEncoder* encoder)
+{
+  SCHRO_ASSERT(encoder);
+  SchroPictureNumber frame_num = encoder->au_frame;
+  return frame_num + encoder->sub_groups_num * encoder->magic_subgroup_length;
+}
+
 
 /**
  * schro_encoder_push_frame:
@@ -2236,7 +2298,7 @@ schro_encoder_frame_get_quant_index (SchroEncoderFrame *frame, int component,
   SchroParams *params = &frame->params;
   int position;
   int horiz_codeblocks;
-  
+
   position = schro_subband_get_position (index);
   horiz_codeblocks = params->horiz_codeblocks[SCHRO_SUBBAND_SHIFT(position)+1];
 
@@ -2813,6 +2875,43 @@ schro_encoder_reference_get (SchroEncoder *encoder,
   return NULL;
 }
 
+void
+schro_encoder_add_state (SchroEncoderFrame* frame
+    , SchroEncoderFrameStateEnum state)
+{
+  SCHRO_ASSERT(frame);
+  frame->state &= state;
+}
+
+int
+schro_encoder_has_state (SchroEncoderFrame* frame
+    , SchroEncoderFrameStateEnum state)
+{
+  SCHRO_ASSERT(frame);
+  return frame->state & state;
+}
+
+void
+schro_encoder_reset_state (SchroEncoderFrame* frame)
+{
+  SCHRO_ASSERT(frame);
+  frame->state &= SCHRO_ENCODER_FRAME_STATE_NEW;
+}
+
+SchroPictureNumber
+schro_encoder_pic_num (SchroEncoderFrame* frame)
+{
+  SCHRO_ASSERT(frame);
+  return frame->frame_number;
+}
+
+float
+schro_encoder_sc_score (SchroEncoderFrame* frame)
+{
+  SCHRO_ASSERT(frame);
+  return frame->sc_mad_score;
+}
+
 /* settings */
 
 #define ENUM(name,list,def) \
@@ -2896,6 +2995,7 @@ static SchroEncoderSetting encoder_settings[] = {
   INT ("profile", 0, 0, 0),
   INT ("level", 0, 0, 0),
   INT ("au_distance", 1, INT_MAX, 30),
+  INT ("sub_groups_num", 1, 40, 4),
   BOOL("enable_psnr", FALSE),
   BOOL("enable_ssim", FALSE),
 
@@ -2985,6 +3085,7 @@ schro_encoder_setting_set_double (SchroEncoder *encoder, const char *name,
   VAR_SET(profile);
   VAR_SET(level);
   VAR_SET(au_distance);
+  VAR_SET(sub_groups_num);
   VAR_SET(ref_distance);
   VAR_SET(transform_depth);
   VAR_SET(intra_wavelet);
@@ -3048,6 +3149,7 @@ schro_encoder_setting_get_double (SchroEncoder *encoder, const char *name)
   VAR_GET(profile);
   VAR_GET(level);
   VAR_GET(au_distance);
+  VAR_GET(sub_groups_num);
   VAR_GET(ref_distance);
   VAR_GET(transform_depth);
   VAR_GET(intra_wavelet);
@@ -3278,7 +3380,11 @@ schro_encoder_async_schedule (SchroEncoder *encoder, SchroExecDomain exec_domain
   }
   calculate_sc_score (encoder);
 
-  /* now we do shot change detection on all frames in the queue */
+  /* now we determine the GOP structure for all frames in the queue
+   * this is a quick step, no need to dispatch a task to carry it out */
+  schro_encoder_handle_opengop (encoder, SCHRO_ENCODER_FRAME_STATE_HAVE_GOP
+      , SCHRO_ENCODER_FRAME_STATE_SC_DETECT_2);
+#if 0
   for(i=0;i<encoder->frame_queue->n;i++) {
     frame = encoder->frame_queue->elements[i].data;
     if (frame->frame_number == encoder->gop_picture) {
@@ -3286,13 +3392,15 @@ schro_encoder_async_schedule (SchroEncoder *encoder, SchroExecDomain exec_domain
       break;
     }
   }
+#endif
 
   /* Reference pictures are higher priority, so we pass over the list
    * first for reference pictures, then for non-ref. */
   for(ref = 1; ref >= 0; ref--){
     for(i=0;i<encoder->frame_queue->n;i++) {
       frame = encoder->frame_queue->elements[i].data;
-      SCHRO_DEBUG("backref i=%d picture=%d state=%d busy=%d", i, frame->frame_number, frame->state, frame->busy);
+      SCHRO_DEBUG("backref i=%d picture=%d state=%d busy=%d", i
+          , frame->frame_number, frame->state, frame->busy);
 
       if (frame->busy) continue;
 

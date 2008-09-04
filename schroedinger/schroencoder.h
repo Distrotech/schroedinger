@@ -245,6 +245,9 @@ struct _SchroEncoder {
   int profile;
   int level;
   int au_distance;
+  /* Andrea's addition */
+  int sub_groups_num;
+
   schro_bool enable_psnr;
   schro_bool enable_ssim;
   schro_bool enable_md5;
@@ -344,6 +347,9 @@ struct _SchroEncoder {
   int quant_slot;
 
   int last_ref;
+
+  /* Andrea's addition */
+  int need_first_intra;
 };
 #endif
 
@@ -445,6 +451,12 @@ double schro_encoder_perceptual_weight_ccir959 (double cpd);
 double schro_encoder_perceptual_weight_moo (double cpd);
 double schro_encoder_perceptual_weight_manos_sakrison (double cpd);
 
+/* Andrea's addition */
+int                schro_encoder_need_first_intra    (SchroEncoder* encoder);
+void               schro_encoder_reset_first_intra   (SchroEncoder* encoder);
+int                schro_encoder_get_subgroup_length (SchroEncoder* encoder);
+SchroPictureNumber schro_encoder_get_next_seqhdr     (SchroEncoder* encoder);
+
 void schro_encoder_init_subbands (SchroEncoderFrame *frame);
 void schro_encoder_encode_subband (SchroEncoderFrame *frame, int component, int index);
 void schro_encoder_encode_subband_noarith (SchroEncoderFrame *frame, int component, int index);
@@ -489,6 +501,15 @@ void schro_encoder_init_error_tables (SchroEncoder *encoder);
 
 void schro_encoder_frame_set_quant_index (SchroEncoderFrame *frame, int component,
     int index, int x, int y, int quant_index);
+
+/* Andrea's addition */
+void schro_encoder_add_state   (SchroEncoderFrame* frame
+    , SchroEncoderFrameStateEnum state);
+int  schro_encoder_has_state   (SchroEncoderFrame* frame
+    , SchroEncoderFrameStateEnum state);
+void schro_encoder_reset_state (SchroEncoderFrame* frame);
+SchroPictureNumber schro_encoder_pic_num (SchroEncoderFrame* frame);
+float schro_encoder_sc_score (SchroEncoderFrame* frame);
 
 #endif
 
