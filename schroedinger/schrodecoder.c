@@ -91,7 +91,7 @@ static void schro_decoder_picture_complete (SchroAsyncStage *stage);
 
 static void schro_decoder_error (SchroDecoder *decoder, const char *s);
 
-static void schro_picturequeue_rob_insert (SchroQueue *queue, SchroPicture *pic);
+static void schro_picturequeue_rob_insert (SchroQueue *queue, SchroPicture *picture, unsigned windowsize);
 static int schro_picture_n_before_m (SchroPictureNumber n, SchroPictureNumber m);
 
 /* API */
@@ -377,7 +377,7 @@ schro_decoder_get_picture_number (SchroDecoder *decoder)
   SchroPicture *picture = NULL;
 
   if (decoder->reorder_queue->n >= decoder->reorder_queue_size ||
-      decoder->coded_order || decoder->flushing) {
+      decoder->flushing) {
     picture = schro_queue_peek (decoder->reorder_queue);
   }
   if (picture)
@@ -466,10 +466,15 @@ schro_decoder_set_skip_ratio (SchroDecoder *decoder, double ratio)
 void
 schro_decoder_set_picture_order (SchroDecoder *decoder, int order)
 {
+  /* todo: this is the wrong place to set reorder_queue_size,
+   * a future decoder update will extract the reorder_queue_size
+   * from the seqhdr (or profile/level defaults) */
   if (order == SCHRO_DECODER_PICTURE_ORDER_CODED) {
     decoder->coded_order = TRUE;
+    decoder->reorder_queue_size = 1;
   } else {
     decoder->coded_order = FALSE;
+    decoder->reorder_queue_size = 2+1;
   }
 }
 
@@ -481,7 +486,7 @@ schro_decoder_pull_is_ready_locked (SchroDecoder *decoder)
   /* Not possible to pull from the RoB if not full */
   /* NB, schro's RoB implementation can be larger than the spec */
   if (decoder->reorder_queue->n >= decoder->reorder_queue_size ||
-      decoder->coded_order || decoder->flushing) {
+      decoder->flushing) {
     picture = schro_queue_peek (decoder->reorder_queue);
   }
 
@@ -644,7 +649,7 @@ schro_decoder_dump (SchroDecoder *decoder)
         0 /*picture->working*/);
   }
   if (decoder->reorder_queue->n >= decoder->reorder_queue_size ||
-      decoder->coded_order || decoder->flushing) {
+      decoder->flushing) {
     SCHRO_ERROR("next_picture_number %d", schro_decoder_get_picture_number (decoder));
   } else {
     SCHRO_ERROR("reorder_queue too empty to determine next_picture_number: "
@@ -697,11 +702,16 @@ schro_decoder_push_end_of_stream (SchroDecoder *decoder)
   return SCHRO_DECODER_EOS;
 }
 
+/**
+ * schro_decoder_set_flushing:
+ *
+ * This function is depricated and has no effect.
+ * If control over the picture order is required, consult
+ * schro_decoder_set_picture_order()
+ */
 int
 schro_decoder_set_flushing (SchroDecoder *decoder, int value)
 {
-  decoder->flushing = value;
-
   return SCHRO_DECODER_OK;
 }
 
@@ -864,11 +874,7 @@ schro_decoder_iterate_picture (SchroDecoder *decoder, SchroBuffer *buffer, Schro
 
   schro_async_lock (decoder->async);
   SCHRO_DEBUG("adding %d to queue", picture->picture_number);
-  if (!decoder->coded_order) {
-    schro_picturequeue_rob_insert (decoder->reorder_queue, picture);
-  } else {
-    schro_queue_add (decoder->reorder_queue, picture, picture->picture_number);
-  }
+  schro_picturequeue_rob_insert (decoder->reorder_queue, picture, decoder->reorder_queue_size);
   schro_async_signal_scheduler (decoder->async);
   schro_async_unlock (decoder->async);
 
@@ -2767,14 +2773,21 @@ schro_picture_n_before_m (SchroPictureNumber n, SchroPictureNumber m)
 
 /* model the reorder buffer */
 static void
-schro_picturequeue_rob_insert (SchroQueue *queue, SchroPicture *picture)
+schro_picturequeue_rob_insert (SchroQueue *queue, SchroPicture *picture, unsigned windowsize)
 {
-  int i;
+  /* the implemented reorder buffer may be larger than signalled in the stream
+   * to fix this, window the insertion sort to work on upto the last @windowsize@
+   * elements. */
+  /* NB, a window size of 1 implies coded_order */
+  int i = queue->n + 1 - windowsize;
 
   SCHRO_ASSERT (queue->n < queue->size);
 
+  if (i < 0)
+    i = 0;
+
   /* find the position to insert before. */
-  for(i=0;i<queue->n;i++){
+  for(;i<queue->n;i++){
     if (schro_picture_n_before_m (picture->picture_number, queue->elements[i].picture_number)) {
       break;
     }
