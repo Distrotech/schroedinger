@@ -874,11 +874,7 @@ schro_decoder_iterate_picture (SchroDecoder *decoder, SchroBuffer *buffer, Schro
 
   schro_async_lock (decoder->async);
   SCHRO_DEBUG("adding %d to queue", picture->picture_number);
-  if (!decoder->coded_order) {
-    schro_picturequeue_rob_insert (decoder->reorder_queue, picture, decoder->reorder_queue_size);
-  } else {
-    schro_queue_add (decoder->reorder_queue, picture, picture->picture_number);
-  }
+  schro_picturequeue_rob_insert (decoder->reorder_queue, picture, decoder->reorder_queue_size);
   schro_async_signal_scheduler (decoder->async);
   schro_async_unlock (decoder->async);
 
