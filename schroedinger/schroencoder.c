@@ -3886,6 +3886,13 @@ schro_encoder_reference_get (SchroEncoder *encoder,
   return NULL;
 }
 
+float
+schro_encoder_sc_score (SchroEncoderFrame* frame)
+{
+  SCHRO_ASSERT(frame);
+  return frame->sc_mad_score;
+}
+
 /* settings */
 
 #define ENUM(name,list,def) \
