@@ -510,6 +510,7 @@ void schro_encoder_init_error_tables (SchroEncoder *encoder);
 void schro_encoder_frame_set_quant_index (SchroEncoderFrame *frame, int component,
     int index, int x, int y, int quant_index);
 
+float schro_encoder_sc_score (SchroEncoderFrame* frame);
 #endif
 
 SCHRO_END_DECLS
