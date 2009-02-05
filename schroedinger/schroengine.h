@@ -24,6 +24,9 @@ int schro_encoder_engine_lossless (SchroEncoder *encoder);
 int schro_encoder_engine_backtest (SchroEncoder *encoder);
 int schro_encoder_engine_lowdelay (SchroEncoder *encoder);
 
+void schro_encoder_handle_opengop (SchroEncoder* encoder
+    , SchroEncoderFrameStateEnum gop_state);
+
 int schro_encoder_handle_quants (SchroEncoder *encoder, int i);
 void schro_encoder_init_frame (SchroEncoderFrame *frame);
 
