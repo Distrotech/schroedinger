@@ -131,6 +131,20 @@ schro_queue_pop (SchroQueue *queue)
   queue->n--;
 }
 
+int
+schro_queue_length (SchroQueue* queue)
+{
+  SCHRO_ASSERT(queue);
+  return queue->n;
+}
+
+void*
+schro_queue_get_data (SchroQueue* queue, int index)
+{
+  SCHRO_ASSERT(queue && queue->n > index && !(0>queue->n));
+  return queue->elements[index].data;
+}
+
 void *
 schro_queue_peek (SchroQueue *queue)
 {

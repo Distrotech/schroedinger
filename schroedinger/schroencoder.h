@@ -117,7 +117,7 @@ struct _SchroEncoderFrame {
   /* other stuff */
 
   int start_sequence_header;
-  int gop_length;
+  int subgroup_length;
 
   SchroPictureNumber frame_number;
   SchroFrame *original_frame;
@@ -261,6 +261,7 @@ struct _SchroEncoder {
 
   double noise_threshold;
   int gop_structure;
+  int subgroup_length;
   int queue_depth;
   int perceptual_weighting;
   double perceptual_distance;
@@ -268,8 +269,8 @@ struct _SchroEncoder {
   double filter_value;
   int profile;
   int level;
+  int sub_groups_num;
   int open_gop;
-  int au_distance;
   schro_bool enable_psnr;
   schro_bool enable_ssim;
   schro_bool enable_md5;
@@ -292,6 +293,7 @@ struct _SchroEncoder {
   schro_bool enable_multiquant;
   schro_bool enable_dc_multiquant;
   schro_bool enable_global_motion;
+  schro_bool enable_opengop_structure;
   schro_bool enable_scene_change_detection;
   schro_bool enable_deep_estimation;
   schro_bool enable_combined_me;
@@ -379,6 +381,8 @@ struct _SchroEncoder {
   int quant_slot;
 
   int last_ref;
+
+  int need_first_intra;
 };
 #endif
 
@@ -466,6 +470,11 @@ double schro_encoder_perceptual_weight_ccir959 (double cpd);
 double schro_encoder_perceptual_weight_moo (double cpd);
 double schro_encoder_perceptual_weight_manos_sakrison (double cpd);
 
+int                schro_encoder_need_first_intra    (SchroEncoder* encoder);
+void               schro_encoder_reset_first_intra   (SchroEncoder* encoder);
+int                schro_encoder_get_subgroup_length (SchroEncoder* encoder);
+SchroPictureNumber schro_encoder_get_next_seqhdr     (SchroEncoder* encoder);
+
 void schro_encoder_init_subbands (SchroEncoderFrame *frame);
 void schro_encoder_encode_subband (SchroEncoderFrame *frame, int component, int index);
 void schro_encoder_encode_subband_noarith (SchroEncoderFrame *frame, int component, int index);
@@ -511,6 +520,8 @@ void schro_encoder_frame_set_quant_index (SchroEncoderFrame *frame, int componen
     int index, int x, int y, int quant_index);
 
 float schro_encoder_sc_score (SchroEncoderFrame* frame);
+SchroPictureNumber schro_encoder_pic_num (SchroEncoderFrame* frame);
+
 #endif
 
 SCHRO_END_DECLS

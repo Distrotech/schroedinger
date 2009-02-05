@@ -830,6 +830,65 @@ schro_encoder_force_sequence_header (SchroEncoder *encoder)
 }
 
 /**
+ * schro_encoder_need_first_intra:
+ * @encoder: an encoder object
+ *
+ * Returns non-zero if the first frame has not been processed
+ * It is used to determine the GOP structure of the encoded
+ * stream
+ */
+int
+schro_encoder_need_first_intra (SchroEncoder* encoder)
+{
+  SCHRO_ASSERT (encoder);
+  return encoder->need_first_intra;
+}
+
+/**
+ * schro_encoder_reset_first_intra:
+ * @encoder: an encoder object
+ *
+ * Resets the flag in the encoder used to signal the start
+ * of the sequence (we need an intra at the beginning, the
+ * flag helps determine the appropriate GOP structure for
+ * the encoded stream).
+ */
+void
+schro_encoder_reset_first_intra (SchroEncoder* encoder)
+{
+  SCHRO_ASSERT(encoder);
+  encoder->need_first_intra = 0;
+}
+
+/**
+ * schro_encoder_get_subgroup_length:
+ * @encoder: an encoder object
+ *
+ * Returns the length of the sub group
+ */
+int
+schro_encoder_get_subgroup_length (SchroEncoder* encoder)
+{
+  SCHRO_ASSERT(encoder);
+  return encoder->subgroup_length;
+}
+
+/**
+ * schro_encoder_get_next_seqhdr:
+ * @encoder: an encoder object
+ *
+ * returns the frame number of the next expected sequence hdr
+ */
+SchroPictureNumber
+schro_encoder_get_next_seqhdr (SchroEncoder* encoder)
+{
+  SCHRO_ASSERT(encoder);
+  SchroPictureNumber frame_num = encoder->au_frame;
+  return frame_num + encoder->sub_groups_num * encoder->subgroup_length;
+}
+
+
+/**
  * schro_encoder_push_frame:
  * @encoder: an encoder object
  * @frame: a frame to encode
@@ -1823,11 +1882,18 @@ schro_encoder_async_schedule (SchroEncoder *encoder, SchroExecDomain exec_domain
     }
   }
 
-  for(i=0;i<encoder->frame_queue->n;i++) {
-    frame = encoder->frame_queue->elements[i].data;
-    if (frame->frame_number == encoder->gop_picture) {
-      encoder->handle_gop (encoder, i);
-      break;
+  if (encoder->enable_opengop_structure
+      && SCHRO_ENCODER_GOP_ADAPTIVE == encoder->gop_structure) {
+    /* now we determine the GOP structure for all frames in the queue */
+    schro_encoder_handle_opengop (encoder, SCHRO_ENCODER_FRAME_STAGE_HAVE_GOP);
+
+  } else {
+    for(i=0;i<encoder->frame_queue->n;i++) {
+      frame = encoder->frame_queue->elements[i].data;
+      if (frame->frame_number == encoder->gop_picture) {
+        encoder->handle_gop (encoder, i);
+        break;
+      }
     }
   }
 
@@ -3893,6 +3959,14 @@ schro_encoder_sc_score (SchroEncoderFrame* frame)
   return frame->sc_mad_score;
 }
 
+SchroPictureNumber
+schro_encoder_pic_num (SchroEncoderFrame* frame)
+{
+  SCHRO_ASSERT(frame);
+  return frame->frame_number;
+}
+
+
 /* settings */
 
 #define ENUM(name,list,def) \
@@ -3987,8 +4061,9 @@ struct SchroEncoderSettings {
   DOUB(filter_value, 0, 100.0, 5.0),
   INT (profile, 0, 0, 0),
   INT (level, 0, 0, 0),
+  INT (subgroup_length, 1, 10, 3),
+  INT (sub_groups_num, 1, 100, 16),
   BOOL(open_gop, TRUE),
-  INT (au_distance, 1, INT_MAX, 120),
   BOOL(enable_psnr, FALSE),
   BOOL(enable_ssim, FALSE),
 
@@ -4012,6 +4087,7 @@ struct SchroEncoderSettings {
   BOOL(enable_multiquant, TRUE),
   BOOL(enable_dc_multiquant, FALSE),
   BOOL(enable_global_motion, FALSE),
+  BOOL(enable_opengop_structure, TRUE),
   BOOL(enable_scene_change_detection, TRUE),
   BOOL(enable_deep_estimation, TRUE),
   BOOL(enable_combined_me, FALSE),
