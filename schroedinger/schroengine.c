@@ -607,6 +607,7 @@ schro_encoder_init_frame (SchroEncoderFrame *frame)
       frame->need_downsampling = FALSE;
       frame->need_upsampling = FALSE;
       frame->need_average_luma = FALSE;
+      frame->need_mad = FALSE;
       break;
     case SCHRO_ENCODER_GOP_ADAPTIVE:
     case SCHRO_ENCODER_GOP_BACKREF:
@@ -615,6 +616,7 @@ schro_encoder_init_frame (SchroEncoderFrame *frame)
       frame->need_upsampling = (encoder->mv_precision > 0);
       frame->need_average_luma = TRUE;
       frame->need_extension = TRUE;
+      frame->need_mad = encoder->enable_scene_change_detection;
       break;
     case SCHRO_ENCODER_GOP_BIREF:
     case SCHRO_ENCODER_GOP_CHAINED_BIREF:
@@ -622,6 +624,7 @@ schro_encoder_init_frame (SchroEncoderFrame *frame)
       frame->need_upsampling = (encoder->mv_precision > 0);
       frame->need_average_luma = TRUE;
       frame->need_extension = TRUE;
+      frame->need_mad = encoder->enable_scene_change_detection;
       break;
   }
 }
@@ -769,15 +772,20 @@ schro_encoder_handle_opengop (SchroEncoder* encoder
       f->start_sequence_header = TRUE;
       SCHRO_ASSERT(subgroup_length == j+1);
     }
-#if 0
     SCHRO_DEBUG("scene change score %g for picture %d"
         , schro_encoder_sc_score (f), i+j);
     /* we only take the first scene change in a sub group in
      * the (unlikely) event that 2 or more are present */
-    if (0>k && schro_encoder_sc_score (f) > encoder->magic_scene_change_threshold) {
-      k = i+j;
+    if (encoder->enable_scene_change_detection) {
+      if (0>k && schro_encoder_sc_score (f) > encoder->magic_scene_change_threshold) {
+        k = i+j;
+      }
+    } else {
+      schro_engine_get_scene_change_score (encoder, i+j);
+      if (0>k && f->scene_change_score > encoder->magic_scene_change_threshold) {
+        k = i+j;
+      }
     }
-#endif
   }
   f = schro_queue_get_data (encoder->frame_queue, i+subgroup_length-1);
   /* deal with scene change, if present */

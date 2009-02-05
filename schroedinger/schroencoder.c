@@ -68,7 +68,7 @@ schro_encoder_new (void)
 
   schro_encoder_setting_set_defaults(encoder);
 
-  encoder->sub_group_length = 3;
+  encoder->subgroup_length = 3;
   encoder->sub_groups_num = 16;
 
   schro_video_format_set_std_video_format (&encoder->video_format,
@@ -147,6 +147,13 @@ schro_encoder_start (SchroEncoder *encoder)
 
   encoder->engine_init = 1;
   encoder->force_sequence_header = TRUE;
+
+  /* add check on 'enable' switches */
+  if (encoder->enable_scene_change_detection) {
+    encoder->magic_scene_change_threshold = 3.25;
+  } else {
+    encoder->magic_scene_change_threshold = 0.2;
+  }
 
   if (encoder->video_format.luma_excursion >= 256 ||
       encoder->video_format.chroma_excursion >= 256) {
@@ -1236,6 +1243,25 @@ schro_encoder_frame_complete (SchroAsyncStage *stage)
   }
 }
 
+static void
+schro_encoder_sc_detect_1 (SchroAsyncStage* stage)
+{
+  SCHRO_ASSERT(stage && stage->priv);
+
+  SchroEncoderFrame* frame = stage->priv;
+  SCHRO_ASSERT(frame->stages[SCHRO_ENCODER_FRAME_STAGE_ANALYSE].is_done
+      && frame->previous_frame
+      && frame->previous_frame->stages[SCHRO_ENCODER_FRAME_STAGE_ANALYSE].is_done);
+
+  SchroFrameData *comp1 = &frame->downsampled_frames[0]->components[0]
+    , *comp2 = &frame->previous_frame->downsampled_frames[0]->components[0];
+
+  frame->sc_mad = schro_metric_absdiff_u8 (comp1->data, comp1->stride, comp2->data, comp2->stride,
+      comp1->width, comp1->height);
+  frame->have_mad = 1;
+}
+
+
 /**
  * run_stage:
  * @frame:
@@ -1277,6 +1303,10 @@ run_stage (SchroEncoderFrame *frame, int stage)
     case SCHRO_ENCODER_FRAME_STAGE_POSTANALYSE:
       func = schro_encoder_postanalyse_picture;
       break;
+    case SCHRO_ENCODER_FRAME_STAGE_SC_DETECT_1:
+      func = schro_encoder_sc_detect_1;
+      break;
+
     default:
       SCHRO_ASSERT(0);
   }
@@ -1309,6 +1339,66 @@ check_refs (SchroEncoderFrame *frame)
   return TRUE;
 }
 
+static void
+calculate_sc_score (SchroEncoder* encoder)
+{
+  SCHRO_ASSERT(encoder && encoder->enable_scene_change_detection);
+#define SC_THRESHOLD_RANGE 2
+#define MAD_ARRAY_LEN SC_THRESHOLD_RANGE * 2 + 1
+#define BIG_INT 0xffffffff
+  int i,j,end;
+  int mad_array[MAD_ARRAY_LEN];
+  SchroEncoderFrame *frame, *f, *f2;
+  /* calculate threshold first */
+  for (i=SC_THRESHOLD_RANGE; encoder->frame_queue->n - SC_THRESHOLD_RANGE > i; ++i) {
+    int mad_max = 0, mad_min = BIG_INT;
+    frame = encoder->frame_queue->elements[i].data;
+    if (!frame->need_mad) continue;
+    if (frame->sc_mad_available) continue;
+    if (0>frame->sc_threshold) {
+      memset (mad_array, -1, sizeof(mad_array));
+      mad_array[SC_THRESHOLD_RANGE] = frame->sc_mad;
+      for (j=0; SC_THRESHOLD_RANGE>j;++j) {
+        f = encoder->frame_queue->elements[i-j-1].data;
+        mad_array[SC_THRESHOLD_RANGE-j-1] = f->sc_mad;
+        f = encoder->frame_queue->elements[i+j+1].data;
+        mad_array[SC_THRESHOLD_RANGE+j+1] = f->sc_mad;
+      }
+      for (j=0; MAD_ARRAY_LEN>j; ++j) {
+        if (mad_array[j] > mad_max) mad_max = mad_array[j];
+        if (mad_array[j] < mad_min) mad_min = mad_array[j];
+      }
+      frame->sc_threshold = mad_max + 0.8 * (mad_max - mad_min);
+    }
+  }
+  /* and now calculate the score */
+  for (i=SC_THRESHOLD_RANGE+3; encoder->frame_queue->n - SC_THRESHOLD_RANGE - 3>i; ++i) {
+    frame = encoder->frame_queue->elements[i].data;
+    if (!frame->need_mad) continue;
+    if (frame->sc_mad_available) continue;
+    f = encoder->frame_queue->elements[i-3].data;
+    f2 = encoder->frame_queue->elements[i+3].data;
+    frame->sc_mad_score = frame->sc_mad - (f->sc_threshold + f2->sc_threshold) / 2;
+    frame->sc_mad_available = 1;
+  }
+  /* finally we update the state of the processed items */
+  if (encoder->queue_depth > encoder->frame_queue->n
+      && encoder->end_of_stream) {
+    /* end of sequence */
+   end = encoder->frame_queue->n;
+  } else {
+    end = encoder->frame_queue->n - SC_THRESHOLD_RANGE - 3;
+  }
+  for (i=0; end >i; ++i) {
+    f = encoder->frame_queue->elements[i].data;
+    f->stages[SCHRO_ENCODER_FRAME_STAGE_SC_DETECT_2].is_done = TRUE;
+    SCHRO_DEBUG("calculate sc score for i=%d picture=%d state=%d"
+        , i, f->frame_number, 0 /* f->state */ );
+  }
+}
+#undef BIG_INT
+
+
 static int
 schro_encoder_async_schedule (SchroEncoder *encoder, SchroExecDomain exec_domain)
 {
@@ -1334,12 +1424,54 @@ schro_encoder_async_schedule (SchroEncoder *encoder, SchroExecDomain exec_domain
     }
   }
 
+  if (encoder->enable_scene_change_detection) {
+    /* calculate MAD for entire queue of frames */
+    for (i=0; encoder->frame_queue->n > i; ++i) {
+      frame = encoder->frame_queue->elements[i].data;
+      SCHRO_DEBUG("phase I of shot change detection for i=%d picture=%d state=%d"
+          , i, frame->frame_number, 0 /* frame->state */ );
+
+      if (frame->busy) continue;
+
+      if (0 == i || 0 == frame->need_mad) {
+        /* we can't calculate a MAD for first frame in the queue */
+        frame->stages[SCHRO_ENCODER_FRAME_STAGE_SC_DETECT_1].is_done = TRUE;
+        continue;
+      }
+      SchroEncoderFrame* prev_frame = frame->previous_frame;
+
+      if (!frame->stages[SCHRO_ENCODER_FRAME_STAGE_SC_DETECT_1].is_done
+          && prev_frame
+          && prev_frame->stages[SCHRO_ENCODER_FRAME_STAGE_ANALYSE].is_done
+          && frame->stages[SCHRO_ENCODER_FRAME_STAGE_ANALYSE].is_done) {
+        run_stage (frame, SCHRO_ENCODER_FRAME_STAGE_SC_DETECT_1);
+        return TRUE;
+      }
+    }
+
+    /* calculate new scene change score */
+    for (i=0; encoder->frame_queue->n > i; ++i) {
+      frame = encoder->frame_queue->elements[i].data;
+      if (!frame->stages[SCHRO_ENCODER_FRAME_STAGE_SC_DETECT_1].is_done) {
+        return TRUE;
+      }
+    }
+    calculate_sc_score (encoder);
+  } else {
+    for (i=0; encoder->frame_queue->n > i; ++i) {
+      frame = encoder->frame_queue->elements[i].data;
+      if (frame->stages[SCHRO_ENCODER_FRAME_STAGE_ANALYSE].is_done) {
+        frame->stages[SCHRO_ENCODER_FRAME_STAGE_SC_DETECT_1].is_done = TRUE;
+        frame->stages[SCHRO_ENCODER_FRAME_STAGE_SC_DETECT_2].is_done = TRUE;
+      }
+    }
+  }
+
   if (encoder->enable_opengop_structure
       && SCHRO_ENCODER_GOP_ADAPTIVE == encoder->gop_structure) {
     /* now we determine the GOP structure for all frames in the queue
      * this is a quick function, no need to dispatch a task to carry it out */
     schro_encoder_handle_opengop (encoder, SCHRO_ENCODER_FRAME_STAGE_HAVE_GOP);
-
   } else {
     for(i=0;i<encoder->frame_queue->n;i++) {
       frame = encoder->frame_queue->elements[i].data;
@@ -1489,6 +1621,7 @@ schro_encoder_analyse_picture (SchroAsyncStage *stage)
     frame->have_average_luma = TRUE;
   }
 }
+
 
 void
 schro_encoder_predict_rough_picture (SchroAsyncStage *stage)
@@ -3083,6 +3216,10 @@ schro_encoder_frame_new (SchroEncoder *encoder)
   }
   encoder_frame->refcount = 1;
 
+  encoder_frame->sc_mad = -1;
+  encoder_frame->sc_threshold = -1.;
+  encoder_frame->sc_mad_score = -1.;
+
   frame_format = schro_params_get_frame_format (16,
       encoder->video_format.chroma_format);
 
@@ -3215,6 +3352,12 @@ schro_encoder_reference_get (SchroEncoder *encoder,
   return NULL;
 }
 
+float
+schro_encoder_sc_score (SchroEncoderFrame* frame)
+{
+  SCHRO_ASSERT(frame);
+  return frame->sc_mad_score;
+}
 
 SchroPictureNumber
 schro_encoder_pic_num (SchroEncoderFrame* frame)
@@ -3344,6 +3487,7 @@ struct SchroEncoderSettings {
   BOOL(enable_dc_multiquant, FALSE),
   BOOL(enable_global_motion, FALSE),
   BOOL(enable_opengop_structure, TRUE),
+  BOOL(enable_scene_change_detection, TRUE),
   INT (horiz_slices, 1, INT_MAX, 8),
   INT (vert_slices, 1, INT_MAX, 6),
   ENUM(codeblock_size, codeblock_size_list, 0),
