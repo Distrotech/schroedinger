@@ -42,6 +42,10 @@ int schro_queue_is_full (SchroQueue *queue);
 int schro_queue_is_empty (SchroQueue *queue);
 int schro_queue_slots_available (SchroQueue *queue);
 
+int schro_queue_length (SchroQueue* queue);
+void* schro_queue_get_data (SchroQueue* queue, int index);
+
+
 #endif
 
 SCHRO_END_DECLS
