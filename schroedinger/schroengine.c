@@ -358,7 +358,7 @@ schro_engine_pick_output_buffer_size (SchroEncoder *encoder,
  * Initializes params structure for picture based on encoder parameters
  * and some heuristics.
  */
-static void
+void
 init_params (SchroEncoderFrame *frame)
 {
   SchroParams *params = &frame->params;
@@ -377,11 +377,6 @@ init_params (SchroEncoderFrame *frame)
     params->is_noarith = TRUE;
   }
 
-  if (params->num_refs > 0) {
-    params->wavelet_filter_index = encoder->inter_wavelet;
-  } else {
-    params->wavelet_filter_index = encoder->intra_wavelet;
-  }
   params->transform_depth = encoder->transform_depth;
 
   switch (encoder->motion_block_size) {
@@ -506,6 +501,21 @@ init_params (SchroEncoderFrame *frame)
     params->codeblock_mode_index = 1;
   } else {
     params->codeblock_mode_index = 0;
+  }
+}
+
+
+void
+schro_frame_set_wavelet_params (SchroEncoderFrame* frame)
+{
+  SCHRO_ASSERT (frame && frame->encoder);
+
+  SchroParams* params = &frame->params;
+  SchroEncoder* encoder = frame->encoder;
+  if (params->num_refs > 0) {
+    params->wavelet_filter_index = encoder->inter_wavelet;
+  } else {
+    params->wavelet_filter_index = encoder->intra_wavelet;
   }
 }
 
@@ -929,10 +939,8 @@ schro_encoder_setup_frame_tworef (SchroEncoderFrame *frame)
     schro_engine_pick_output_buffer_size (encoder, frame);
   SCHRO_ASSERT(frame->output_buffer_size != 0);
 
-  /* set up params */
+  /* set up params - num_refs only */
   frame->params.num_refs = frame->num_refs;
-
-  init_params (frame);
 
   return TRUE;
 }
@@ -1016,7 +1024,6 @@ schro_encoder_setup_frame_backref (SchroEncoderFrame *frame)
 
   /* set up params */
   frame->params.num_refs = frame->num_refs;
-  init_params (frame);
 
   return TRUE;
 }
@@ -1073,7 +1080,6 @@ schro_encoder_setup_frame_intra_only (SchroEncoderFrame *frame)
   frame->params.num_refs = frame->num_refs;
 
   /* set up params */
-  init_params (frame);
 
   return TRUE;
 }
@@ -1099,7 +1105,6 @@ schro_encoder_setup_frame_lossless (SchroEncoderFrame *frame)
   frame->params.num_refs = frame->num_refs;
 
   /* set up params */
-  init_params (frame);
   params = &frame->params;
 
   params->wavelet_filter_index = SCHRO_WAVELET_HAAR_0;
@@ -1107,7 +1112,6 @@ schro_encoder_setup_frame_lossless (SchroEncoderFrame *frame)
 
   params->num_refs = frame->num_refs;
   params->video_format = &encoder->video_format;
-  init_params (frame);
 
   params->xbsep_luma = 8;
   params->xblen_luma = 8;
@@ -1164,7 +1168,6 @@ schro_encoder_setup_frame_lowdelay (SchroEncoderFrame *frame)
 
   params->n_horiz_slices = encoder->horiz_slices;
   params->n_vert_slices = encoder->vert_slices;
-  init_params (frame);
   //schro_params_init_lowdelay_quantisers(params);
 
   num = muldiv64(encoder->bitrate,

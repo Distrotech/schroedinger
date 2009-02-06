@@ -186,6 +186,7 @@ struct _SchroEncoderFrame {
   struct _SchroMotionEst *me;
   struct _SchroRoughME *rme[2];
   struct _SchroPhaseCorr *phasecorr[2];
+  struct SchroHierBm* hier_bm[2];
 
   SchroMotion *motion;
 
@@ -279,6 +280,7 @@ struct _SchroEncoder {
   schro_bool enable_global_motion;
   schro_bool enable_opengop_structure;
   schro_bool enable_scene_change_detection;
+  schro_bool enable_deep_estimation;
   int horiz_slices;
   int vert_slices;
   int codeblock_size;

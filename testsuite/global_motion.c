@@ -22,7 +22,7 @@ test_full_field (int width, int height, double *a, double *b, int r, int hole)
   double mult;
   int i,j;
 
-  mf = schro_motion_field_new (100, 80);
+  mf = schro_motion_field_new (100, 80, 0);
 
   printf("test_full_field: r=%d hole=%d\n"
       "[%6.4f %6.4f %6.4f %6.4f] [%g %g]\n",

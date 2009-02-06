@@ -64,12 +64,12 @@ schro_encoder_new (void)
 
   encoder->last_ref = -1;
 
-  encoder->downsample_levels = 5;
-
   schro_encoder_setting_set_defaults(encoder);
 
   encoder->subgroup_length = 3;
   encoder->sub_groups_num = 16;
+
+  encoder->downsample_levels = 4;
 
   schro_video_format_set_std_video_format (&encoder->video_format,
       SCHRO_VIDEO_FORMAT_CUSTOM);
@@ -153,6 +153,11 @@ schro_encoder_start (SchroEncoder *encoder)
     encoder->magic_scene_change_threshold = 3.25;
   } else {
     encoder->magic_scene_change_threshold = 0.2;
+  }
+  if (encoder->enable_bigblock_estimation
+      && encoder->enable_deep_estimation) {
+    /* only one can be set at any one time */
+    encoder->enable_bigblock_estimation = FALSE;
   }
 
   if (encoder->video_format.luma_excursion >= 256 ||
@@ -1419,6 +1424,7 @@ schro_encoder_async_schedule (SchroEncoder *encoder, SchroExecDomain exec_domain
 
     if (TODO(SCHRO_ENCODER_FRAME_STAGE_ANALYSE)) {
       encoder->init_frame (frame);
+      init_params (frame);
       run_stage (frame, SCHRO_ENCODER_FRAME_STAGE_ANALYSE);
       return TRUE;
     }
@@ -1511,6 +1517,7 @@ schro_encoder_async_schedule (SchroEncoder *encoder, SchroExecDomain exec_domain
 
       if (TODO(SCHRO_ENCODER_FRAME_STAGE_PREDICT_PEL) &&
           frame->stages[SCHRO_ENCODER_FRAME_STAGE_PREDICT_ROUGH].is_done) {
+        schro_frame_set_wavelet_params (frame);
         run_stage (frame, SCHRO_ENCODER_FRAME_STAGE_PREDICT_PEL);
         return TRUE;
       }
@@ -1573,11 +1580,17 @@ schro_encoder_async_schedule (SchroEncoder *encoder, SchroExecDomain exec_domain
 void
 schro_encoder_analyse_picture (SchroAsyncStage *stage)
 {
+  SCHRO_ASSERT(stage && stage->priv);
   SchroEncoderFrame *frame = (SchroEncoderFrame *)stage->priv;
 
   if (frame->encoder->filtering != 0 || frame->need_extension) {
-    frame->filtered_frame = schro_frame_dup_extended (frame->original_frame,
-        32);
+    if (frame->encoder->enable_deep_estimation) {
+      frame->filtered_frame = schro_frame_dup_extended (frame->original_frame
+          , MAX(frame->params.xbsep_luma*4, frame->params.ybsep_luma*4));
+    } else if (frame->encoder->enable_bigblock_estimation) {
+      frame->filtered_frame = schro_frame_dup_extended (frame->original_frame,
+         32 );
+    } else SCHRO_ASSERT(0);
     switch (frame->encoder->filtering) {
       case 1:
         schro_frame_filter_cwmN (frame->filtered_frame,
@@ -1604,8 +1617,10 @@ schro_encoder_analyse_picture (SchroAsyncStage *stage)
     schro_encoder_frame_downsample (frame);
     frame->have_downsampling = TRUE;
   }
+  schro_frame_ref (frame->filtered_frame);
+  frame->upsampled_original_frame = schro_upsampled_frame_new (frame->filtered_frame);
   if (frame->need_upsampling) {
-    schro_encoder_frame_upsample (frame);
+    schro_upsampled_frame_upsample (frame->upsampled_original_frame);
     frame->have_upsampling = TRUE;
   }
 
@@ -1626,6 +1641,7 @@ schro_encoder_analyse_picture (SchroAsyncStage *stage)
 void
 schro_encoder_predict_rough_picture (SchroAsyncStage *stage)
 {
+  SCHRO_ASSERT(stage && stage->priv);
   SchroEncoderFrame *frame = (SchroEncoderFrame *)stage->priv;
 
   SCHRO_INFO("predict picture %d", frame->frame_number);
@@ -3306,8 +3322,12 @@ schro_encoder_frame_unref (SchroEncoderFrame *frame)
     if (frame->me) {
       schro_motionest_free (frame->me);
     }
+#if 0
     if (frame->rme[0]) schro_rough_me_free (frame->rme[0]);
     if (frame->rme[1]) schro_rough_me_free (frame->rme[1]);
+#endif
+    if (frame->hier_bm[0]) schro_hbm_unref (&frame->hier_bm[0]);
+    if (frame->hier_bm[1]) schro_hbm_unref (&frame->hier_bm[1]);
     if (frame->phasecorr[0]) schro_phasecorr_free (frame->phasecorr[0]);
     if (frame->phasecorr[1]) schro_phasecorr_free (frame->phasecorr[1]);
 
@@ -3472,6 +3492,7 @@ struct SchroEncoderSettings {
   ENUM(intra_wavelet, wavelet_list, SCHRO_WAVELET_DESLAURIERS_DUBUC_9_7),
   ENUM(inter_wavelet, wavelet_list, SCHRO_WAVELET_LE_GALL_5_3),
   INT (mv_precision, 0, 3, 0),
+  INT (downsample_levels, 2, 8, 4),
   ENUM(motion_block_size, block_size_list, 0),
   ENUM(motion_block_overlap, block_overlap_list, 0),
   BOOL(interlaced_coding, FALSE),
@@ -3488,6 +3509,7 @@ struct SchroEncoderSettings {
   BOOL(enable_global_motion, FALSE),
   BOOL(enable_opengop_structure, TRUE),
   BOOL(enable_scene_change_detection, TRUE),
+  BOOL(enable_deep_estimation, TRUE),
   INT (horiz_slices, 1, INT_MAX, 8),
   INT (vert_slices, 1, INT_MAX, 6),
   ENUM(codeblock_size, codeblock_size_list, 0),
