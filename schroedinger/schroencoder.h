@@ -187,6 +187,7 @@ struct _SchroEncoderFrame {
   struct _SchroRoughME *rme[2];
   struct _SchroPhaseCorr *phasecorr[2];
   struct SchroHierBm* hier_bm[2];
+  struct SchroMe* deep_me[2];
 
   SchroMotion *motion;
 
@@ -492,6 +493,9 @@ void schro_encoder_init_error_tables (SchroEncoder *encoder);
 
 void schro_encoder_frame_set_quant_index (SchroEncoderFrame *frame, int component,
     int index, int x, int y, int quant_index);
+
+struct SchroHierBm* schro_encoder_frame_hbm ( SchroEncoderFrame* frame
+    , int ref_number);
 
 SchroPictureNumber schro_encoder_pic_num (SchroEncoderFrame* frame);
 
