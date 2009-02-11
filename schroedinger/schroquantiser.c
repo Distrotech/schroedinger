@@ -10,10 +10,11 @@
 //#define DUMP_SUBBAND_CURVES
 
 void schro_encoder_choose_quantisers_simple (SchroEncoderFrame *frame);
-void schro_encoder_choose_quantisers_rate_distortion (SchroEncoderFrame *frame);
+void schro_encoder_choose_quantisers_rdo_bit_allocation (SchroEncoderFrame *frame);
 void schro_encoder_choose_quantisers_lossless (SchroEncoderFrame *frame);
 void schro_encoder_choose_quantisers_lowdelay (SchroEncoderFrame *frame);
-void schro_encoder_choose_quantisers_constant_lambda (SchroEncoderFrame *frame);
+void schro_encoder_choose_quantisers_rdo_lambda (SchroEncoderFrame *frame);
+void schro_encoder_choose_quantisers_rdo_cbr (SchroEncoderFrame *frame);
 void schro_encoder_choose_quantisers_constant_error (SchroEncoderFrame *frame);
 
 double schro_encoder_entropy_to_lambda (SchroEncoderFrame *frame, double entropy);
@@ -146,21 +147,30 @@ schro_encoder_calculate_subband_weights (SchroEncoder *encoder,
 {
   int wavelet;
   int n_levels;
-  double *matrix;
+  double *matrix_intra;
+  double *matrix_inter;
   int n;
   int i,j;
-  double column[SCHRO_LIMIT_SUBBANDS];
-  double *weight;
+  double column_intra[SCHRO_LIMIT_SUBBANDS];
+  double column_inter[SCHRO_LIMIT_SUBBANDS];
+  double *weight_intra;
+  double *weight_inter;
 
-  matrix = schro_malloc (sizeof(double)*SCHRO_LIMIT_SUBBANDS*SCHRO_LIMIT_SUBBANDS);
-  weight = schro_malloc (sizeof(double)*CURVE_SIZE*CURVE_SIZE);
+  matrix_intra = schro_malloc (sizeof(double)*SCHRO_LIMIT_SUBBANDS*SCHRO_LIMIT_SUBBANDS);
+  matrix_inter = schro_malloc (sizeof(double)*SCHRO_LIMIT_SUBBANDS*SCHRO_LIMIT_SUBBANDS);
+  weight_intra = schro_malloc (sizeof(double)*CURVE_SIZE*CURVE_SIZE);
+  weight_inter = schro_malloc (sizeof(double)*CURVE_SIZE*CURVE_SIZE);
 
   for(j=0;j<CURVE_SIZE;j++){
     for(i=0;i<CURVE_SIZE;i++){
-      double fv = j*encoder->cycles_per_degree_vert*(1.0/CURVE_SIZE);
-      double fh = i*encoder->cycles_per_degree_horiz*(1.0/CURVE_SIZE);
+      double fv_intra = j*encoder->cycles_per_degree_vert*(1.0/CURVE_SIZE);
+      double fh_intra = i*encoder->cycles_per_degree_horiz*(1.0/CURVE_SIZE);
 
-      weight[j*CURVE_SIZE+i] = perceptual_weight (sqrt(fv*fv+fh*fh));
+      double fv_inter = j*encoder->cycles_per_degree_vert*(1.0/CURVE_SIZE)*encoder->magic_inter_cpd_scale;
+      double fh_inter = i*encoder->cycles_per_degree_horiz*(1.0/CURVE_SIZE)*encoder->magic_inter_cpd_scale;
+
+      weight_intra[j*CURVE_SIZE+i] = perceptual_weight (sqrt(fv_intra*fv_intra+fh_intra*fh_intra));
+      weight_inter[j*CURVE_SIZE+i] = perceptual_weight (sqrt(fv_intra*fv_inter+fh_inter*fh_inter));
     }
   }
 
@@ -194,20 +204,27 @@ schro_encoder_calculate_subband_weights (SchroEncoder *encoder,
 
       if (0) {
         for(i=0;i<n;i++){
-          column[i] = weighted_sum(h_curve[i], v_curve[i], weight);
-          matrix[i*n+i] = dot_product (h_curve[i], v_curve[i],
-              h_curve[i], v_curve[i], weight);
+          column_intra[i] = weighted_sum(h_curve[i], v_curve[i], weight_intra);
+          column_inter[i] = weighted_sum(h_curve[i], v_curve[i], weight_inter);
+          matrix_intra[i*n+i] = dot_product (h_curve[i], v_curve[i],
+              h_curve[i], v_curve[i], weight_intra);
+          matrix_inter[i*n+i] = dot_product (h_curve[i], v_curve[i],
+              h_curve[i], v_curve[i], weight_inter);
           for(j=i+1;j<n;j++) {
-            matrix[i*n+j] = dot_product (h_curve[i], v_curve[i],
-                h_curve[j], v_curve[j], weight);
-            matrix[j*n+i] = matrix[i*n+j];
+            matrix_intra[i*n+j] = dot_product (h_curve[i], v_curve[i],
+                h_curve[j], v_curve[j], weight_intra);
+            matrix_intra[j*n+i] = matrix_intra[i*n+j];
+            matrix_inter[i*n+j] = dot_product (h_curve[i], v_curve[i],
+                h_curve[j], v_curve[j], weight_inter);
+            matrix_inter[j*n+i] = matrix_inter[i*n+j];
           }
         }
 
-        solve (matrix, column, n);
+        solve (matrix_intra, column_intra, n);
+        solve (matrix_inter, column_inter, n);
 
         for(i=0;i<n;i++){
-          if (column[i] < 0) {
+          if (column_intra[i] < 0 || column_inter[i] < 0) {
             SCHRO_ERROR("BROKEN wavelet %d n_levels %d", wavelet, n_levels);
             break;
           }
@@ -215,8 +232,10 @@ schro_encoder_calculate_subband_weights (SchroEncoder *encoder,
 
         SCHRO_DEBUG("wavelet %d n_levels %d", wavelet, n_levels);
         for(i=0;i<n;i++){
-          SCHRO_DEBUG("%g", 1.0/sqrt(column[i]));
-          encoder->subband_weights[wavelet][n_levels-1][i] = sqrt(column[i]);
+          SCHRO_DEBUG("%g", 1.0/sqrt(column_intra[i]));
+          SCHRO_DEBUG("%g", 1.0/sqrt(column_inter[i]));
+          encoder->intra_subband_weights[wavelet][n_levels-1][i] = sqrt(column_intra[i]);
+          encoder->inter_subband_weights[wavelet][n_levels-1][i] = sqrt(column_inter[i]);
         }
       } else {
         for(i=0;i<n;i++){
@@ -226,15 +245,19 @@ schro_encoder_calculate_subband_weights (SchroEncoder *encoder,
 
           n_transforms = n_levels - SCHRO_SUBBAND_SHIFT(position);
           size = (1.0/CURVE_SIZE)*(1<<n_transforms);
-          encoder->subband_weights[wavelet][n_levels-1][i] = 1.0/(size *
-            sqrt(weighted_sum(h_curve[i], v_curve[i], weight)));
+          encoder->intra_subband_weights[wavelet][n_levels-1][i] = 1.0/(size *
+            sqrt(weighted_sum(h_curve[i], v_curve[i], weight_intra)));
+          encoder->inter_subband_weights[wavelet][n_levels-1][i] = 1.0/(size *
+            sqrt(weighted_sum(h_curve[i], v_curve[i], weight_inter)));
         }
       }
     }
   }
 
-  schro_free(weight);
-  schro_free(matrix);
+  schro_free(weight_intra);
+  schro_free(matrix_intra);
+  schro_free(weight_inter);
+  schro_free(matrix_inter);
 }
 
 void
@@ -244,8 +267,11 @@ schro_encoder_choose_quantisers (SchroEncoderFrame *frame)
     case SCHRO_QUANTISER_ENGINE_SIMPLE:
       schro_encoder_choose_quantisers_simple (frame);
       break;
-    case SCHRO_QUANTISER_ENGINE_RATE_DISTORTION:
-      schro_encoder_choose_quantisers_rate_distortion (frame);
+    case SCHRO_QUANTISER_ENGINE_RDO_BIT_ALLOCATION:
+      schro_encoder_choose_quantisers_rdo_bit_allocation (frame);
+      break;
+    case SCHRO_QUANTISER_ENGINE_CBR:
+      schro_encoder_choose_quantisers_rdo_cbr(frame);
       break;
     case SCHRO_QUANTISER_ENGINE_LOSSLESS:
       schro_encoder_choose_quantisers_lossless (frame);
@@ -253,8 +279,8 @@ schro_encoder_choose_quantisers (SchroEncoderFrame *frame)
     case SCHRO_QUANTISER_ENGINE_LOWDELAY:
       schro_encoder_choose_quantisers_lowdelay (frame);
       break;
-    case SCHRO_QUANTISER_ENGINE_CONSTANT_LAMBDA:
-      schro_encoder_choose_quantisers_constant_lambda (frame);
+    case SCHRO_QUANTISER_ENGINE_RDO_LAMBDA:
+      schro_encoder_choose_quantisers_rdo_lambda (frame);
       break;
     case SCHRO_QUANTISER_ENGINE_CONSTANT_ERROR:
       schro_encoder_choose_quantisers_constant_error (frame);
@@ -289,14 +315,18 @@ schro_encoder_choose_quantisers_simple (SchroEncoderFrame *frame)
   noise_amplitude = 255.0 * pow(0.1, frame->encoder->noise_threshold*0.05);
   SCHRO_DEBUG("noise %g", noise_amplitude);
 
-  table = frame->encoder->subband_weights[params->wavelet_filter_index]
+  if (frame->num_refs == 0){
+    table = frame->encoder->intra_subband_weights[params->wavelet_filter_index]
     [MAX(0,params->transform_depth-1)];
+  }
+  else {
+    table = frame->encoder->inter_subband_weights[params->wavelet_filter_index]
+      [MAX(0,params->transform_depth-1)];
+  }
 
   for(component=0;component<3;component++){
     for(i=0;i<1 + 3*params->transform_depth; i++) {
-      a = noise_amplitude *
-        frame->encoder->subband_weights[params->wavelet_filter_index]
-          [MAX(0,params->transform_depth-1)][i];
+      a = noise_amplitude * table[i];
 
       frame->quant_index[component][i] = schro_utils_multiplier_to_quant_index (a);
     }
@@ -623,7 +653,16 @@ schro_encoder_calc_estimates (SchroEncoderFrame *frame)
   schro_encoder_dump_subband_curves (frame);
 #endif
 
+  double *arith_context_ratios;
+
   for(component=0;component<3;component++){
+    if (frame->num_refs==0){
+      arith_context_ratios = frame->encoder->average_arith_context_ratios_intra[component];
+    }
+    else {
+      arith_context_ratios = frame->encoder->average_arith_context_ratios_inter[component];
+    }
+
     for(i=0;i<1 + 3*params->transform_depth; i++) {
       for(j=0;j<60;j++){
         int vol;
@@ -639,6 +678,7 @@ schro_encoder_calc_estimates (SchroEncoderFrame *frame)
         hist = &frame->subband_hists[component][i];
         frame->est_entropy[component][i][j] =
           schro_histogram_estimate_entropy (hist, j, params->is_noarith);
+        frame->est_entropy[component][i][j] *= arith_context_ratios[i];
         frame->est_error[component][i][j] = schro_histogram_apply_table (hist,
               &frame->encoder->intra_hist_tables[j]);
       }
@@ -647,49 +687,99 @@ schro_encoder_calc_estimates (SchroEncoderFrame *frame)
   frame->have_estimate_tables = TRUE;
 }
 
-void
-schro_encoder_choose_quantisers_rate_distortion (SchroEncoderFrame *frame)
+/*
+ * Quantiser engine which picks the best RDO quantisers to fit in
+ * a frame bit allocation.
+ */
+ void
+schro_encoder_choose_quantisers_rdo_bit_allocation (SchroEncoderFrame *frame)
 {
-  double base_lambda;
+  double frame_lambda;
   int bits;
-  double ratio;
 
   schro_encoder_generate_subband_histograms (frame);
   schro_encoder_calc_estimates (frame);
 
   SCHRO_ASSERT(frame->have_estimate_tables);
 
-  if (frame->num_refs == 0) {
-    ratio = frame->encoder->average_arith_context_ratio_intra;
-  } else {
-    ratio = frame->encoder->average_arith_context_ratio_inter;
-  }
-  frame->estimated_arith_context_ratio = CLAMP(ratio, 0.5, 1.2);
   bits = frame->allocated_residual_bits;
 
-  base_lambda = schro_encoder_entropy_to_lambda (frame, bits);
-  frame->base_lambda = base_lambda;
-  SCHRO_DEBUG("LAMBDA: %d %g %d", frame->frame_number, base_lambda, bits);
+  frame_lambda = schro_encoder_entropy_to_lambda (frame, bits);
+  frame->frame_lambda = frame_lambda;
+  SCHRO_DEBUG("LAMBDA: %d %g %d", frame->frame_number, frame_lambda, bits);
 
-  schro_encoder_lambda_to_entropy (frame, base_lambda);
+  schro_encoder_lambda_to_entropy (frame, frame_lambda);
 }
 
 void
-schro_encoder_choose_quantisers_constant_lambda (SchroEncoderFrame *frame)
+schro_encoder_choose_quantisers_rdo_lambda (SchroEncoderFrame *frame)
 {
+  SCHRO_DEBUG("Using rdo_lambda quant selection on frame %d with lambda %g",frame->frame_number,frame->frame_lambda);
+
   schro_encoder_generate_subband_histograms (frame);
   schro_encoder_calc_estimates (frame);
 
   SCHRO_ASSERT(frame->have_estimate_tables);
 
-  frame->base_lambda = frame->encoder->magic_lambda;
-  if (!frame->is_ref) {
-    frame->base_lambda *= frame->encoder->magic_nonref_lambda_scale;
-  }
-
-  schro_encoder_lambda_to_entropy (frame, frame->base_lambda);
+  schro_encoder_lambda_to_entropy (frame, frame->frame_lambda);
 }
 
+
+void
+schro_encoder_choose_quantisers_rdo_cbr(SchroEncoderFrame *frame)
+{
+  // SCHRO_ERROR("Using rdo_cbr quant selection on frame %d with lambda %g",frame>frame_number,frame>frame_lambda);
+  /* SCHRO_ASSERT(frame>state & SCHRO_ENCODER_FRAME_STATE_HAVE_LAMBDA ); */
+
+  int est_bits, alloc_bits;
+
+  schro_encoder_generate_subband_histograms (frame);
+  schro_encoder_calc_estimates (frame);
+
+  SCHRO_ASSERT(frame->have_estimate_tables);
+
+  est_bits = (int) (schro_encoder_lambda_to_entropy (frame, frame->frame_lambda) );
+
+  // SCHRO_ERROR("Estimated bits for frame %d residual : %d", frame>frame_number, est_bits);
+
+  // Check that we're within reasonable bounds of the allocation
+  SchroEncoder* encoder = frame->encoder;
+
+  if (frame->num_refs==0 ){
+    alloc_bits = encoder->I_frame_alloc;
+  }
+  else if (schro_encoder_frame_is_B_frame(frame) == TRUE ){
+    alloc_bits = encoder->B_frame_alloc;
+  }
+  else{
+    alloc_bits = encoder->P_frame_alloc;
+  }
+  // FIXME: maybe want to subtract motion data bits for Inter pictures first
+  // for a more accurate result
+ 
+  int enforce;
+
+  if (encoder->rc_buffer_level > (encoder->rc_buffer_size/10) &&
+      encoder->rc_buffer_level < (19*encoder->rc_buffer_size)/20 ) {
+    enforce = 0;
+  }
+  else{
+    enforce = 1;
+    /*
+    SCHRO_ERROR("Setting max bits for frame %d at extrema :  %d %g", frame>frame_number,
+                                                          alloc_bits,
+                                                          (double)(encoder>rc_buffer_level)/
+                                                          (double)(encoder>rc_buffer_size)); */
+  }
+
+  if (est_bits > alloc_bits && enforce == 1){
+
+    frame->frame_lambda = schro_encoder_entropy_to_lambda (frame, alloc_bits);
+    SCHRO_DEBUG("Setting revised lambda based on allocation: %d %g %d", frame->frame_number, frame->frame_lambda, alloc_bits);
+
+    schro_encoder_lambda_to_entropy (frame, frame->frame_lambda);
+  }
+}
 
 void
 schro_encoder_estimate_entropy (SchroEncoderFrame *frame)
@@ -704,7 +794,7 @@ schro_encoder_estimate_entropy (SchroEncoderFrame *frame)
       n += frame->est_entropy[component][i][frame->quant_index[component][i]];
     }
   }
-  frame->estimated_residual_bits = n * frame->estimated_arith_context_ratio;
+  frame->estimated_residual_bits = n;
 
   if (frame->allocated_residual_bits > 0 &&
       frame->estimated_residual_bits >
@@ -746,12 +836,22 @@ schro_subband_pick_quant (SchroEncoderFrame *frame, int component, int i,
 }
 
 static double
-schro_encoder_lambda_to_entropy (SchroEncoderFrame *frame, double base_lambda)
+schro_encoder_lambda_to_entropy (SchroEncoderFrame *frame, double frame_lambda)
 {
   SchroParams *params = &frame->params;
   int i;
   int component;
   double entropy = 0;
+  double* table;
+
+  if (frame->num_refs == 0){
+    table = frame->encoder->intra_subband_weights[params->wavelet_filter_index]
+    [MAX(0,params->transform_depth-1)];
+  }
+  else {
+    table = frame->encoder->inter_subband_weights[params->wavelet_filter_index]
+    [MAX(0,params->transform_depth-1)];
+  }
 
   for(component=0;component<3;component++){
     for(i=0;i<1 + 3*params->transform_depth; i++) {
@@ -759,7 +859,7 @@ schro_encoder_lambda_to_entropy (SchroEncoderFrame *frame, double base_lambda)
       double weight;
       int quant_index;
 
-      lambda = base_lambda;
+      lambda = frame_lambda;
 
       if (i == 0) {
         lambda *= frame->encoder->magic_subband0_lambda_scale;
@@ -768,8 +868,7 @@ schro_encoder_lambda_to_entropy (SchroEncoderFrame *frame, double base_lambda)
         lambda *= frame->encoder->magic_chroma_lambda_scale;
       }
 
-      weight = frame->encoder->subband_weights[frame->params.wavelet_filter_index]
-        [MAX(0,frame->params.transform_depth-1)][i];
+      weight = table[i];
       lambda /= weight*weight;
 
       quant_index = schro_subband_pick_quant (frame, component, i, lambda);
@@ -779,7 +878,7 @@ schro_encoder_lambda_to_entropy (SchroEncoderFrame *frame, double base_lambda)
     }
   }
 
-  return entropy * frame->estimated_arith_context_ratio;
+  return entropy;
 }
 
 double
@@ -865,12 +964,22 @@ schro_encoder_entropy_to_lambda (SchroEncoderFrame *frame, double entropy)
 }
 
 static double
-schro_encoder_lambda_to_error (SchroEncoderFrame *frame, double base_lambda)
+schro_encoder_lambda_to_error (SchroEncoderFrame *frame, double frame_lambda)
 {
   SchroParams *params = &frame->params;
   int i;
   int component;
   double error = 0;
+  double *table;
+
+  if (frame->num_refs == 0){
+    table = frame->encoder->intra_subband_weights[params->wavelet_filter_index]
+    [MAX(0,params->transform_depth-1)];
+  }
+  else {
+    table = frame->encoder->inter_subband_weights[params->wavelet_filter_index]
+    [MAX(0,params->transform_depth-1)];
+  }
 
   for(component=0;component<3;component++){
     for(i=0;i<1 + 3*params->transform_depth; i++) {
@@ -878,7 +987,7 @@ schro_encoder_lambda_to_error (SchroEncoderFrame *frame, double base_lambda)
       double weight;
       int quant_index;
 
-      lambda = base_lambda;
+      lambda = frame_lambda;
 
       if (i == 0) {
         lambda *= frame->encoder->magic_subband0_lambda_scale;
@@ -887,8 +996,7 @@ schro_encoder_lambda_to_error (SchroEncoderFrame *frame, double base_lambda)
         lambda *= frame->encoder->magic_chroma_lambda_scale;
       }
 
-      weight = frame->encoder->subband_weights[frame->params.wavelet_filter_index]
-        [MAX(0,frame->params.transform_depth-1)][i];
+      weight = table[i];
       lambda /= weight*weight;
 
       quant_index = schro_subband_pick_quant (frame, component, i, lambda);
@@ -985,7 +1093,7 @@ schro_encoder_error_to_lambda (SchroEncoderFrame *frame, double error)
 void
 schro_encoder_choose_quantisers_constant_error (SchroEncoderFrame *frame)
 {
-  double base_lambda;
+  double frame_lambda;
   double error;
 
   schro_encoder_generate_subband_histograms (frame);
@@ -997,9 +1105,9 @@ schro_encoder_choose_quantisers_constant_error (SchroEncoderFrame *frame)
   error *= frame->params.video_format->width *
     frame->params.video_format->height;
 
-  base_lambda = schro_encoder_error_to_lambda (frame, error);
+  frame_lambda = schro_encoder_error_to_lambda (frame, error);
 
-  frame->base_lambda = base_lambda;
-  SCHRO_DEBUG("LAMBDA: %d %g", frame->frame_number, base_lambda);
+  frame->frame_lambda = frame_lambda;
+  SCHRO_DEBUG("LAMBDA: %d %g", frame->frame_number, frame_lambda);
 }
 
