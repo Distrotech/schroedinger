@@ -137,21 +137,21 @@ schro_encoder_pick_refs (SchroEncoderFrame *frame,
       ref1 = encoder->reference_pictures[i]->frame_number;
     }
   }
-#if 0
-  if (ref1 == SCHRO_PICTURE_NUMBER_INVALID) {
-    /* if there's no fwd ref, pick an older back ref */
-    for(i=0;i<SCHRO_LIMIT_REFERENCE_FRAMES;i++){
-      if (encoder->reference_pictures[i] == NULL) continue;
-      if (!encoder->reference_pictures[i]->expired_reference &&
-          encoder->reference_pictures[i]->frame_number < ref0 &&
-          (ref1 == SCHRO_PICTURE_NUMBER_INVALID ||
-           encoder->reference_pictures[i]->frame_number > ref1)) {
-        ref1 = encoder->reference_pictures[i]->frame_number;
+
+  if (!encoder->enable_opengop_structure) {
+    if (ref1 == SCHRO_PICTURE_NUMBER_INVALID) {
+      /* if there's no fwd ref, pick an older back ref */
+      for(i=0;i<SCHRO_LIMIT_REFERENCE_FRAMES;i++){
+        if (encoder->reference_pictures[i] == NULL) continue;
+        if (!encoder->reference_pictures[i]->expired_reference &&
+            encoder->reference_pictures[i]->frame_number < ref0 &&
+            (ref1 == SCHRO_PICTURE_NUMBER_INVALID ||
+            encoder->reference_pictures[i]->frame_number > ref1)) {
+          ref1 = encoder->reference_pictures[i]->frame_number;
+        }
       }
     }
   }
-#endif
-
   *ptr_ref0 = ref0;
   *ptr_ref1 = ref1;
 }
@@ -177,7 +177,7 @@ schro_encoder_pick_retire (SchroEncoderFrame *frame,
     }
   }
 
-  if (retire == SCHRO_PICTURE_NUMBER_INVALID && n_refs == 3) {
+  if (retire == SCHRO_PICTURE_NUMBER_INVALID && n_refs == 4) {
     /* if we have a full queue, forceably retire something */
     for(i=0;i<SCHRO_LIMIT_REFERENCE_FRAMES;i++){
       if (encoder->reference_pictures[i] == NULL) continue;
@@ -527,19 +527,19 @@ get_alloc (SchroEncoder *encoder, double requested_bits)
   int must_use_bits;
   double alloc;
 
-  must_use_bits = MAX(0, encoder->buffer_level + encoder->bits_per_picture
-      - encoder->buffer_size);
+  must_use_bits = MAX(0, encoder->rc_buffer_level + encoder->bits_per_picture
+      - encoder->rc_buffer_size);
 
   x = MAX(0, requested_bits - must_use_bits) /
-    MAX(0, encoder->buffer_size - encoder->bits_per_picture);
+    MAX(0, encoder->rc_buffer_size - encoder->bits_per_picture);
 
   y = 1 - exp(-x);
 
-  alloc = must_use_bits + (encoder->buffer_level - must_use_bits) * y;
+  alloc = must_use_bits + (encoder->rc_buffer_level - must_use_bits) * y;
 
   SCHRO_DEBUG("request %g, level %d/%d, must use %d -> x %g y %g alloc %g",
       requested_bits,
-      encoder->buffer_level, encoder->buffer_size,
+      encoder->rc_buffer_level, encoder->rc_buffer_size,
       must_use_bits, x, y, alloc);
 
   return alloc;
@@ -573,7 +573,7 @@ schro_encoder_calculate_allocation (SchroEncoderFrame *frame)
     frame->allocated_residual_bits = get_alloc (encoder,
         encoder->bits_per_picture * frame->picture_weight *
         encoder->magic_allocation_scale);
-    frame->hard_limit_bits = encoder->buffer_level;
+    frame->hard_limit_bits = encoder->rc_buffer_level;
   } else {
     double weight;
 
@@ -594,7 +594,7 @@ schro_encoder_calculate_allocation (SchroEncoderFrame *frame)
       SCHRO_DEBUG("allocated residual bits less than 0");
       frame->allocated_residual_bits = 0;
     }
-    frame->hard_limit_bits = encoder->buffer_level;
+    frame->hard_limit_bits = encoder->rc_buffer_level;
   }
 }
 
@@ -712,7 +712,16 @@ code_BBBP (SchroEncoder* encoder, size_t index, int subgroup_length
       }
       ref1 = SCHRO_PICTURE_NUMBER_INVALID;
     }
-    schro_engine_code_picture (f, FALSE, -1, num_refs, ref0, ref1);
+    if (0 > scene_change) {
+      schro_encoder_pick_retire (f, &retire);
+      if (subgroup_length - 2 > j) {
+        schro_engine_code_picture (f, TRUE, retire, num_refs, ref0, ref1);
+      } else {
+        schro_engine_code_picture (f, FALSE, retire, num_refs, ref0, ref1);
+      }
+      if (subgroup_length - 1 > 1 && 0 < j)
+        schro_encoder_expire_reference (encoder, f->frame_number - 1);
+    } else schro_engine_code_picture (f, FALSE, -1, num_refs, ref0, ref1);
     f->presentation_frame = schro_encoder_pic_num (f);
     if (subgroup_length-2 == j) {
       ++f->presentation_frame;
@@ -949,9 +958,6 @@ schro_encoder_handle_quants (SchroEncoder *encoder, int i)
 
   if (frame->busy || !frame->stages[SCHRO_ENCODER_FRAME_STAGE_MODE_DECISION].is_done) return FALSE;
 
-  encoder->quant_slot++;
-
-  schro_encoder_calculate_allocation (frame);
   schro_encoder_choose_quantisers (frame);
   schro_encoder_estimate_entropy (frame);
 
@@ -987,7 +993,6 @@ schro_encoder_handle_gop_backref (SchroEncoder *encoder, int i)
   //schro_engine_code_BBBP (encoder, i, 1);
   if (frame->start_sequence_header) {
     schro_encoder_pick_retire (frame, &retire);
-
     schro_engine_code_picture (frame, TRUE, retire, 0, -1, -1);
     frame->picture_weight = encoder->magic_keyframe_weight;
   } else {
