@@ -592,7 +592,7 @@ schro_motionest_superblock_scan_one (SchroMotionEst *me, int ref, int distance,
     return;
   }
 
-  schro_metric_scan_do_scan (&scan);
+  schro_metric_scan_do_scan (&scan, FALSE);
   block->error = schro_metric_scan_get_min (&scan, &dx, &dy);
   mv->metric = block->error/16;
 
@@ -797,7 +797,7 @@ schro_motionest_block_scan_one (SchroMotionEst *me, int ref, int distance,
         continue;
       }
 
-      schro_metric_scan_do_scan (&scan);
+      schro_metric_scan_do_scan (&scan, FALSE);
       mv->metric = schro_metric_scan_get_min (&scan, &dx, &dy);
       block->error += mv->metric;
       block->valid &= (mv->metric != SCHRO_METRIC_INVALID);
@@ -878,7 +878,7 @@ schro_motionest_block_scan (SchroMotionEst *me, int ref, int distance,
     return;
   }
 
-  schro_metric_scan_do_scan (&scan);
+  schro_metric_scan_do_scan (&scan, FALSE);
   mv->metric = schro_metric_scan_get_min (&scan, &dx, &dy);
   block->error = mv->metric;
   block->valid = (mv->metric != SCHRO_METRIC_INVALID);
@@ -1042,7 +1042,7 @@ schro_motionest_subsuperblock_scan (SchroMotionEst *me, int ref, int distance,
     return;
   }
 
-  schro_metric_scan_do_scan (&scan);
+  schro_metric_scan_do_scan (&scan, FALSE);
   mv->metric = schro_metric_scan_get_min (&scan, &dx, &dy);
   block->error = mv->metric;
   block->valid = (mv->metric != SCHRO_METRIC_INVALID);
