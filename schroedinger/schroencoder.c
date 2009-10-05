@@ -3334,6 +3334,8 @@ schro_encoder_frame_set_quant_index (SchroEncoderFrame *frame, int component,
   for(i=0;i<horiz_codeblocks*vert_codeblocks;i++){
     codeblock_quants[i] = quant_index;
   }
+
+  frame->quant_index[component][index] = quant_index;
 }
 
 static int
