@@ -47,7 +47,7 @@ schro_metric_scan_do_scan (SchroMetricScan *scan)
   if (scan->block_width == 8 && scan->block_height == 8) {
     for(j=0;j<scan->scan_height;j++){
     for(i=0;i<scan->scan_width;i++){
-      orc_sad8x8_u8 (scan->metrics + i * scan->scan_height + j,
+      orc_sad_8x8_u8 (scan->metrics + i * scan->scan_height + j,
           SCHRO_FRAME_DATA_GET_PIXEL_U8(fd, scan->x, scan->y),
           fd->stride,
           SCHRO_FRAME_DATA_GET_PIXEL_U8(fd_ref, scan->ref_x + i, scan->ref_y + j),
