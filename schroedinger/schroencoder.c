@@ -772,7 +772,7 @@ schro_encoder_set_video_format (SchroEncoder *encoder,
 /**
  * schro_encoder_set_packet_assembly:
  * @encoder: an encoder object
- * @value: 
+ * @value:
  *
  * If @value is TRUE, all subsequent calls to schro_encoder_pull()
  * will return a buffer that contains all Dirac packets related to
@@ -1640,15 +1640,6 @@ schro_encoder_frame_complete (SchroAsyncStage *stage)
       frame->ref_frame[1] = NULL;
     }
 
-    if (!frame->is_ref) {
-      for(i=0;i<5;i++){
-        if (frame->downsampled_frames[i]) {
-          schro_frame_unref (frame->downsampled_frames[i]);
-          frame->downsampled_frames[i] = NULL;
-        }
-      }
-    }
-
     if (frame->deep_me) {
       schro_me_free (&frame->deep_me);
     }
@@ -1656,6 +1647,15 @@ schro_encoder_frame_complete (SchroAsyncStage *stage)
     for (i=0; 2>i; ++i) {
       if (frame->hier_bm[i]) {
         schro_hbm_unref (&frame->hier_bm[i]);
+      }
+    }
+
+    if (!frame->is_ref) {
+      for(i=0;i<5;i++){
+        if (frame->downsampled_frames[i]) {
+          schro_frame_unref (frame->downsampled_frames[i]);
+          frame->downsampled_frames[i] = NULL;
+        }
       }
     }
 
@@ -2203,6 +2203,10 @@ schro_encoder_mode_decision (SchroAsyncStage *stage)
           , frame->dcblock_ratio);
 
       if (frame->dcblock_ratio > frame->encoder->magic_me_bailout_limit) {
+        if (frame->deep_me) {
+          /* Free the motion estimation info if we are inserting an I frame */
+          schro_me_free (&frame->deep_me);
+        }
         frame->params.num_refs = 0;
         frame->num_refs = 0;
         SCHRO_DEBUG("DC block ratio too high for frame d, inserting an intra  picture"
@@ -3349,7 +3353,7 @@ schro_encoder_frame_set_quant_index (SchroEncoderFrame *frame, int component,
   int horiz_codeblocks;
   int vert_codeblocks;
   int i;
-  
+
 
   position = schro_subband_get_position (index);
   horiz_codeblocks = params->horiz_codeblocks[SCHRO_SUBBAND_SHIFT(position)+1];
