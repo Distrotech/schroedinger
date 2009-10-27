@@ -568,6 +568,10 @@ schro_encoder_start (SchroEncoder *encoder)
     SCHRO_ERROR("no motion estimation selected!");
     SCHRO_ASSERT(0);
   }
+  if (!encoder->enable_deep_estimation
+      && encoder->enable_combined_me) {
+     encoder->enable_combined_me = FALSE;
+  }
 
   if (encoder->video_format.luma_excursion >= 256 ||
       encoder->video_format.chroma_excursion >= 256) {
@@ -4087,6 +4091,7 @@ struct SchroEncoderSettings {
   BOOL(enable_opengop_structure, TRUE),
   BOOL(enable_scene_change_detection, TRUE),
   BOOL(enable_deep_estimation, TRUE),
+  BOOL(enable_combined_me, FALSE),
   INT (horiz_slices, 1, INT_MAX, 8),
   INT (vert_slices, 1, INT_MAX, 6),
   ENUM(codeblock_size, codeblock_size_list, 0),
