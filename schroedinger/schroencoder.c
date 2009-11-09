@@ -465,6 +465,7 @@ SchroEncoder *
 schro_encoder_new (void)
 {
   SchroEncoder *encoder;
+  int c,b;
 
   encoder = schro_malloc0 (sizeof(SchroEncoder));
 
@@ -477,27 +478,11 @@ schro_encoder_new (void)
 
   schro_encoder_setting_set_defaults(encoder);
 
-  encoder->subgroup_length = 3;
-  encoder->sub_groups_num = 16;
-
-  encoder->magic_chroma_lambda_scale = 0.1;
-  encoder->magic_P_lambda_scale = 0.25;
-  encoder->magic_B_lambda_scale = 0.03125;
-  encoder->magic_me_lambda_scale = 32.0;
-  encoder->magic_inter_cpd_scale = 1.0;
-  encoder->magic_scene_change_threshold = 3.25;
-  encoder->magic_me_bailout_limit = 0.33;
-  encoder->magic_mc_lambda = 0.1;
-
-  encoder->downsample_levels = 4;
-
   schro_video_format_set_std_video_format (&encoder->video_format,
       SCHRO_VIDEO_FORMAT_CUSTOM);
 
   encoder->inserted_buffers =
     schro_list_new_full ((SchroListFreeFunc)schro_buffer_unref, NULL);
-
-  int c,b;
 
   for (c=0; c<3; ++c){
     for (b=0; b<SCHRO_LIMIT_SUBBANDS; ++b){
@@ -4083,7 +4068,7 @@ struct SchroEncoderSettings {
   INT (profile, 0, 0, 0),
   INT (level, 0, 0, 0),
   INT (subgroup_length, 1, 10, 4),
-  INT (sub_groups_num, 1, 100, 30),
+  INT (sub_groups_num, 1, 100, 6),
   BOOL(open_gop, TRUE),
   BOOL(enable_psnr, FALSE),
   BOOL(enable_ssim, FALSE),
@@ -4118,17 +4103,17 @@ struct SchroEncoderSettings {
 
   DOUB(magic_dc_metric_offset, 0.0, 1000.0, 1.0),
   DOUB(magic_subband0_lambda_scale, 0.0, 1000.0, 10.0),
-  DOUB(magic_chroma_lambda_scale, 0.0, 1000.0, 0.01),
+  DOUB(magic_chroma_lambda_scale, 0.0, 1000.0, 0.1),
   DOUB(magic_me_lambda_scale, 0.0, 100.0, 32.0),
   DOUB(magic_P_lambda_scale, 0.0, 10.0, 0.25),
-  DOUB(magic_B_lambda_scale, 0.0, 10.0, 0.0625),
+  DOUB(magic_B_lambda_scale, 0.0, 10.0, 0.03125),
   DOUB(magic_allocation_scale, 0.0, 1000.0, 1.1),
-  DOUB(magic_inter_cpd_scale, 0.0, 1.0, 0.125),
+  DOUB(magic_inter_cpd_scale, 0.0, 1.0, 1.0),
   DOUB(magic_keyframe_weight, 0.0, 1000.0, 7.5),
   DOUB(magic_scene_change_threshold, 0.0, 1000.0, 0.2),
   DOUB(magic_inter_p_weight, 0.0, 1000.0, 1.5),
   DOUB(magic_inter_b_weight, 0.0, 1000.0, 0.2),
-  DOUB(magic_me_bailout_limit, 0.0, 1000.0, 0.5),
+  DOUB(magic_me_bailout_limit, 0.0, 1000.0, 0.33),
   DOUB(magic_bailout_weight, 0.0, 1000.0, 4.0),
   DOUB(magic_error_power, 0.0, 1000.0, 4.0),
   DOUB(magic_mc_lambda, 0.0, 1000.0, 0.1),
