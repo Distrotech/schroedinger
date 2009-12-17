@@ -4112,7 +4112,7 @@ struct SchroEncoderSettings {
   DOUB(magic_allocation_scale, 0.0, 1000.0, 1.1),
   DOUB(magic_inter_cpd_scale, 0.0, 1.0, 1.0),
   DOUB(magic_keyframe_weight, 0.0, 1000.0, 7.5),
-  DOUB(magic_scene_change_threshold, 0.0, 1000.0, 3.25),
+  DOUB(magic_scene_change_threshold, 0.0, 1000.0, 0.2),
   DOUB(magic_inter_p_weight, 0.0, 1000.0, 1.5),
   DOUB(magic_inter_b_weight, 0.0, 1000.0, 0.2),
   DOUB(magic_me_bailout_limit, 0.0, 1000.0, 0.33),
