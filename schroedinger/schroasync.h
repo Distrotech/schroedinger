@@ -65,6 +65,8 @@ void schro_async_stop (SchroAsync *async);
  */
 void schro_async_start (SchroAsync *async);
 
+void schro_async_set_stage (SchroAsyncStage* stage);
+
 void schro_async_run_stage_locked (SchroAsync *async, SchroAsyncStage *stage);
 int schro_async_wait_locked (SchroAsync *async);
 void schro_async_signal_scheduler (SchroAsync *async);
