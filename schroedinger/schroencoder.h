@@ -272,7 +272,6 @@ struct _SchroEncoder {
   int level;
   int sub_groups_num;
   int open_gop;
-  int au_distance;
   schro_bool enable_psnr;
   schro_bool enable_ssim;
   schro_bool enable_md5;
