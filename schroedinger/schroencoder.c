@@ -1886,7 +1886,6 @@ schro_encoder_async_schedule (SchroEncoder *encoder, SchroExecDomain exec_domain
       && SCHRO_ENCODER_GOP_ADAPTIVE == encoder->gop_structure) {
     /* now we determine the GOP structure for all frames in the queue */
     schro_encoder_handle_opengop (encoder, SCHRO_ENCODER_FRAME_STAGE_HAVE_GOP);
-
   } else {
     for(i=0;i<encoder->frame_queue->n;i++) {
       frame = encoder->frame_queue->elements[i].data;
@@ -2080,6 +2079,7 @@ schro_encoder_analyse_picture (SchroAsyncStage *stage)
     frame->have_average_luma = TRUE;
   }
 }
+
 
 void
 schro_encoder_predict_rough_picture (SchroAsyncStage *stage)
