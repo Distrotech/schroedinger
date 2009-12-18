@@ -3966,6 +3966,12 @@ schro_encoder_pic_num (SchroEncoderFrame* frame)
   return frame->frame_number;
 }
 
+SchroHierBm
+schro_encoder_frame_hbm (SchroEncoderFrame* frame, int ref_number)
+{
+  SCHRO_ASSERT(frame && (0 == ref_number || 1 == ref_number));
+  return frame->hier_bm[ref_number];
+}
 
 /* settings */
 
