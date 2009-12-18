@@ -844,7 +844,7 @@ schro_encoder_handle_gop_tworef (SchroEncoder *encoder, int i)
   if (frame->busy || !frame->stages[SCHRO_ENCODER_FRAME_STAGE_ANALYSE].is_done)
     return;
 
-  schro_engine_check_new_sequence_header (encoder, frame);
+  //schro_engine_check_new_sequence_header (encoder, frame);
 
   gop_length = encoder->subgroup_length;
   SCHRO_DEBUG("handling gop from %d to %d (index %d)", encoder->gop_picture,
