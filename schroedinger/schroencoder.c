@@ -4072,7 +4072,7 @@ struct SchroEncoderSettings {
   ENUM(intra_wavelet, wavelet_list, SCHRO_WAVELET_DESLAURIERS_DUBUC_13_7),
   ENUM(inter_wavelet, wavelet_list, SCHRO_WAVELET_DESLAURIERS_DUBUC_13_7),
   INT (mv_precision, 0, 3, 0),
-  INT (downsample_levels, 2, 8, 5),
+  INT (downsample_levels, 2, 8, 4),
   ENUM(motion_block_size, block_size_list, 0),
   ENUM(motion_block_overlap, block_overlap_list, 0),
   BOOL(interlaced_coding, FALSE),
