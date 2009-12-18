@@ -6,6 +6,7 @@
 #include <schroedinger/schrophasecorrelation.h>
 #include <string.h>
 #include <math.h>
+#include <float.h>
 
 #define DC_BIAS 50
 #define DC_METRIC 50
@@ -318,7 +319,7 @@ schro_encoder_motion_predict_subpel_deep (SchroMe me)
       for (j=0; params->y_num_blocks > j; ++j) {
         for (i=0; params->x_num_blocks > i; ++i) {
           int error, entropy, min_error=SCHRO_METRIC_INVALID, m=-1;
-          double score, min_score=HUGE_VAL;
+          double score, min_score=DBL_MAX;
           int x, y, k;
           int dx, dy;
           int pred_x, pred_y;
@@ -1575,7 +1576,7 @@ schro_do_split2 (SchroMe me, int i, int j, SchroBlock* block
 
   for (jj=0; 4>jj; ++jj) {
     for (ii=0; 4>ii; ++ii) {
-      double score, min_score=HUGE_VAL;
+      double score, min_score=DBL_MAX;
       int entropy[2], error;
       int width, height;
       int dx[2], dy[2];
@@ -1820,7 +1821,7 @@ schro_get_best_mv_split1 (SchroMe me, int ref, int i, int j
 
   /* now pick the best candidate */
   min_m = -1;
-  min_score = HUGE_VAL;
+  min_score = DBL_MAX;
   tmp_x = (i * params->xbsep_luma) << mv_prec;
   tmp_y = (j * params->ybsep_luma) << mv_prec;
   upframe = schro_me_ref (me, ref);
@@ -1897,7 +1898,7 @@ schro_do_split1 (SchroMe me, int i, int j, SchroBlock* block
 
   for (jj=0; 4>jj; jj+=2) {
     for (ii=0; 4>ii; ii+=2) {
-      double score, min_score = HUGE_VAL;
+      double score, min_score = DBL_MAX;
       int entropy[2], error=SCHRO_METRIC_INVALID;
       int best_entropy = SCHRO_METRIC_INVALID
         , best_error = SCHRO_METRIC_INVALID;
@@ -2039,7 +2040,7 @@ schro_get_best_split0_mv (SchroMe me, int ref, int i, int j
   int n=0, m=0, min_m = -1, metric, ent;
   int mv_prec = params->mv_precision;
   int fd_width, fd_height, jj, ii;
-  double score, min_score = HUGE_VAL
+  double score, min_score = DBL_MAX
     , lambda = schro_me_lambda (me);
   int xblen = params->xbsep_luma << 2, yblen = params->ybsep_luma << 2;
   int width, height, dx, dy, xmin, xmax, ymin, ymax, tmp_x, tmp_y;
@@ -2154,7 +2155,7 @@ schro_do_split0 (SchroMe me, int i, int j, SchroBlock* block
   int ref, error=SCHRO_METRIC_INVALID, entropy[2];
   int best_error = SCHRO_METRIC_INVALID
     , best_entropy = SCHRO_METRIC_INVALID;
-  double score, min_score = HUGE_VAL;
+  double score, min_score = DBL_MAX;
   int xmin = -orig_frame->extension, ymin = -orig_frame->extension
     , xmax = (orig_frame->width << mv_prec) + orig_frame->extension
     , ymax = (orig_frame->height << mv_prec) + orig_frame->extension;
