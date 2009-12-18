@@ -520,6 +520,9 @@ void schro_encoder_init_error_tables (SchroEncoder *encoder);
 void schro_encoder_frame_set_quant_index (SchroEncoderFrame *frame, int component,
     int index, int x, int y, int quant_index);
 
+struct _SchroHierBm* schro_encoder_frame_hbm ( SchroEncoderFrame* frame
+    , int ref_number);
+
 float schro_encoder_sc_score (SchroEncoderFrame* frame);
 SchroPictureNumber schro_encoder_pic_num (SchroEncoderFrame* frame);
 
