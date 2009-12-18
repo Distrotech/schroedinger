@@ -4047,7 +4047,7 @@ struct SchroEncoderSettings {
   BOOL(enable_dc_multiquant, FALSE),
   BOOL(enable_global_motion, FALSE),
   BOOL(enable_scene_change_detection, TRUE),
-  BOOL(enable_deep_estimation, FALSE),
+  BOOL(enable_deep_estimation, TRUE),
   BOOL(enable_rdo_cbr, FALSE),
   INT (horiz_slices, 1, INT_MAX, 8),
   INT (vert_slices, 1, INT_MAX, 6),
