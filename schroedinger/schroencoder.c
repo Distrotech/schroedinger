@@ -129,7 +129,7 @@ schro_encoder_last_subgroup_coded(SchroEncoder* encoder, int picnum)
 void schro_encoder_init_rc_buffer(SchroEncoder* encoder)
 {
   SCHRO_ASSERT (encoder);
-  int gop_length = encoder->au_distance;
+  int gop_length = encoder->subgroup_length * encoder->sub_groups_num;
   if (encoder->buffer_size == 0) {
     encoder->buffer_size = 5 * encoder->bitrate;
   }
@@ -158,7 +158,7 @@ void schro_encoder_init_rc_buffer(SchroEncoder* encoder)
     encoder->B_frame_alloc = 0;
   }
   else{
-    int num_P_frames = encoder->au_distance / encoder->magic_subgroup_length - 1;
+    int num_P_frames = encoder->sub_groups_num - 1;
     int num_B_frames = gop_length - num_P_frames - 1;
     int total;
     encoder->I_frame_alloc = 2^24;
@@ -191,7 +191,7 @@ schro_encoder_projected_subgroup_bits(SchroEncoder* encoder)
 {
     // FIXME: take account of subgroups with an I instead of a P??
     int bits = encoder->P_complexity +
-                   (encoder->magic_subgroup_length-1)*encoder->B_complexity;
+                   (encoder->subgroup_length-1)*encoder->B_complexity;
     return bits;
 }
 
@@ -206,7 +206,7 @@ schro_encoder_target_subgroup_bits(SchroEncoder* encoder)
 {
     // FIXME: take account of subgroups with an I instead of a P??
     int bits = encoder->P_frame_alloc +
-                   (encoder->magic_subgroup_length-1)*encoder->B_frame_alloc;
+                   (encoder->subgroup_length-1)*encoder->B_frame_alloc;
     return bits;
 }
 
@@ -220,19 +220,19 @@ void
 schro_encoder_cbr_allocate(SchroEncoder* encoder, int fnum )
 {
   SCHRO_ASSERT(encoder);
-  int gop_length = encoder->au_distance;
+  int gop_length = encoder->sub_groups_num * encoder->subgroup_length;
   int Icty = encoder->I_complexity;
   int Pcty = encoder->P_complexity;
   int Bcty = encoder->B_complexity;
 
   int num_I_frames = 1;
-  int num_P_frames = encoder->au_distance / encoder->magic_subgroup_length - 1;
+  int num_P_frames = encoder->sub_groups_num - 1;
   int num_B_frames = gop_length - num_I_frames - num_P_frames;
 
   int total_gop_bits = muldiv64 (encoder->bitrate * gop_length,
                        encoder->video_format.frame_rate_denominator,
                        encoder->video_format.frame_rate_numerator);
-  int sg_len = encoder->magic_subgroup_length;
+  int sg_len = encoder->subgroup_length;
 
   double buffer_occ = ( (double)encoder->buffer_level)/((double)encoder->buffer_size);
 
@@ -293,7 +293,7 @@ schro_encoder_cbr_update(SchroEncoderFrame* frame, int num_bits)
   double actual_ratio = (double)(encoder->buffer_level)/
                         (double)(encoder->buffer_size);
   double filter_tap;
-  int P_separation=encoder->magic_subgroup_length;
+  int P_separation=encoder->subgroup_length;
 
   // 1 is coding frames, 2 if coding fields
   int field_factor = 1;
@@ -401,7 +401,7 @@ schro_encoder_cbr_update(SchroEncoderFrame* frame, int num_bits)
 
       // Reset the frame counter
       if (encoder->subgroup_position==0){
-        encoder->subgroup_position = encoder->magic_subgroup_length;
+        encoder->subgroup_position = encoder->subgroup_length;
         encoder->B_complexity_sum = 0;
       }
 
@@ -550,6 +550,7 @@ schro_encoder_start (SchroEncoder *encoder)
 
   encoder->engine_init = 1;
   encoder->force_sequence_header = TRUE;
+  encoder->need_first_intra = 1;
 
   /* add check on 'enable' switches */
   if (encoder->enable_scene_change_detection) {

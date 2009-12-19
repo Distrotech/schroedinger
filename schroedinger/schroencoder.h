@@ -322,7 +322,6 @@ struct _SchroEncoder {
   double magic_bailout_weight;
   double magic_error_power;
   double magic_mc_lambda;
-  double magic_subgroup_length;
   double magic_badblock_multiplier_nonref;
   double magic_badblock_multiplier_ref;
   double magic_block_search_threshold;
