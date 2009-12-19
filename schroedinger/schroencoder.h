@@ -246,8 +246,8 @@ struct _SchroEncoder {
   int min_bitrate;
 
   // Buffer model parameters for CBR and (TODO) constrained VBR coding
-  int buffer_size;
-  int buffer_level;
+  int rc_buffer_size;
+  int rc_buffer_level;
   int bits_per_picture;
   int subgroup_position;
   int I_complexity;

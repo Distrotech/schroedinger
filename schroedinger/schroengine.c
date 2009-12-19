@@ -527,19 +527,19 @@ get_alloc (SchroEncoder *encoder, double requested_bits)
   int must_use_bits;
   double alloc;
 
-  must_use_bits = MAX(0, encoder->buffer_level + encoder->bits_per_picture
-      - encoder->buffer_size);
+  must_use_bits = MAX(0, encoder->rc_buffer_level + encoder->bits_per_picture
+      - encoder->rc_buffer_size);
 
   x = MAX(0, requested_bits - must_use_bits) /
-    MAX(0, encoder->buffer_size - encoder->bits_per_picture);
+    MAX(0, encoder->rc_buffer_size - encoder->bits_per_picture);
 
   y = 1 - exp(-x);
 
-  alloc = must_use_bits + (encoder->buffer_level - must_use_bits) * y;
+  alloc = must_use_bits + (encoder->rc_buffer_level - must_use_bits) * y;
 
   SCHRO_DEBUG("request %g, level %d/%d, must use %d -> x %g y %g alloc %g",
       requested_bits,
-      encoder->buffer_level, encoder->buffer_size,
+      encoder->rc_buffer_level, encoder->rc_buffer_size,
       must_use_bits, x, y, alloc);
 
   return alloc;
@@ -573,7 +573,7 @@ schro_encoder_calculate_allocation (SchroEncoderFrame *frame)
     frame->allocated_residual_bits = get_alloc (encoder,
         encoder->bits_per_picture * frame->picture_weight *
         encoder->magic_allocation_scale);
-    frame->hard_limit_bits = encoder->buffer_level;
+    frame->hard_limit_bits = encoder->rc_buffer_level;
   } else {
     double weight;
 
@@ -594,7 +594,7 @@ schro_encoder_calculate_allocation (SchroEncoderFrame *frame)
       SCHRO_DEBUG("allocated residual bits less than 0");
       frame->allocated_residual_bits = 0;
     }
-    frame->hard_limit_bits = encoder->buffer_level;
+    frame->hard_limit_bits = encoder->rc_buffer_level;
   }
 }
 

@@ -764,8 +764,8 @@ schro_encoder_choose_quantisers_rdo_cbr(SchroEncoderFrame *frame)
  
   int enforce;
 
-  if (encoder->buffer_level > (encoder->buffer_size/10) &&
-      encoder->buffer_level < (19*encoder->buffer_size)/20 ) {
+  if (encoder->rc_buffer_level > (encoder->rc_buffer_size/10) &&
+      encoder->rc_buffer_level < (19*encoder->rc_buffer_size)/20 ) {
     enforce = 0;
   }
   else{
@@ -773,8 +773,8 @@ schro_encoder_choose_quantisers_rdo_cbr(SchroEncoderFrame *frame)
     /*
     SCHRO_ERROR("Setting max bits for frame %d at extrema :  %d %g", frame>frame_number,
                                                           alloc_bits,
-                                                          (double)(encoder>buffer_level)/
-                                                          (double)(encoder>buffer_size)); */
+                                                          (double)(encoder>rc_buffer_level)/
+                                                          (double)(encoder>rc_buffer_size)); */
   }
 
   if (est_bits > alloc_bits && enforce == 1){
