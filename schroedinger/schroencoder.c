@@ -3314,7 +3314,7 @@ schro_encoder_frame_get_quant_index (SchroEncoderFrame *frame, int component,
   SchroParams *params = &frame->params;
   int position;
   int horiz_codeblocks;
-  
+
   position = schro_subband_get_position (index);
   horiz_codeblocks = params->horiz_codeblocks[SCHRO_SUBBAND_SHIFT(position)+1];
 
@@ -4103,7 +4103,7 @@ struct SchroEncoderSettings {
 
   DOUB(magic_dc_metric_offset, 0.0, 1000.0, 1.0),
   DOUB(magic_subband0_lambda_scale, 0.0, 1000.0, 10.0),
-  DOUB(magic_chroma_lambda_scale, 0.0, 1000.0, 0.01),
+  DOUB(magic_chroma_lambda_scale, 0.0, 1000.0, 0.1),
   DOUB(magic_me_lambda_scale, 0.0, 100.0, 32.0),
   DOUB(magic_P_lambda_scale, 0.0, 10.0, 0.25),
   DOUB(magic_B_lambda_scale, 0.0, 10.0, 0.03125),
