@@ -177,7 +177,7 @@ schro_encoder_pick_retire (SchroEncoderFrame *frame,
     }
   }
 
-  if (retire == SCHRO_PICTURE_NUMBER_INVALID && n_refs == 3) {
+  if (retire == SCHRO_PICTURE_NUMBER_INVALID && n_refs == 4) {
     /* if we have a full queue, forceably retire something */
     for(i=0;i<SCHRO_LIMIT_REFERENCE_FRAMES;i++){
       if (encoder->reference_pictures[i] == NULL) continue;
