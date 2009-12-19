@@ -130,13 +130,13 @@ void schro_encoder_init_rc_buffer(SchroEncoder* encoder)
 {
   SCHRO_ASSERT (encoder);
   int gop_length = encoder->subgroup_length * encoder->sub_groups_num;
-  if (encoder->buffer_size == 0) {
-    encoder->buffer_size = 5 * encoder->bitrate;
+  if (encoder->rc_buffer_size == 0) {
+    encoder->rc_buffer_size = 5 * encoder->bitrate;
   }
 
   // Set initial level at 90%
-  if (encoder->buffer_level == 0) {
-    encoder->buffer_level = (9*encoder->buffer_size)/10;
+  if (encoder->rc_buffer_level == 0) {
+    encoder->rc_buffer_level = (9*encoder->rc_buffer_size)/10;
   }
   encoder->bits_per_picture = muldiv64 (encoder->bitrate,
                               encoder->video_format.frame_rate_denominator,
@@ -234,7 +234,7 @@ schro_encoder_cbr_allocate(SchroEncoder* encoder, int fnum )
                        encoder->video_format.frame_rate_numerator);
   int sg_len = encoder->subgroup_length;
 
-  double buffer_occ = ( (double)encoder->buffer_level)/((double)encoder->buffer_size);
+  double buffer_occ = ( (double)encoder->rc_buffer_level)/((double)encoder->rc_buffer_size);
 
   if ( encoder->gop_structure != SCHRO_ENCODER_GOP_INTRA_ONLY){
     double correction;
@@ -290,8 +290,8 @@ schro_encoder_cbr_update(SchroEncoderFrame* frame, int num_bits)
 
   // The target buffer occupancy
   double target_ratio = 0.9;
-  double actual_ratio = (double)(encoder->buffer_level)/
-                        (double)(encoder->buffer_size);
+  double actual_ratio = (double)(encoder->rc_buffer_level)/
+                        (double)(encoder->rc_buffer_size);
   double filter_tap;
   int P_separation=encoder->subgroup_length;
 
@@ -1204,7 +1204,7 @@ schro_encoder_pull_full (SchroEncoder *encoder, int *presentation_frame,
             frame->actual_mc_bits,
             frame->actual_residual_bits,
             frame->scene_change_score, /* 10 */
-            encoder->buffer_level,
+            encoder->rc_buffer_level,
             frame->frame_lambda,
             frame->mc_error,
             frame->mean_squared_error_luma,
@@ -1219,23 +1219,23 @@ schro_encoder_pull_full (SchroEncoder *encoder, int *presentation_frame,
       }
 
       if (encoder->rate_control == SCHRO_ENCODER_RATE_CONTROL_CONSTANT_BITRATE) {
-        encoder->buffer_level -= buffer->length * 8;
+        encoder->rc_buffer_level -= buffer->length * 8;
         if (is_picture) {
-          if (encoder->buffer_level < 0) {
-            SCHRO_ERROR("buffer underrun by %d bits", -encoder->buffer_level);
-            encoder->buffer_level = 0;
+          if (encoder->rc_buffer_level < 0) {
+            SCHRO_ERROR("buffer underrun by %d bits", -encoder->rc_buffer_level);
+            encoder->rc_buffer_level = 0;
           }
-          encoder->buffer_level += encoder->bits_per_picture;
-          if (encoder->buffer_level > encoder->buffer_size) {
+          encoder->rc_buffer_level += encoder->bits_per_picture;
+          if (encoder->rc_buffer_level > encoder->rc_buffer_size) {
             int n;
 
-            n = (encoder->buffer_level - encoder->buffer_size + 7)/8;
+            n = (encoder->rc_buffer_level - encoder->rc_buffer_size + 7)/8;
             SCHRO_DEBUG("buffer overrun, adding padding of %d bytes", n);
             n = schro_encoder_encode_padding (encoder, n);
-            encoder->buffer_level -= n*8;
+            encoder->rc_buffer_level -= n*8;
           }
-          SCHRO_DEBUG("buffer level %d of %d bits", encoder->buffer_level,
-              encoder->buffer_size);
+          SCHRO_DEBUG("buffer level %d of %d bits", encoder->rc_buffer_level,
+              encoder->rc_buffer_size);
         }
       }
 
@@ -2366,24 +2366,24 @@ schro_encoder_encode_picture (SchroAsyncStage *stage)
   // Update the buffer model
   if (frame->encoder->rate_control == SCHRO_ENCODER_RATE_CONTROL_CONSTANT_BITRATE ){
     SchroEncoder* encoder = frame->encoder;
-    encoder->buffer_level -= total_frame_bits;
-    encoder->buffer_level += encoder->bits_per_picture;
+    encoder->rc_buffer_level -= total_frame_bits;
+    encoder->rc_buffer_level += encoder->bits_per_picture;
 
-    if (encoder->buffer_level < 0) {
-      SCHRO_DEBUG("buffer underrun by %d bytes", -encoder->buffer_level);
-      encoder->buffer_level = 0;
+    if (encoder->rc_buffer_level < 0) {
+      SCHRO_DEBUG("buffer underrun by %d bytes", -encoder->rc_buffer_level);
+      encoder->rc_buffer_level = 0;
     }
 
-    if (encoder->buffer_level > encoder->buffer_size) {
+    if (encoder->rc_buffer_level > encoder->rc_buffer_size) {
       int n;
 
-      n = (encoder->buffer_level - encoder->buffer_size + 7)/8;
+      n = (encoder->rc_buffer_level - encoder->rc_buffer_size + 7)/8;
       SCHRO_DEBUG("buffer overrun, adding padding of %d bytes", n);
       n = schro_encoder_encode_padding (encoder, n);
-      encoder->buffer_level -= n*8;
+      encoder->rc_buffer_level -= n*8;
     }
     SCHRO_DEBUG("At frame %d, buffer level %d of %d bits", frame->frame_number,
-      encoder->buffer_level, encoder->buffer_size);
+      encoder->rc_buffer_level, encoder->rc_buffer_size);
 
     schro_encoder_cbr_update(frame, total_frame_bits);
   }
@@ -4050,8 +4050,8 @@ struct SchroEncoderSettings {
   DOUB(qf, 0, 15, 5.5),
   INT (max_bitrate, 0, INT_MAX, 13824000),
   INT (min_bitrate, 0, INT_MAX, 13824000),
-  INT (buffer_size, 0, INT_MAX, 0),
-  INT (buffer_level, 0, INT_MAX, 0),
+  INT (rc_buffer_size, 0, INT_MAX, 0),
+  INT (rc_buffer_level, 0, INT_MAX, 0),
   DOUB(noise_threshold, 0, 100.0, 25.0),
   ENUM(gop_structure, gop_structure_list, 0),
   INT (queue_depth, 1, SCHRO_LIMIT_FRAME_QUEUE_LENGTH, 20),
