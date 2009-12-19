@@ -599,11 +599,7 @@ schro_encoder_start (SchroEncoder *encoder)
       break;
     case SCHRO_ENCODER_RATE_CONTROL_CONSTANT_BITRATE:
       handle_gop_enum (encoder);
-      if (encoder->enable_rdo_cbr) {
-        encoder->quantiser_engine = SCHRO_QUANTISER_ENGINE_CBR;
-      } else {
-        encoder->quantiser_engine = SCHRO_QUANTISER_ENGINE_RDO_BIT_ALLOCATION;
-      }
+      encoder->quantiser_engine = SCHRO_QUANTISER_ENGINE_CBR;
       schro_encoder_init_rc_buffer (encoder);
 
       schro_encoder_encode_bitrate_comment (encoder, encoder->bitrate);
@@ -4010,7 +4006,6 @@ struct SchroEncoderSettings {
   BOOL(enable_global_motion, FALSE),
   BOOL(enable_scene_change_detection, TRUE),
   BOOL(enable_deep_estimation, TRUE),
-  BOOL(enable_rdo_cbr, TRUE),
   BOOL(enable_combined_me, FALSE),
   INT (horiz_slices, 1, INT_MAX, 8),
   INT (vert_slices, 1, INT_MAX, 6),

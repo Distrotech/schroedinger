@@ -294,7 +294,6 @@ struct _SchroEncoder {
   schro_bool enable_global_motion;
   schro_bool enable_scene_change_detection;
   schro_bool enable_deep_estimation;
-  schro_bool enable_rdo_cbr;
   schro_bool enable_combined_me;
   int horiz_slices;
   int vert_slices;
