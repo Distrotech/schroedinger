@@ -4048,7 +4048,7 @@ struct SchroEncoderSettings {
   BOOL(enable_global_motion, FALSE),
   BOOL(enable_scene_change_detection, TRUE),
   BOOL(enable_deep_estimation, TRUE),
-  BOOL(enable_rdo_cbr, FALSE),
+  BOOL(enable_rdo_cbr, TRUE),
   INT (horiz_slices, 1, INT_MAX, 8),
   INT (vert_slices, 1, INT_MAX, 6),
   ENUM(codeblock_size, codeblock_size_list, 0),
