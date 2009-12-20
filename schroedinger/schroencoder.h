@@ -260,7 +260,6 @@ struct _SchroEncoder {
   int level;
   int open_gop;
   int au_distance;
-  int max_refs;
   schro_bool enable_psnr;
   schro_bool enable_ssim;
   schro_bool enable_md5;
