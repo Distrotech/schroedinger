@@ -248,7 +248,17 @@ struct _SchroEncoder {
   // Buffer model parameters for CBR and (TODO) constrained VBR coding
   int buffer_size;
   int buffer_level;
-  double quality;
+  int bits_per_picture;
+  int subgroup_position;
+  int I_complexity;
+  int P_complexity;
+  int B_complexity;
+  int B_complexity_sum;
+  long int I_frame_alloc;
+  long int P_frame_alloc;
+  long int B_frame_alloc;
+  long int gop_target;
+
   double noise_threshold;
   int gop_structure;
   int queue_depth;
@@ -290,10 +300,16 @@ struct _SchroEncoder {
   int vert_slices;
   int codeblock_size;
 
+  // Current qf, from which is derived ...
+  double qf;
+  // current lambda
+  double lambda;
+  // lambda to use for intra pictures in CBR mode
+  double intra_cbr_lambda;
+
   double magic_dc_metric_offset;
   double magic_subband0_lambda_scale;
   double magic_chroma_lambda_scale;
-  double magic_nonref_lambda_scale;
   double magic_P_lambda_scale;
   double magic_B_lambda_scale;
   double magic_me_lambda_scale;
@@ -308,7 +324,6 @@ struct _SchroEncoder {
   double magic_error_power;
   double magic_mc_lambda;
   double magic_subgroup_length;
-  double magic_lambda;
   double magic_badblock_multiplier_nonref;
   double magic_badblock_multiplier_ref;
   double magic_block_search_threshold;
@@ -362,22 +377,6 @@ struct _SchroEncoder {
 
   /* engine specific stuff */
 
-  int bits_per_picture;
-  int subgroup_position;
-  int I_complexity;
-  int P_complexity;
-  int B_complexity;
-  int B_complexity_sum;
-  long int I_frame_alloc;
-  long int P_frame_alloc;
-  long int B_frame_alloc;
-  long int gop_target;
-
-  // Current qf, from which is derived ...
-  double qf;
-  // lambda to use for intra pictures in CBR mode
-  double intra_cbr_lambda;
-
   int gop_picture;
   int quant_slot;
 
@@ -430,6 +429,7 @@ void schro_encoder_free (SchroEncoder *encoder);
 SchroVideoFormat * schro_encoder_get_video_format (SchroEncoder *encoder);
 void schro_encoder_set_video_format (SchroEncoder *encoder,
     SchroVideoFormat *video_format);
+void schro_encoder_set_lambda (SchroEncoder* encoder);
 void schro_encoder_set_frame_lambda (SchroEncoderFrame* frame);
 void schro_encoder_end_of_stream (SchroEncoder *encoder);
 int schro_encoder_push_ready (SchroEncoder *encoder);

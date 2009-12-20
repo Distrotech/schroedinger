@@ -25,6 +25,12 @@ static SchroFrame * get_downsampled(SchroEncoderFrame *frame, int i);
 
 void schro_motion_calculate_stats (SchroMotion *motion, SchroEncoderFrame *frame);
 
+double schro_encoder_get_me_lambda (SchroEncoderFrame* frame)
+{
+  schro_encoder_set_frame_lambda(frame);
+  return frame->encoder->magic_me_lambda_scale * sqrt(frame->frame_lambda);
+}
+
 SchroMotionEst *
 schro_motionest_new (SchroEncoderFrame *frame)
 {
@@ -2660,7 +2666,7 @@ schro_me_new (SchroEncoderFrame* frame)
    * are not reference-counted but they should if we use them like this */
   me->params = &frame->params;
   me->motion = frame->motion;
-  me->lambda = frame->encoder->magic_mc_lambda;
+  me->lambda = frame->frame_me_lambda;
   for (ref=0; me->params->num_refs > ref; ++ref) {
     me->meElement[ref] = schro_me_element_new (frame, ref);
   }

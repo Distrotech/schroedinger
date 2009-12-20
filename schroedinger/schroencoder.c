@@ -44,6 +44,16 @@ static schro_bool schro_frame_data_is_zero (SchroFrameData *fd);
 static void schro_encoder_setting_set_defaults (SchroEncoder *encoder);
 
 /*
+ * Set basic lambda value from the qf
+ */
+void
+schro_encoder_set_lambda (SchroEncoder *encoder)
+{
+  // NB: lambda used is reciprocal of Dirac's value. Grrr.
+  encoder->lambda = pow( 10.0 , -(12.0-encoder->qf )/2.5 )/16.0;
+}
+
+/*
  * Set a frame lambda based on the encoder lambda
  */
 void
@@ -51,41 +61,18 @@ schro_encoder_set_frame_lambda (SchroEncoderFrame *frame)
 {
   SCHRO_ASSERT(frame);
   SCHRO_ASSERT(frame->encoder);
-  switch (frame->encoder->rate_control) {
-    case SCHRO_ENCODER_RATE_CONTROL_CONSTANT_BITRATE:
-      if (frame->encoder->enable_rdo_cbr) {
-        frame->frame_lambda = pow( 10.0 , -(12.0-frame->encoder->qf )/2.5 )/16.0;
-        frame->frame_me_lambda = frame->encoder->magic_me_lambda_scale *
-          sqrt(frame->frame_lambda);
-      } else {
-        /* overwritten in schro_encoder_choose_quantisers_rdo_bit_allocation */
-        frame->frame_lambda = 0;
-        frame->frame_me_lambda = frame->encoder->magic_mc_lambda;
-      }
-      break;
-    case SCHRO_ENCODER_RATE_CONTROL_CONSTANT_QUALITY:
-      frame->frame_lambda = exp(((frame->encoder->quality-5)/0.7 - 7.0)*M_LN10*0.5);
-      frame->frame_me_lambda = frame->encoder->magic_mc_lambda;
-      break;
-    default:
-      /* others don't use lambda */
-      frame->frame_lambda = frame->encoder->magic_lambda;
-      frame->frame_me_lambda = frame->encoder->magic_mc_lambda;
-      break;
-  }
+  schro_encoder_set_lambda(frame->encoder);
+  frame->frame_lambda = frame->encoder->lambda;
   if ((frame->num_refs != 0)){
-    if (schro_encoder_frame_is_B_frame(frame) ) {
+    if (schro_encoder_frame_is_B_frame(frame) )
       frame->frame_lambda *= frame->encoder->magic_B_lambda_scale;
-    } else {
+    else
       frame->frame_lambda *= frame->encoder->magic_P_lambda_scale;
-    }
   }
   else{
     if (frame->encoder->rate_control == SCHRO_ENCODER_RATE_CONTROL_CONSTANT_BITRATE ){
-      if (frame->encoder->intra_cbr_lambda != -1) {
-        frame->frame_lambda = sqrt (frame->frame_lambda *
-            frame->encoder->intra_cbr_lambda);
-      }
+      frame->frame_lambda *= frame->encoder->intra_cbr_lambda;
+      frame->frame_lambda = sqrt(frame->frame_lambda);
       frame->encoder->intra_cbr_lambda = frame->frame_lambda;
       SCHRO_DEBUG("Using filtered CBR value for intra lambda %g (picture %d)", frame->frame_lambda,frame->frame_number);
     }
@@ -144,12 +131,12 @@ void schro_encoder_init_rc_buffer(SchroEncoder* encoder)
   SCHRO_ASSERT (encoder);
   int gop_length = encoder->au_distance;
   if (encoder->buffer_size == 0) {
-    encoder->buffer_size = 3 * encoder->bitrate;
+    encoder->buffer_size = 5 * encoder->bitrate;
   }
 
-  // Set initial level at 100%
+  // Set initial level at 90%
   if (encoder->buffer_level == 0) {
-    encoder->buffer_level = encoder->buffer_size;
+    encoder->buffer_level = (9*encoder->buffer_size)/10;
   }
   encoder->bits_per_picture = muldiv64 (encoder->bitrate,
                               encoder->video_format.frame_rate_denominator,
@@ -546,12 +533,6 @@ handle_gop_enum (SchroEncoder *encoder)
 
 }
 
-static double
-schro_encoder_quality_get_lambda (double quality)
-{
-  return exp(((quality-5)/0.7 - 7.0)*M_LN10*0.5);
-}
-
 /**
  * schro_encoder_start:
  * @encoder: an encoder object
@@ -601,8 +582,8 @@ schro_encoder_start (SchroEncoder *encoder)
 
   schro_tables_init ();
   schro_encoder_init_perceptual_weighting (encoder);
-  /* special value indicating invalid */
-  encoder->intra_cbr_lambda = -1;
+  schro_encoder_set_lambda (encoder);
+  encoder->intra_cbr_lambda = encoder->lambda;
 
   schro_encoder_init_error_tables (encoder);
 
@@ -657,7 +638,6 @@ schro_encoder_start (SchroEncoder *encoder)
     case SCHRO_ENCODER_RATE_CONTROL_CONSTANT_QUALITY:
       handle_gop_enum (encoder);
       encoder->quantiser_engine = SCHRO_QUANTISER_ENGINE_RDO_LAMBDA;
-      encoder->magic_lambda = schro_encoder_quality_get_lambda (encoder->quality);
       break;
   }
 
@@ -2113,7 +2093,7 @@ schro_encoder_predict_subpel_picture (SchroAsyncStage *stage)
       }
     }
     if (frame->params.num_refs > 0 && frame->params.mv_precision > 0) {
-      schro_me_set_lambda (frame->deep_me, frame->frame_me_lambda);
+      schro_me_set_lambda (frame->deep_me, schro_encoder_get_me_lambda (frame));
       schro_encoder_motion_predict_subpel_deep (frame->deep_me);
     }
   }
@@ -2157,7 +2137,7 @@ schro_encoder_mode_decision (SchroAsyncStage *stage)
       SCHRO_INFO("mode decision and superblock splitting picture %d"
           , frame->frame_number);
       schro_me_set_motion (frame->deep_me, frame->motion);
-      schro_me_set_lambda (frame->deep_me, frame->frame_me_lambda);
+      schro_me_set_lambda (frame->deep_me, schro_encoder_get_me_lambda (frame));
       schro_mode_decision (frame->deep_me);
       schro_motion_calculate_stats (frame->motion, frame);
       frame->estimated_mc_bits = schro_motion_estimate_entropy (frame->motion);
@@ -4009,11 +3989,11 @@ struct SchroEncoderSettings {
 } static const encoder_settings[] = {
   ENUM(rate_control, rate_control_list, 6),
   INT (bitrate, 0, INT_MAX, 13824000),
+  DOUB(qf, 0, 15, 5.5),
   INT (max_bitrate, 0, INT_MAX, 13824000),
   INT (min_bitrate, 0, INT_MAX, 13824000),
   INT (buffer_size, 0, INT_MAX, 0),
   INT (buffer_level, 0, INT_MAX, 0),
-  DOUB(quality, 0, 10.0, 5.0),
   DOUB(noise_threshold, 0, 100.0, 25.0),
   ENUM(gop_structure, gop_structure_list, 0),
   INT (queue_depth, 1, SCHRO_LIMIT_FRAME_QUEUE_LENGTH, 20),
@@ -4072,8 +4052,6 @@ struct SchroEncoderSettings {
   DOUB(magic_bailout_weight, 0.0, 1000.0, 4.0),
   DOUB(magic_error_power, 0.0, 1000.0, 4.0),
   DOUB(magic_mc_lambda, 0.0, 1000.0, 0.1),
-  DOUB(magic_subgroup_length, 1.0, 10.0, 4.0),
-  DOUB(magic_lambda, 0.0, 1000.0, 1.0),
   DOUB(magic_badblock_multiplier_nonref, 0.0, 1000.0, 4.0),
   DOUB(magic_badblock_multiplier_ref, 0.0, 1000.0, 8.0),
   DOUB(magic_block_search_threshold, 0.0, 1000.0, 15.0),
