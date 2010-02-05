@@ -1110,6 +1110,18 @@ schro_encoder_frame_assemble_buffer (SchroEncoderFrame *frame,
   offset += buf->length;
 }
 
+int
+schro_encoder_get_frame_stats_size (SchroEncoder *encoder)
+{
+  return 21;
+}
+
+void
+schro_encoder_get_frame_stats (SchroEncoder *encoder, double *dest, int n)
+{
+  memcpy (dest, encoder->frame_stats, sizeof(double)*MIN(n,21));
+}
+
 /**
  * schro_encoder_pull_full:
  * @encoder: an encoder object
@@ -1212,6 +1224,27 @@ schro_encoder_pull_full (SchroEncoder *encoder, int *presentation_frame,
             frame->dcblock_ratio,
             frame->hist_slope);
 
+        encoder->frame_stats[0] = frame->frame_number;
+        encoder->frame_stats[1] = frame->num_refs;
+        encoder->frame_stats[2] = frame->is_ref;
+        encoder->frame_stats[3] = frame->allocated_mc_bits;
+        encoder->frame_stats[4] = frame->allocated_residual_bits;
+        encoder->frame_stats[5] = frame->picture_weight;
+        encoder->frame_stats[6] = frame->estimated_mc_bits;
+        encoder->frame_stats[7] = frame->estimated_residual_bits;
+        encoder->frame_stats[8] = frame->actual_mc_bits;
+        encoder->frame_stats[8] = frame->actual_residual_bits;
+        encoder->frame_stats[10] = frame->scene_change_score;
+        encoder->frame_stats[11] = encoder->buffer_level;
+        encoder->frame_stats[12] = frame->frame_lambda;
+        encoder->frame_stats[13] = frame->mc_error;
+        encoder->frame_stats[14] = frame->mean_squared_error_luma;
+        encoder->frame_stats[15] = frame->mean_squared_error_chroma;
+        encoder->frame_stats[16] = elapsed_time;
+        encoder->frame_stats[17] = frame->badblock_ratio;
+        encoder->frame_stats[18] = frame->dcblock_ratio;
+        encoder->frame_stats[19] = frame->hist_slope;
+        encoder->frame_stats[20] = frame->mssim;
 
         schro_encoder_shift_frame_queue (encoder);
       }
@@ -2459,11 +2492,9 @@ schro_encoder_postanalyse_picture (SchroAsyncStage *stage)
   }
 
   if (frame->encoder->enable_ssim) {
-    double mssim;
-
-    mssim = schro_frame_ssim (frame->filtered_frame,
+    frame->mssim = schro_frame_ssim (frame->original_frame,
         frame->reconstructed_frame->frames[0]);
-    schro_dump(SCHRO_DUMP_SSIM, "%d %g\n", frame->frame_number, mssim);
+    schro_dump(SCHRO_DUMP_SSIM, "%d %g\n", frame->frame_number, frame->mssim);
   }
 }
 
@@ -4064,7 +4095,7 @@ struct SchroEncoderSettings {
   BOOL(enable_dc_multiquant, FALSE),
   BOOL(enable_global_motion, FALSE),
   BOOL(enable_scene_change_detection, TRUE),
-  BOOL(enable_deep_estimation, FALSE),
+  BOOL(enable_deep_estimation, TRUE),
   BOOL(enable_rdo_cbr, FALSE),
   BOOL(enable_chroma_me, FALSE),
   INT (horiz_slices, 1, INT_MAX, 8),
@@ -4073,11 +4104,11 @@ struct SchroEncoderSettings {
 
   DOUB(magic_dc_metric_offset, 0.0, 1000.0, 1.0),
   DOUB(magic_subband0_lambda_scale, 0.0, 1000.0, 10.0),
-  DOUB(magic_chroma_lambda_scale, 0.0, 1000.0, 0.01),
+  DOUB(magic_chroma_lambda_scale, 0.0, 1000.0, 0.1),
   DOUB(magic_nonref_lambda_scale, 0.0, 1000.0, 0.01),
   DOUB(magic_me_lambda_scale, 0.0, 100.0, 32.0),
   DOUB(magic_P_lambda_scale, 0.0, 10.0, 0.25),
-  DOUB(magic_B_lambda_scale, 0.0, 10.0, 0.03125),
+  DOUB(magic_B_lambda_scale, 0.0, 10.0, 0.001),
   DOUB(magic_allocation_scale, 0.0, 1000.0, 1.1),
   DOUB(magic_inter_cpd_scale, 0.0, 1.0, 1.0),
   DOUB(magic_keyframe_weight, 0.0, 1000.0, 7.5),
@@ -4087,7 +4118,7 @@ struct SchroEncoderSettings {
   DOUB(magic_me_bailout_limit, 0.0, 1000.0, 0.33),
   DOUB(magic_bailout_weight, 0.0, 1000.0, 4.0),
   DOUB(magic_error_power, 0.0, 1000.0, 4.0),
-  DOUB(magic_mc_lambda, 0.0, 1000.0, 0.1),
+  DOUB(magic_mc_lambda, 0.0, 1000.0, 1.0),
   DOUB(magic_subgroup_length, 1.0, 10.0, 4.0),
   DOUB(magic_lambda, 0.0, 1000.0, 1.0),
   DOUB(magic_badblock_multiplier_nonref, 0.0, 1000.0, 4.0),
