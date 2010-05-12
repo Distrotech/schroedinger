@@ -3655,6 +3655,7 @@ schro_encoder_encode_subband (SchroEncoderFrame * frame, int component,
   int quant_index;
   int n_subbands_left;
   int first_quant_index;
+  int prob_limit = frame->encoder->magic_prob_limit * 65536;
 
   position = schro_subband_get_position (index);
   schro_subband_get_frame_data (&fd, frame->iwt_frame, component,
@@ -3750,6 +3751,7 @@ schro_encoder_encode_subband (SchroEncoderFrame * frame, int component,
         int16_t *prev_quant_line = SCHRO_FRAME_DATA_GET_LINE (&qd, j - 1);
         int16_t *quant_line = SCHRO_FRAME_DATA_GET_LINE (&qd, j);
         int16_t *parent_line = SCHRO_FRAME_DATA_GET_LINE (&parent_fd, (j >> 1));
+        int16_t *line = SCHRO_FRAME_DATA_GET_LINE (&fd, j);
 
 #define STUFF(have_parent,is_horiz,is_vert) \
         for(i=xmin;i<xmax;i++){ \
@@ -3759,6 +3761,8 @@ schro_encoder_encode_subband (SchroEncoderFrame * frame, int component,
           int nhood_or; \
           int previous_value; \
           int sign_context; \
+          int est; \
+          int est2; \
  \
           if (have_parent) { \
             parent = parent_line[(i>>1)]; \
@@ -3813,6 +3817,18 @@ schro_encoder_encode_subband (SchroEncoderFrame * frame, int component,
           } \
  \
           value_context = SCHRO_CTX_COEFF_DATA; \
+          \
+          est = schro_arith_estimate_entropy_sint(arith, cont_context, \
+                value_context, sign_context, quant_line[i]); \
+          est2 = 0; \
+          if ((quant_line[i] == -1 || quant_line[i] == 1) && \
+              est > prob_limit) { \
+            quant_line[i] = 0; \
+            line[i] = 0; \
+            est2 = est; \
+            est = schro_arith_estimate_entropy_sint(arith, cont_context, \
+                  value_context, sign_context, quant_line[i]); \
+          } \
  \
           _schro_arith_encode_sint (arith, cont_context, value_context, \
               sign_context, quant_line[i]); \
@@ -4346,6 +4362,7 @@ struct SchroEncoderSettings
   DOUB (magic_block_search_threshold, 0.0, 1000.0, 15.0),
   DOUB (magic_scan_distance, 0.0, 1000.0, 4.0),
   DOUB (magic_diagonal_lambda_scale, 0.0, 1000.0, 1.0),
+  DOUB (magic_prob_limit, 0.0, 10.0, 6.0),
 };
 
 int

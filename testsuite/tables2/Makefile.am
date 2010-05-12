@@ -2,7 +2,8 @@
 noinst_PROGRAMS = \
 	lowdelay_tables \
 	quant_tables \
-	unpack_tables
+	unpack_tables \
+	arith_tables
 
 if ENABLE_ENCODER
 noinst_PROGRAMS += \

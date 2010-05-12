@@ -616,6 +616,91 @@ schro_arith_estimate_sint (SchroArith * arith, int cont_context,
 }
 #endif
 
+static const int entropy_lut[256] = {
+  0, 370, 741, 1114, 1488, 1864, 2242, 2621, 
+  3001, 3383, 3767, 4152, 4539, 4927, 5317, 5708, 
+  6102, 6496, 6893, 7291, 7691, 8092, 8495, 8900, 
+  9307, 9715, 10125, 10537, 10951, 11367, 11784, 12204, 
+  12625, 13048, 13473, 13900, 14328, 14759, 15192, 15626, 
+  16063, 16502, 16943, 17386, 17831, 18278, 18727, 19178, 
+  19631, 20087, 20545, 21005, 21467, 21932, 22399, 22868, 
+  23340, 23814, 24290, 24769, 25250, 25734, 26220, 26708, 
+  27199, 27693, 28189, 28688, 29190, 29694, 30201, 30711, 
+  31223, 31739, 32257, 32778, 33301, 33828, 34358, 34891, 
+  35426, 35965, 36507, 37052, 37600, 38151, 38706, 39263, 
+  39825, 40389, 40957, 41528, 42103, 42681, 43263, 43849, 
+  44438, 45030, 45627, 46227, 46831, 47439, 48051, 48667, 
+  49287, 49911, 50540, 51172, 51809, 52450, 53095, 53745, 
+  54399, 55058, 55722, 56390, 57063, 57741, 58423, 59111, 
+  59804, 60501, 61204, 61913, 62626, 63345, 64070, 64800, 
+  65535, 66277, 67024, 67778, 68537, 69303, 70075, 70853, 
+  71638, 72429, 73227, 74031, 74843, 75661, 76487, 77320, 
+  78161, 79009, 79864, 80728, 81599, 82479, 83367, 84263, 
+  85167, 86081, 87003, 87935, 88876, 89826, 90786, 91756, 
+  92735, 93725, 94726, 95737, 96759, 97793, 98837, 99894, 
+  100962, 102043, 103136, 104242, 105361, 106493, 107639, 108799, 
+  109974, 111163, 112367, 113587, 114823, 116076, 117345, 118631, 
+  119935, 121258, 122599, 123959, 125340, 126740, 128162, 129606, 
+  131071, 132560, 134073, 135611, 137174, 138763, 140379, 142023, 
+  143697, 145400, 147135, 148903, 150703, 152539, 154412, 156322, 
+  158271, 160262, 162295, 164373, 166498, 168672, 170897, 173175, 
+  175510, 177903, 180359, 182881, 185471, 188135, 190876, 193698, 
+  196607, 199609, 202710, 205915, 209233, 212671, 216239, 219948, 
+  223807, 227831, 232034, 236433, 241046, 245895, 251007, 256412, 
+  262143, 268246, 274769, 281775, 289343, 297570, 306582, 316543, 
+  327679, 340305, 354879, 372118, 393215, 420415, 458751, 524287
+};
+
+int
+schro_arith_estimate_entropy_bit (SchroArith * arith, int i, int value)
+{
+  if (value) {
+    return entropy_lut[arith->probabilities[i] >> 8];
+  } else {
+    return entropy_lut[255 - (arith->probabilities[i] >> 8)];
+  }
+}
+
+int
+schro_arith_estimate_entropy_uint (SchroArith * arith, int cont_context,
+    int value_context, int value)
+{
+  int i;
+  int n_bits;
+  int entropy = 0;
+
+  value++;
+  n_bits = maxbit (value);
+  for (i = 0; i < n_bits - 1; i++) {
+    entropy += schro_arith_estimate_entropy_bit (arith, cont_context, 0);
+    entropy += schro_arith_estimate_entropy_bit (arith, value_context,
+        (value >> (n_bits - 2 - i)) & 1);
+    cont_context = arith->contexts[cont_context].next;
+  }
+  entropy += schro_arith_estimate_entropy_bit (arith, cont_context, 1);
+  return entropy;
+}
+
+int
+schro_arith_estimate_entropy_sint (SchroArith * arith, int cont_context,
+    int value_context, int sign_context, int value)
+{
+  int sign;
+  int entropy;
+
+  if (value < 0) {
+    sign = 1;
+    value = -value;
+  } else {
+    sign = 0;
+  }
+  entropy = schro_arith_estimate_entropy_uint (arith, cont_context, value_context, value);
+  if (value) {
+    entropy += schro_arith_estimate_entropy_bit (arith, sign_context, sign);
+  }
+  return entropy;
+}
+
 #ifndef SCHRO_ARITH_DEFINE_INLINE
 int
 _schro_arith_decode_uint (SchroArith * arith, unsigned int cont_context,

@@ -142,6 +142,12 @@ void schro_arith_estimate_uint (SchroArith *arith, int cont_context,
 void schro_arith_estimate_sint (SchroArith *arith, int cont_context,
     int value_context, int sign_context, int value);
 
+int schro_arith_estimate_entropy_bit (SchroArith * arith, int i, int value);
+int schro_arith_estimate_entropy_uint (SchroArith * arith, int cont_context,
+    int value_context, int value);
+int schro_arith_estimate_entropy_sint (SchroArith * arith, int cont_context,
+    int value_context, int sign_context, int value);
+
 #ifdef SCHRO_ARITH_DEFINE_INLINE
 static inline int
 _schro_arith_decode_bit (SchroArith *arith, unsigned int i)

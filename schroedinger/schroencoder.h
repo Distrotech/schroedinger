@@ -321,6 +321,7 @@ struct _SchroEncoder {
   double magic_block_search_threshold;
   double magic_scan_distance;
   double magic_diagonal_lambda_scale;
+  double magic_prob_limit;
 
   /* hooks */
 
